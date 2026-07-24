@@ -7,6 +7,7 @@ import {
 
 import QuizTimer from './QuizTimer';
 import QuizResult from './QuizResult';
+import useExamIntegrityMonitor from '../hooks/useExamIntegrityMonitor';
 
 import {
   getQuizAttempt,
@@ -40,6 +41,30 @@ export default function QuizPlayer({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [integrityWarning, setIntegrityWarning] = useState('');
+
+  const handleIntegrityIncident = useCallback((eventType) => {
+    const messages = {
+      page_hidden:
+        'The exam page became hidden. This event was recorded for instructor review.',
+      fullscreen_exited:
+        'Fullscreen was exited. This event was recorded for instructor review.',
+      connection_lost:
+        'Your connection was lost. Continue working while the browser reconnects.',
+    };
+    setIntegrityWarning(
+      messages[eventType] ??
+        'An exam integrity event was recorded.'
+    );
+  }, []);
+
+  useExamIntegrityMonitor({
+    attemptId,
+    enabled:
+      attemptData?.attempt?.status === 'in_progress' &&
+      !result,
+    onIncident: handleIntegrityIncident
+  });
 
   const loadAttempt = useCallback(async () => {
     try {
@@ -238,6 +263,21 @@ export default function QuizPlayer({
     setCurrentQuestionIndex(index);
   }
 
+  async function enterFullscreen() {
+    try {
+      if (
+        !document.fullscreenElement &&
+        document.documentElement.requestFullscreen
+      ) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      setIntegrityWarning(
+        'Fullscreen could not be started in this browser.'
+      );
+    }
+  }
+
   if (loading) {
     return (
       <main className="quiz-player">
@@ -283,6 +323,17 @@ export default function QuizPlayer({
 
   return (
     <main className="quiz-player">
+      {integrityWarning && (
+        <div className="integrity-warning" role="alert">
+          <span>{integrityWarning}</span>
+          <button
+            type="button"
+            onClick={() => setIntegrityWarning('')}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <header className="quiz-player__header">
         <div>
           <p className="quiz-player__course-label">
@@ -299,12 +350,21 @@ export default function QuizPlayer({
           )}
         </div>
 
-        <QuizTimer
-          expiresAt={
-            attemptData.attempt.expiresAt
-          }
-          onTimeExpired={handleTimeExpired}
-        />
+        <div className="quiz-player__exam-tools">
+          <QuizTimer
+            expiresAt={
+              attemptData.attempt.expiresAt
+            }
+            onTimeExpired={handleTimeExpired}
+          />
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => void enterFullscreen()}
+          >
+            Enter fullscreen
+          </button>
+        </div>
       </header>
 
       <section className="quiz-progress">

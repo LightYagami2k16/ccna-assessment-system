@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getStudentRecentResults } from '../services/quizAttemptService'
 
 function formatDate(value) {
@@ -18,7 +18,7 @@ export default function StudentRecentResults() {
     try {
       setLoading(true)
       setMessage('')
-      setResults(await getStudentRecentResults(10))
+      setResults(await getStudentRecentResults(50))
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -30,13 +30,36 @@ export default function StudentRecentResults() {
     void loadResults()
   }, [loadResults])
 
+  const resultsByQuiz = useMemo(() => {
+    const groups = new Map()
+
+    for (const result of results) {
+      if (!groups.has(result.quizId)) {
+        groups.set(result.quizId, {
+          quizId: result.quizId,
+          quizTitle: result.quizTitle,
+          courseCode: result.courseCode,
+          moduleCode: result.moduleCode,
+          attempts: [],
+        })
+      }
+
+      groups.get(result.quizId).attempts.push(result)
+    }
+
+    return Array.from(groups.values())
+  }, [results])
+
   return (
     <section className="student-recent-results">
       <div className="section-heading">
         <div>
           <span className="eyebrow">MY PERFORMANCE</span>
           <h2>Recent quiz results</h2>
-          <p>Your 10 most recent completed quiz attempts and scores.</p>
+          <p>
+            Completed attempts are grouped by quiz, with the newest attempt
+            shown first.
+          </p>
         </div>
         <button className="secondary" type="button" onClick={() => void loadResults()}>
           Refresh results
@@ -52,45 +75,72 @@ export default function StudentRecentResults() {
           <p>Your results will appear here after you submit a quiz.</p>
         </div>
       ) : (
-        <div className="recent-result-grid">
-          {results.map((result) => (
-            <article className="recent-result-card" key={result.attemptId}>
-              <header>
+        <div className="recent-result-groups">
+          {resultsByQuiz.map((group) => (
+            <article className="recent-result-group" key={group.quizId}>
+              <header className="recent-result-group__heading">
                 <div>
                   <span className="course-code">
-                    {result.courseCode}
-                    {result.moduleCode ? ` / ${result.moduleCode}` : ''}
+                    {group.courseCode}
+                    {group.moduleCode ? ` / ${group.moduleCode}` : ''}
                   </span>
-                  <h3>{result.quizTitle}</h3>
+                  <h3>{group.quizTitle}</h3>
                 </div>
-                <span
-                  className={
-                    result.passed
-                      ? 'quiz-result__status quiz-result__status--passed'
-                      : 'quiz-result__status quiz-result__status--failed'
-                  }
-                >
-                  {result.passed ? 'Passed' : 'Not passed'}
+                <span className="status-chip">
+                  {group.attempts.length}{' '}
+                  {group.attempts.length === 1 ? 'attempt' : 'attempts'}
                 </span>
               </header>
 
-              <div className="recent-result-card__score">
-                <strong>{Number(result.percentage).toFixed(2)}%</strong>
-                <span>
-                  {Number(result.scorePoints)} of {Number(result.maximumPoints)} points
-                </span>
+              <div className="recent-attempt-table-wrapper">
+                <table className="recent-attempt-table">
+                  <thead>
+                    <tr>
+                      <th>Attempt</th>
+                      <th>Score</th>
+                      <th>Result</th>
+                      <th>Completed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.attempts.map((result, index) => (
+                      <tr key={result.attemptId}>
+                        <td>
+                          <div className="recent-attempt-number">
+                            <strong>Attempt #{result.attemptNumber}</strong>
+                            {index === 0 && <span>Latest</span>}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="recent-attempt-score">
+                            <strong>{Number(result.percentage).toFixed(2)}%</strong>
+                            <small>
+                              {Number(result.scorePoints)} of{' '}
+                              {Number(result.maximumPoints)} points
+                            </small>
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            className={
+                              result.passed
+                                ? 'quiz-result__status quiz-result__status--passed'
+                                : 'quiz-result__status quiz-result__status--failed'
+                            }
+                          >
+                            {result.passed ? 'Passed' : 'Not passed'}
+                          </span>
+                        </td>
+                        <td>
+                          <time dateTime={result.submittedAt || result.startedAt}>
+                            {formatDate(result.submittedAt || result.startedAt)}
+                          </time>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              <dl>
-                <div>
-                  <dt>Attempt</dt>
-                  <dd>#{result.attemptNumber}</dd>
-                </div>
-                <div>
-                  <dt>Completed</dt>
-                  <dd>{formatDate(result.submittedAt || result.startedAt)}</dd>
-                </div>
-              </dl>
             </article>
           ))}
         </div>

@@ -3,6 +3,7 @@ import InstructorQuestionBank from './InstructorQuestionBank'
 import InstructorQuizBuilder from './InstructorQuizBuilder'
 import InstructorResultsDashboard from './InstructorResultsDashboard'
 import InstructorClassAssignments from './InstructorClassAssignments'
+import ExamControlsDashboard from './ExamControlsDashboard'
 
 export default function InstructorWorkspace({ user }) {
   const [activeSection, setActiveSection] = useState('questions')
@@ -32,6 +33,13 @@ export default function InstructorWorkspace({ user }) {
           Classes & assignments
         </button>
         <button
+          className={activeSection === 'exam-controls' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+          type="button"
+          onClick={() => setActiveSection('exam-controls')}
+        >
+          Exam controls
+        </button>
+        <button
           className={activeSection === 'results' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
           type="button"
           onClick={() => setActiveSection('results')}
@@ -43,6 +51,7 @@ export default function InstructorWorkspace({ user }) {
       {activeSection === 'questions' && <InstructorQuestionBank user={user} />}
       {activeSection === 'quizzes' && <InstructorQuizBuilder />}
       {activeSection === 'assignments' && <InstructorClassAssignments />}
+      {activeSection === 'exam-controls' && <ExamControlsDashboard />}
       {activeSection === 'results' && <InstructorResultsDashboard />}
     </div>
   )
