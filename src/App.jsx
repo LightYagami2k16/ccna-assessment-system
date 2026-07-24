@@ -18,14 +18,16 @@ export default function App() {
       if (!data.session) setLoading(false)
     }
 
-    loadSession()
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      if (!nextSession) {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
+    void loadSession()
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        setSession(nextSession)
+        if (!nextSession) {
+          setProfile(null)
+          setLoading(false)
+        }
+      },
+    )
 
     return () => {
       active = false
@@ -34,17 +36,32 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    let active = true
+
     async function loadProfile() {
       if (!session?.user) return
       setLoading(true)
-      const { data, error } = await supabase.from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
-      if (!error) setProfile(data)
-      setLoading(false)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('id', session.user.id)
+        .single()
+
+      if (active) {
+        if (!error) setProfile(data)
+        setLoading(false)
+      }
     }
-    loadProfile()
+
+    void loadProfile()
+    return () => {
+      active = false
+    }
   }, [session])
 
-  if (loading) return <div className="loading-screen">Loading CCNA Assessment…</div>
+  if (loading) {
+    return <div className="loading-screen">Loading CCNA Assessment…</div>
+  }
   if (!session) return <AuthForm />
   return <Dashboard profile={profile} user={session.user} />
 }
