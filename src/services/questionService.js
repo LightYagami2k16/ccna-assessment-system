@@ -29,20 +29,34 @@ export async function getInstructorQuestions() {
     .from('questions')
     .select(`
       id,
+      course_id,
+      module_id,
       title,
       question_text,
+      explanation,
       question_type,
       points,
       difficulty,
       status,
       created_at,
       courses (id, code, title),
-      modules (id, code, title)
+      modules (id, code, title),
+      question_options (
+        id,
+        option_text,
+        is_correct,
+        sort_order
+      )
     `)
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((question) => ({
+    ...question,
+    question_options: [...(question.question_options ?? [])].sort(
+      (left, right) => left.sort_order - right.sort_order,
+    ),
+  }))
 }
 
 export async function createQuestion({
@@ -103,4 +117,24 @@ export async function deleteQuestion(questionId) {
     .eq('id', questionId)
 
   if (error) throw error
+}
+
+export async function updateQuestion(payload) {
+  const { data, error } = await supabase.rpc('update_instructor_question', {
+    p_payload: payload,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function setQuestionStatus(questionId, status) {
+  const { data, error } = await supabase.rpc(
+    'set_instructor_question_status',
+    {
+      p_question_id: questionId,
+      p_status: status,
+    },
+  )
+  if (error) throw error
+  return data
 }

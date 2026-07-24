@@ -1,22 +1,42 @@
 import { useState } from 'react'
-import { deleteQuestion } from '../services/questionService'
+import {
+  deleteQuestion,
+  setQuestionStatus,
+} from '../services/questionService'
 
-export default function QuestionList({ questions, onQuestionDeleted }) {
+export default function QuestionList({ questions, onEdit, onChanged }) {
   const [message, setMessage] = useState('')
-  const [deletingId, setDeletingId] = useState(null)
+  const [busyId, setBusyId] = useState(null)
 
   async function handleDelete(question) {
-    if (!window.confirm(`Delete the draft question “${question.title}”?`)) return
+    if (!window.confirm(`Delete the draft question "${question.title}"?`)) return
 
-    setDeletingId(question.id)
+    setBusyId(question.id)
     setMessage('')
     try {
       await deleteQuestion(question.id)
-      await onQuestionDeleted?.()
+      await onChanged?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
-      setDeletingId(null)
+      setBusyId(null)
+    }
+  }
+
+  async function handleStatusChange(question) {
+    const nextStatus = question.status === 'published' ? 'draft' : 'published'
+    const verb = nextStatus === 'published' ? 'Publish' : 'Unpublish'
+    if (!window.confirm(`${verb} "${question.title}"?`)) return
+
+    setBusyId(question.id)
+    setMessage('')
+    try {
+      await setQuestionStatus(question.id, nextStatus)
+      await onChanged?.()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -48,14 +68,14 @@ export default function QuestionList({ questions, onQuestionDeleted }) {
                 <th>Type</th>
                 <th>Points</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {questions.map((question) => (
                 <tr key={question.id}>
                   <td>
-                    <strong>{question.courses?.code ?? '—'}</strong>
+                    <strong>{question.courses?.code ?? '-'}</strong>
                     <small>{question.modules?.code ?? 'General'}</small>
                   </td>
                   <td>
@@ -74,14 +94,43 @@ export default function QuestionList({ questions, onQuestionDeleted }) {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className="secondary"
-                      type="button"
-                      disabled={question.status !== 'draft' || deletingId === question.id}
-                      onClick={() => void handleDelete(question)}
-                    >
-                      {deletingId === question.id ? 'Deleting…' : 'Delete'}
-                    </button>
+                    <div className="question-actions">
+                      <button
+                        className="secondary"
+                        type="button"
+                        disabled={question.status !== 'draft' || busyId === question.id}
+                        title={
+                          question.status === 'draft'
+                            ? 'Edit this draft'
+                            : 'Unpublish this question before editing it'
+                        }
+                        onClick={() => onEdit(question)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className={`status-toggle-button ${
+                          question.status === 'published' ? 'secondary' : 'primary'
+                        }`}
+                        type="button"
+                        disabled={busyId === question.id}
+                        onClick={() => void handleStatusChange(question)}
+                      >
+                        {busyId === question.id
+                          ? 'Updating...'
+                          : question.status === 'published'
+                            ? 'Unpublish'
+                            : 'Publish'}
+                      </button>
+                      <button
+                        className="secondary"
+                        type="button"
+                        disabled={question.status !== 'draft' || busyId === question.id}
+                        onClick={() => void handleDelete(question)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

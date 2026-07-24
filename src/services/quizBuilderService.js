@@ -75,3 +75,12 @@ export async function deleteInstructorQuiz(quizId) {
   if (error) throw error
   return data
 }
+
+export async function setInstructorQuizStatus(quizId, status) {
+  const { data, error } = await supabase.rpc('set_instructor_quiz_status', {
+    p_quiz_id: quizId,
+    p_status: status,
+  })
+  if (error) throw error
+  return data
+}

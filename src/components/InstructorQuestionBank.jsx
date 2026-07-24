@@ -7,6 +7,7 @@ export default function InstructorQuestionBank({ user }) {
   const [questions, setQuestions] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [editingQuestion, setEditingQuestion] = useState(null)
 
   const loadQuestions = useCallback(async () => {
     try {
@@ -26,13 +27,26 @@ export default function InstructorQuestionBank({ user }) {
 
   return (
     <div className="instructor-question-bank">
-      <QuestionEditor user={user} onQuestionCreated={loadQuestions} />
+      <QuestionEditor
+        key={editingQuestion?.id ?? 'new'}
+        user={user}
+        question={editingQuestion}
+        onSaved={async () => {
+          setEditingQuestion(null)
+          await loadQuestions()
+        }}
+        onCancel={() => setEditingQuestion(null)}
+      />
       {loading ? (
         <section className="question-list">
-          <p>Loading question bank…</p>
+          <p>Loading question bank...</p>
         </section>
       ) : (
-        <QuestionList questions={questions} onQuestionDeleted={loadQuestions} />
+        <QuestionList
+          questions={questions}
+          onEdit={(question) => setEditingQuestion(question)}
+          onChanged={loadQuestions}
+        />
       )}
       {message && <p className="form-message form-message--error">{message}</p>}
     </div>

@@ -104,7 +104,7 @@ export default function InstructorQuizBuilder() {
         <InstructorQuizList
           quizzes={quizzes}
           onEdit={(quiz) => void startEditing(quiz)}
-          onDeleted={loadData}
+          onChanged={loadData}
         />
       )}
     </section>

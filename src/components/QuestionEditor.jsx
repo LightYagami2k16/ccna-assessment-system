@@ -3,6 +3,7 @@ import {
   createQuestion,
   getCourses,
   getModules,
+  updateQuestion,
 } from '../services/questionService'
 
 function newMultipleChoiceOptions() {
@@ -21,19 +22,39 @@ function trueFalseOptions() {
   ]
 }
 
-export default function QuestionEditor({ user, onQuestionCreated }) {
+function optionsForQuestion(question) {
+  if (!question) return newMultipleChoiceOptions()
+  return (question.question_options ?? []).map((option) => ({
+    optionText: option.option_text,
+    isCorrect: option.is_correct,
+  }))
+}
+
+export default function QuestionEditor({
+  user,
+  question = null,
+  onSaved,
+  onCancel,
+}) {
+  const isEditing = Boolean(question)
   const [courses, setCourses] = useState([])
   const [modules, setModules] = useState([])
-  const [courseId, setCourseId] = useState('')
-  const [moduleId, setModuleId] = useState('')
-  const [questionType, setQuestionType] = useState('multiple_choice')
-  const [title, setTitle] = useState('')
-  const [questionText, setQuestionText] = useState('')
-  const [explanation, setExplanation] = useState('')
-  const [points, setPoints] = useState(1)
-  const [difficulty, setDifficulty] = useState('beginner')
-  const [status, setStatus] = useState('draft')
-  const [options, setOptions] = useState(newMultipleChoiceOptions)
+  const [courseId, setCourseId] = useState(
+    question?.course_id ? String(question.course_id) : '',
+  )
+  const [moduleId, setModuleId] = useState(
+    question?.module_id ? String(question.module_id) : '',
+  )
+  const [questionType, setQuestionType] = useState(
+    question?.question_type ?? 'multiple_choice',
+  )
+  const [title, setTitle] = useState(question?.title ?? '')
+  const [questionText, setQuestionText] = useState(question?.question_text ?? '')
+  const [explanation, setExplanation] = useState(question?.explanation ?? '')
+  const [points, setPoints] = useState(question?.points ?? 1)
+  const [difficulty, setDifficulty] = useState(question?.difficulty ?? 'beginner')
+  const [status, setStatus] = useState(question?.status ?? 'draft')
+  const [options, setOptions] = useState(() => optionsForQuestion(question))
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -116,34 +137,34 @@ export default function QuestionEditor({ user, onQuestionCreated }) {
 
     setSubmitting(true)
     setMessage('')
-
     try {
-      await createQuestion({
-        courseId: Number(courseId),
-        moduleId,
-        createdBy: user.id,
-        questionType,
+      const commonValues = {
         title: title.trim(),
         questionText: questionText.trim(),
         explanation: explanation.trim(),
         points: Number(points),
         difficulty,
-        status,
         options,
-      })
+      }
 
-      setTitle('')
-      setQuestionText('')
-      setExplanation('')
-      setPoints(1)
-      setStatus('draft')
-      setOptions(
-        questionType === 'multiple_choice'
-          ? newMultipleChoiceOptions()
-          : trueFalseOptions(),
-      )
-      setMessage('Question created successfully.')
-      await onQuestionCreated?.()
+      if (isEditing) {
+        await updateQuestion({
+          id: question.id,
+          ...commonValues,
+        })
+      } else {
+        await createQuestion({
+          courseId: Number(courseId),
+          moduleId,
+          createdBy: user.id,
+          questionType,
+          status,
+          ...commonValues,
+        })
+      }
+
+      setMessage(isEditing ? 'Question updated successfully.' : 'Question created successfully.')
+      await onSaved?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -156,20 +177,31 @@ export default function QuestionEditor({ user, onQuestionCreated }) {
       <div className="section-heading">
         <div>
           <span className="eyebrow">INSTRUCTOR TOOLS</span>
-          <h2>Create question</h2>
+          <h2>{isEditing ? 'Edit draft question' : 'Create question'}</h2>
+          {isEditing && (
+            <p>
+              Editing is limited to drafts. Publish the question again after
+              reviewing your changes.
+            </p>
+          )}
         </div>
-        <span className="status-chip">Phase 1.2</span>
+        <span className="status-chip">Phase 1.4</span>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="form-grid">
           <label>
             Course
-            <select value={courseId} onChange={handleCourseChange} required>
+            <select
+              value={courseId}
+              onChange={handleCourseChange}
+              required
+              disabled={isEditing}
+            >
               <option value="">Select course</option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>
-                  {course.code} — {course.title}
+                  {course.code} - {course.title}
                 </option>
               ))}
             </select>
@@ -179,19 +211,23 @@ export default function QuestionEditor({ user, onQuestionCreated }) {
             <select
               value={moduleId}
               onChange={(event) => setModuleId(event.target.value)}
-              disabled={!courseId}
+              disabled={!courseId || isEditing}
             >
               <option value="">No specific module</option>
               {modules.map((module) => (
                 <option key={module.id} value={module.id}>
-                  {module.code} — {module.title}
+                  {module.code} - {module.title}
                 </option>
               ))}
             </select>
           </label>
           <label>
             Question type
-            <select value={questionType} onChange={handleQuestionTypeChange}>
+            <select
+              value={questionType}
+              onChange={handleQuestionTypeChange}
+              disabled={isEditing}
+            >
               <option value="multiple_choice">Multiple choice</option>
               <option value="true_false">True or false</option>
             </select>
@@ -278,16 +314,31 @@ export default function QuestionEditor({ user, onQuestionCreated }) {
           </label>
           <label>
             Status
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              disabled={isEditing}
+            >
               <option value="draft">Draft</option>
               <option value="published">Published</option>
             </select>
           </label>
         </div>
 
-        <button className="primary form-submit" type="submit" disabled={submitting}>
-          {submitting ? 'Saving question…' : 'Create question'}
-        </button>
+        <div className="question-editor__actions">
+          <button className="primary form-submit" type="submit" disabled={submitting}>
+            {submitting
+              ? 'Saving question...'
+              : isEditing
+                ? 'Save changes'
+                : 'Create question'}
+          </button>
+          {isEditing && (
+            <button className="secondary" type="button" onClick={onCancel}>
+              Cancel editing
+            </button>
+          )}
+        </div>
         {message && <p className="form-message">{message}</p>}
       </form>
     </section>

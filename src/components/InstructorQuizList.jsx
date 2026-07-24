@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { deleteInstructorQuiz } from '../services/quizBuilderService'
+import {
+  deleteInstructorQuiz,
+  setInstructorQuizStatus,
+} from '../services/quizBuilderService'
 
 function formatDate(value) {
   if (!value) return 'No limit'
@@ -9,22 +12,40 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function InstructorQuizList({ quizzes, onEdit, onDeleted }) {
+export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   const [deletingId, setDeletingId] = useState(null)
+  const [statusChangingId, setStatusChangingId] = useState(null)
   const [message, setMessage] = useState('')
 
   async function handleDelete(quiz) {
-    if (!window.confirm(`Delete the unused draft quiz “${quiz.title}”?`)) return
+    if (!window.confirm(`Delete the unused draft quiz "${quiz.title}"?`)) return
 
     setDeletingId(quiz.id)
     setMessage('')
     try {
       await deleteInstructorQuiz(quiz.id)
-      await onDeleted()
+      await onChanged()
     } catch (error) {
       setMessage(error.message)
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function handleStatusChange(quiz) {
+    const nextStatus = quiz.status === 'published' ? 'draft' : 'published'
+    const verb = nextStatus === 'published' ? 'Publish' : 'Unpublish'
+    if (!window.confirm(`${verb} "${quiz.title}"?`)) return
+
+    setStatusChangingId(quiz.id)
+    setMessage('')
+    try {
+      await setInstructorQuizStatus(quiz.id, nextStatus)
+      await onChanged()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setStatusChangingId(null)
     }
   }
 
@@ -81,12 +102,26 @@ export default function InstructorQuizList({ quizzes, onEdit, onDeleted }) {
                   Edit quiz
                 </button>
                 <button
+                  className={`status-toggle-button ${
+                    quiz.status === 'published' ? 'secondary' : 'primary'
+                  }`}
+                  type="button"
+                  disabled={statusChangingId === quiz.id}
+                  onClick={() => void handleStatusChange(quiz)}
+                >
+                  {statusChangingId === quiz.id
+                    ? 'Updating...'
+                    : quiz.status === 'published'
+                      ? 'Unpublish'
+                      : 'Publish'}
+                </button>
+                <button
                   className="secondary"
                   type="button"
                   disabled={quiz.status !== 'draft' || deletingId === quiz.id}
                   onClick={() => void handleDelete(quiz)}
                 >
-                  {deletingId === quiz.id ? 'Deleting…' : 'Delete draft'}
+                  {deletingId === quiz.id ? 'Deleting...' : 'Delete draft'}
                 </button>
               </div>
             </article>
