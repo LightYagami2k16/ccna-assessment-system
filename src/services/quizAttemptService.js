@@ -1,5 +1,14 @@
 import { supabase } from '../lib/supabase'
 
+function stableOrderValue(value) {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
 export async function getAvailableQuizzes() {
   const { data, error } = await supabase
     .from('quizzes')
@@ -53,6 +62,28 @@ export async function getQuizAttempt(attemptId) {
     p_attempt_id: attemptId,
   })
   if (error) throw error
+
+  if (data?.attempt?.quizId) {
+    const { data: quizSettings, error: settingsError } = await supabase
+      .from('quizzes')
+      .select('randomize_options')
+      .eq('id', data.attempt.quizId)
+      .single()
+
+    if (settingsError) throw settingsError
+
+    if (quizSettings.randomize_options) {
+      data.questions = (data.questions ?? []).map((question) => ({
+        ...question,
+        options: [...(question.options ?? [])].sort(
+          (left, right) =>
+            stableOrderValue(`${attemptId}:${question.questionId}:${left.id}`) -
+            stableOrderValue(`${attemptId}:${question.questionId}:${right.id}`),
+        ),
+      }))
+    }
+  }
+
   return data
 }
 
