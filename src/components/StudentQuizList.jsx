@@ -111,6 +111,9 @@ export default function StudentQuizList({ onOpenAttempt }) {
                   <span>{quiz.modules?.code ?? 'General'}</span>
                 </div>
                 <h3>{quiz.title}</h3>
+                {quiz.access_mode === 'assigned_classes' && (
+                  <span className="assignment-badge">Assigned to your class</span>
+                )}
                 <p>{quiz.description || 'No description provided.'}</p>
                 <dl className="student-quiz-card__details">
                   <div>

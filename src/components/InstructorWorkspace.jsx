@@ -2,6 +2,7 @@ import { useState } from 'react'
 import InstructorQuestionBank from './InstructorQuestionBank'
 import InstructorQuizBuilder from './InstructorQuizBuilder'
 import InstructorResultsDashboard from './InstructorResultsDashboard'
+import InstructorClassAssignments from './InstructorClassAssignments'
 
 export default function InstructorWorkspace({ user }) {
   const [activeSection, setActiveSection] = useState('questions')
@@ -24,6 +25,13 @@ export default function InstructorWorkspace({ user }) {
           Quizzes
         </button>
         <button
+          className={activeSection === 'assignments' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+          type="button"
+          onClick={() => setActiveSection('assignments')}
+        >
+          Classes & assignments
+        </button>
+        <button
           className={activeSection === 'results' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
           type="button"
           onClick={() => setActiveSection('results')}
@@ -34,6 +42,7 @@ export default function InstructorWorkspace({ user }) {
 
       {activeSection === 'questions' && <InstructorQuestionBank user={user} />}
       {activeSection === 'quizzes' && <InstructorQuizBuilder />}
+      {activeSection === 'assignments' && <InstructorClassAssignments />}
       {activeSection === 'results' && <InstructorResultsDashboard />}
     </div>
   )

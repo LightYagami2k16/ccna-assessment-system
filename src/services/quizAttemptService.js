@@ -10,30 +10,13 @@ function stableOrderValue(value) {
 }
 
 export async function getAvailableQuizzes() {
-  const { data, error } = await supabase
-    .from('quizzes')
-    .select(`
-      id, title, description, instructions, duration_minutes, max_attempts,
-      passing_score, available_from, available_until, show_results_immediately,
-      randomize_questions, randomize_options, created_at,
-      courses (id, code, title),
-      modules (id, code, title)
-    `)
-    .eq('status', 'published')
-    .order('created_at', { ascending: false })
+  const { data, error } = await supabase.rpc(
+    'get_available_quizzes_for_student',
+  )
 
   if (error) throw error
 
-  const now = Date.now()
-  return (data ?? []).filter((quiz) => {
-    const startsAt = quiz.available_from
-      ? new Date(quiz.available_from).getTime()
-      : null
-    const endsAt = quiz.available_until
-      ? new Date(quiz.available_until).getTime()
-      : null
-    return (!startsAt || startsAt <= now) && (!endsAt || endsAt >= now)
-  })
+  return data ?? []
 }
 
 export async function getStudentAttempts() {
@@ -45,6 +28,17 @@ export async function getStudentAttempts() {
     `)
     .order('started_at', { ascending: false })
 
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getStudentRecentResults(limit = 10) {
+  const { data, error } = await supabase.rpc(
+    'get_student_recent_quiz_results',
+    {
+      p_limit: limit,
+    },
+  )
   if (error) throw error
   return data ?? []
 }
