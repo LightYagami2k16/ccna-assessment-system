@@ -43,6 +43,26 @@ export async function getStudentRecentResults(limit = 10) {
   return data ?? []
 }
 
+export async function getStudentQuizArchiveStatuses() {
+  const { data, error } = await supabase.rpc(
+    'get_student_quiz_archive_statuses',
+  )
+  if (error) throw error
+  return data ?? []
+}
+
+export async function setStudentQuizArchived(quizId, archived) {
+  const { data, error } = await supabase.rpc(
+    'set_student_quiz_archived',
+    {
+      p_quiz_id: quizId,
+      p_archived: archived,
+    },
+  )
+  if (error) throw error
+  return data
+}
+
 export async function startQuizAttempt(quizId) {
   const { data, error } = await supabase.rpc('start_quiz_attempt', {
     p_quiz_id: quizId,

@@ -14,6 +14,8 @@ export async function getInstructorQuizzes() {
       passing_score,
       randomize_questions,
       randomize_options,
+      question_selection_mode,
+      random_question_count,
       duration_minutes,
       max_attempts,
       show_results_immediately,
@@ -76,11 +78,33 @@ export async function deleteInstructorQuiz(quizId) {
   return data
 }
 
+export async function deleteInstructorQuizzes(quizIds) {
+  const { data, error } = await supabase.rpc(
+    'delete_instructor_quizzes_bulk',
+    { p_quiz_ids: quizIds },
+  )
+
+  if (error) throw error
+  return data
+}
+
 export async function setInstructorQuizStatus(quizId, status) {
   const { data, error } = await supabase.rpc('set_instructor_quiz_status', {
     p_quiz_id: quizId,
     p_status: status,
   })
+  if (error) throw error
+  return data
+}
+
+export async function setInstructorQuizzesStatus(quizIds, status) {
+  const { data, error } = await supabase.rpc(
+    'set_instructor_quizzes_status_bulk',
+    {
+      p_quiz_ids: quizIds,
+      p_status: status,
+    },
+  )
   if (error) throw error
   return data
 }

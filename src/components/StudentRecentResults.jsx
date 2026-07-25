@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getStudentRecentResults } from '../services/quizAttemptService'
+import {
+  getStudentQuizArchiveStatuses,
+  getStudentRecentResults,
+  setStudentQuizArchived,
+} from '../services/quizAttemptService'
 
 function formatDate(value) {
   if (!value) return 'Not recorded'
@@ -9,16 +13,23 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function StudentRecentResults() {
+export default function StudentRecentResults({ onRestored }) {
   const [results, setResults] = useState([])
+  const [archiveStatuses, setArchiveStatuses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [restoringQuizId, setRestoringQuizId] = useState(null)
   const [message, setMessage] = useState('')
 
   const loadResults = useCallback(async () => {
     try {
       setLoading(true)
       setMessage('')
-      setResults(await getStudentRecentResults(50))
+      const [resultData, archiveData] = await Promise.all([
+        getStudentRecentResults(50),
+        getStudentQuizArchiveStatuses(),
+      ])
+      setResults(resultData)
+      setArchiveStatuses(archiveData)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -32,6 +43,9 @@ export default function StudentRecentResults() {
 
   const resultsByQuiz = useMemo(() => {
     const groups = new Map()
+    const statusByQuiz = Object.fromEntries(
+      archiveStatuses.map((status) => [status.quizId, status]),
+    )
 
     for (const result of results) {
       if (!groups.has(result.quizId)) {
@@ -43,36 +57,64 @@ export default function StudentRecentResults() {
           attempts: [],
         })
       }
-
       groups.get(result.quizId).attempts.push(result)
     }
 
     return Array.from(groups.values())
-  }, [results])
+      .map((group) => ({
+        ...group,
+        lifecycle: statusByQuiz[group.quizId],
+      }))
+      .filter(
+        (group) =>
+          group.lifecycle?.archived ||
+          group.lifecycle?.attemptsRemaining === 0,
+      )
+  }, [archiveStatuses, results])
+
+  async function handleRestore(quizId) {
+    try {
+      setRestoringQuizId(quizId)
+      setMessage('')
+      await setStudentQuizArchived(quizId, false)
+      onRestored?.()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setRestoringQuizId(null)
+    }
+  }
 
   return (
     <section className="student-recent-results">
       <div className="section-heading">
         <div>
           <span className="eyebrow">MY PERFORMANCE</span>
-          <h2>Recent quiz results</h2>
+          <h2>Quiz history</h2>
           <p>
-            Completed attempts are grouped by quiz, with the newest attempt
-            shown first.
+            Archived quizzes and quizzes with no attempts remaining are
+            grouped here. Restore an archived quiz whenever attempts remain.
           </p>
         </div>
-        <button className="secondary" type="button" onClick={() => void loadResults()}>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() => void loadResults()}
+        >
           Refresh results
         </button>
       </div>
 
       {message && <p className="form-message form-message--error">{message}</p>}
       {loading ? (
-        <p>Loading recent results...</p>
-      ) : !results.length ? (
+        <p>Loading quiz history...</p>
+      ) : !resultsByQuiz.length ? (
         <div className="empty-state">
-          <h3>No completed quizzes yet</h3>
-          <p>Your results will appear here after you submit a quiz.</p>
+          <h3>No quizzes in history</h3>
+          <p>
+            Complete a quiz and archive it, or use all available attempts,
+            to place it here.
+          </p>
         </div>
       ) : (
         <div className="recent-result-groups">
@@ -86,10 +128,34 @@ export default function StudentRecentResults() {
                   </span>
                   <h3>{group.quizTitle}</h3>
                 </div>
-                <span className="status-chip">
-                  {group.attempts.length}{' '}
-                  {group.attempts.length === 1 ? 'attempt' : 'attempts'}
-                </span>
+
+                <div className="recent-result-group__actions">
+                  <div className="recent-result-group__summary">
+                    <span className="status-chip">
+                      {group.attempts.length}{' '}
+                      {group.attempts.length === 1 ? 'result' : 'results'}
+                    </span>
+                    <span className="attempts-remaining">
+                      {group.lifecycle?.attemptsRemaining ?? 0} attempts
+                      remaining
+                    </span>
+                  </div>
+
+                  {group.lifecycle?.archived &&
+                    group.lifecycle?.attemptsRemaining > 0 &&
+                    !group.lifecycle?.hasActiveAttempt && (
+                      <button
+                        className="secondary"
+                        type="button"
+                        disabled={restoringQuizId === group.quizId}
+                        onClick={() => void handleRestore(group.quizId)}
+                      >
+                        {restoringQuizId === group.quizId
+                          ? 'Restoring...'
+                          : 'Restore to available'}
+                      </button>
+                    )}
+                </div>
               </header>
 
               <div className="recent-attempt-table-wrapper">
@@ -113,7 +179,9 @@ export default function StudentRecentResults() {
                         </td>
                         <td>
                           <div className="recent-attempt-score">
-                            <strong>{Number(result.percentage).toFixed(2)}%</strong>
+                            <strong>
+                              {Number(result.percentage).toFixed(2)}%
+                            </strong>
                             <small>
                               {Number(result.scorePoints)} of{' '}
                               {Number(result.maximumPoints)} points

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import QuestionEditor from './QuestionEditor'
 import QuestionList from './QuestionList'
+import InstructorModuleManager from './InstructorModuleManager'
 import { getInstructorQuestions } from '../services/questionService'
 
 export default function InstructorQuestionBank({ user }) {
@@ -8,6 +9,7 @@ export default function InstructorQuestionBank({ user }) {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [editingQuestion, setEditingQuestion] = useState(null)
+  const [moduleVersion, setModuleVersion] = useState(0)
 
   const loadQuestions = useCallback(async () => {
     try {
@@ -27,8 +29,13 @@ export default function InstructorQuestionBank({ user }) {
 
   return (
     <div className="instructor-question-bank">
+      <InstructorModuleManager
+        onChanged={() =>
+          setModuleVersion((current) => current + 1)
+        }
+      />
       <QuestionEditor
-        key={editingQuestion?.id ?? 'new'}
+        key={`${editingQuestion?.id ?? 'new'}-${moduleVersion}`}
         user={user}
         question={editingQuestion}
         onSaved={async () => {

@@ -8,6 +8,15 @@ import {
 import QuizTimer from './QuizTimer';
 import QuizResult from './QuizResult';
 import useExamIntegrityMonitor from '../hooks/useExamIntegrityMonitor';
+import {
+  cachePendingAnswer,
+  clearAttemptCache,
+  getAttemptSnapshot,
+  getPendingAnswers,
+  markPendingAnswerSynced,
+  saveAttemptSnapshot,
+  updateSnapshotAnswer
+} from '../services/quizAnswerCache';
 
 import {
   getQuizAttempt,
@@ -71,7 +80,22 @@ export default function QuizPlayer({
       setLoading(true);
       setPageMessage('');
 
-      const data = await getQuizAttempt(attemptId);
+      let data;
+
+      try {
+        data = await getQuizAttempt(attemptId);
+        saveAttemptSnapshot(attemptId, data);
+      } catch (error) {
+        data = getAttemptSnapshot(attemptId);
+
+        if (!data) {
+          throw error;
+        }
+
+        setPageMessage(
+          'You are offline. A saved copy of this attempt was restored from this device.'
+        );
+      }
 
       setAttemptData(data);
 
@@ -83,6 +107,21 @@ export default function QuizPlayer({
             question.attemptQuestionId
           ] = question.selectedOptionId;
         }
+      }
+
+      const pendingAnswers = getPendingAnswers(attemptId);
+
+      for (const [
+        attemptQuestionId,
+        pendingAnswer
+      ] of Object.entries(pendingAnswers)) {
+        restoredAnswers[attemptQuestionId] =
+          pendingAnswer.selectedOptionId;
+        updateSnapshotAnswer(
+          attemptId,
+          attemptQuestionId,
+          pendingAnswer.selectedOptionId
+        );
       }
 
       setSelectedAnswers(restoredAnswers);
@@ -126,6 +165,71 @@ export default function QuizPlayer({
     );
   }, [answeredCount, questions.length]);
 
+  const syncPendingAnswers = useCallback(async () => {
+    const pendingAnswers = getPendingAnswers(attemptId);
+    const pendingEntries = Object.entries(pendingAnswers);
+
+    if (!pendingEntries.length) {
+      return true;
+    }
+
+    if (!navigator.onLine) {
+      setSaveMessage(
+        'Offline: answers are saved on this device and will sync after reconnection.'
+      );
+      return false;
+    }
+
+    setSaveMessage(
+      `Synchronizing ${pendingEntries.length} saved answer(s)...`
+    );
+
+    for (const [
+      attemptQuestionId,
+      pendingAnswer
+    ] of pendingEntries) {
+      try {
+        await saveQuizAnswer({
+          attemptId,
+          attemptQuestionId,
+          selectedOptionId:
+            pendingAnswer.selectedOptionId
+        });
+        markPendingAnswerSynced(
+          attemptId,
+          attemptQuestionId
+        );
+      } catch {
+        setSaveMessage(
+          'Some answers are still saved on this device and will retry automatically.'
+        );
+        return false;
+      }
+    }
+
+    setSaveMessage('All saved answers are synchronized.');
+    return true;
+  }, [attemptId]);
+
+  useEffect(() => {
+    function handleOnline() {
+      void syncPendingAnswers();
+    }
+
+    window.addEventListener('online', handleOnline);
+
+    if (
+      attemptData?.attempt?.status === 'in_progress' &&
+      navigator.onLine
+    ) {
+      void syncPendingAnswers();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [attemptData?.attempt?.status, syncPendingAnswers]);
+
   const performSubmission = useCallback(
     async ({ skipConfirmation = false } = {}) => {
       if (submitting || result) {
@@ -154,9 +258,20 @@ export default function QuizPlayer({
         setSubmitting(true);
         setPageMessage('');
 
+        const answersSynchronized =
+          await syncPendingAnswers();
+
+        if (!answersSynchronized) {
+          setPageMessage(
+            'Your answers are saved on this device, but submission must wait until they synchronize.'
+          );
+          return;
+        }
+
         const submissionResult =
           await submitQuizAttempt(attemptId);
 
+        clearAttemptCache(attemptId);
         setResult(submissionResult);
       } catch (error) {
         const errorMessage =
@@ -185,7 +300,8 @@ export default function QuizPlayer({
       loadAttempt,
       questions.length,
       result,
-      submitting
+      submitting,
+      syncPendingAnswers
     ]
   );
 
@@ -211,8 +327,16 @@ export default function QuizPlayer({
     const attemptQuestionId =
       currentQuestion.attemptQuestionId;
 
-    const previousOption =
-      selectedAnswers[attemptQuestionId] ?? null;
+    cachePendingAnswer(
+      attemptId,
+      attemptQuestionId,
+      optionId
+    );
+    updateSnapshotAnswer(
+      attemptId,
+      attemptQuestionId,
+      optionId
+    );
 
     setSelectedAnswers((currentAnswers) => ({
       ...currentAnswers,
@@ -229,15 +353,18 @@ export default function QuizPlayer({
         selectedOptionId: optionId
       });
 
+      markPendingAnswerSynced(
+        attemptId,
+        attemptQuestionId
+      );
       setSaveMessage('Answer saved.');
     } catch (error) {
-      setSelectedAnswers((currentAnswers) => ({
-        ...currentAnswers,
-        [attemptQuestionId]: previousOption
-      }));
-
       setSaveMessage(
-        error?.message ?? 'Unable to save answer.'
+        navigator.onLine
+          ? `${
+              error?.message ?? 'Unable to reach the server.'
+            } The answer remains saved on this device.`
+          : 'Offline: the answer is saved on this device and will sync automatically.'
       );
     } finally {
       setSavingQuestionId(null);

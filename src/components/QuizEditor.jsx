@@ -36,6 +36,12 @@ export default function QuizEditor({
   const [randomizeOptions, setRandomizeOptions] = useState(
     quiz?.randomize_options ?? false,
   )
+  const [questionSelectionMode, setQuestionSelectionMode] = useState(
+    quiz?.question_selection_mode ?? 'manual',
+  )
+  const [automaticRandomCount, setAutomaticRandomCount] = useState(
+    quiz?.random_question_count ?? 10,
+  )
   const [availableFrom, setAvailableFrom] = useState(
     toLocalDateTime(quiz?.available_from),
   )
@@ -45,6 +51,7 @@ export default function QuizEditor({
   const [selectedQuestionIds, setSelectedQuestionIds] = useState(
     () => quiz?.quiz_questions?.map((item) => item.question_id) ?? [],
   )
+  const [manualRandomCount, setManualRandomCount] = useState(1)
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -66,6 +73,14 @@ export default function QuizEditor({
     [questions, selectedQuestionIds],
   )
 
+  const eligiblePublishedQuestions = useMemo(
+    () =>
+      eligibleQuestions.filter(
+        (question) => question.status === 'published',
+      ),
+    [eligibleQuestions],
+  )
+
   function handleCourseSelection(event) {
     const nextCourseId = event.target.value
     setCourseId(nextCourseId)
@@ -80,6 +95,54 @@ export default function QuizEditor({
         ? current.filter((id) => id !== questionId)
         : [...current, questionId],
     )
+  }
+
+  function selectAllEligibleQuestions() {
+    setSelectedQuestionIds(
+      eligibleQuestions.map((question) => question.id),
+    )
+    setMessage('')
+  }
+
+  function clearSelectedQuestions() {
+    setSelectedQuestionIds([])
+    setMessage('')
+  }
+
+  function selectRandomQuestions() {
+    const requestedCount = Number(manualRandomCount)
+
+    if (
+      !Number.isInteger(requestedCount) ||
+      requestedCount < 1 ||
+      requestedCount > eligibleQuestions.length
+    ) {
+      setMessage(
+        `Enter a number from 1 to ${eligibleQuestions.length}.`,
+      )
+      return
+    }
+
+    const shuffledQuestions = [...eligibleQuestions]
+
+    for (
+      let index = shuffledQuestions.length - 1;
+      index > 0;
+      index -= 1
+    ) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      ;[shuffledQuestions[index], shuffledQuestions[randomIndex]] = [
+        shuffledQuestions[randomIndex],
+        shuffledQuestions[index],
+      ]
+    }
+
+    setSelectedQuestionIds(
+      shuffledQuestions
+        .slice(0, requestedCount)
+        .map((question) => question.id),
+    )
+    setMessage('')
   }
 
   function moveQuestion(index, direction) {
@@ -107,14 +170,29 @@ export default function QuizEditor({
     if (Number(passingScore) < 0 || Number(passingScore) > 100) {
       return 'Passing score must be between 0 and 100.'
     }
-    if (status === 'published' && selectedQuestionIds.length === 0) {
+    if (
+      questionSelectionMode === 'manual' &&
+      status === 'published' &&
+      selectedQuestionIds.length === 0
+    ) {
       return 'Select at least one question before publishing.'
     }
     if (
+      questionSelectionMode === 'manual' &&
       status === 'published' &&
       selectedQuestions.some((question) => question.status !== 'published')
     ) {
       return 'Every selected question must be published first.'
+    }
+    if (
+      questionSelectionMode === 'random_database' &&
+      (
+        !Number.isInteger(Number(automaticRandomCount)) ||
+        Number(automaticRandomCount) < 1 ||
+        Number(automaticRandomCount) > eligiblePublishedQuestions.length
+      )
+    ) {
+      return `Automatic random count must be between 1 and ${eligiblePublishedQuestions.length}.`
     }
     if (
       availableFrom &&
@@ -150,10 +228,15 @@ export default function QuizEditor({
         status,
         randomizeQuestions,
         randomizeOptions,
+        questionSelectionMode,
+        randomQuestionCount: Number(automaticRandomCount),
         showResultsImmediately: true,
         availableFrom: toIsoDateTime(availableFrom),
         availableUntil: toIsoDateTime(availableUntil),
-        questionIds: selectedQuestionIds,
+        questionIds:
+          questionSelectionMode === 'manual'
+            ? selectedQuestionIds
+            : [],
       })
       await onSaved(quizId)
     } catch (error) {
@@ -310,6 +393,99 @@ export default function QuizEditor({
           </label>
         </div>
 
+        <section className="question-selection-mode">
+          <div>
+            <h3>Question selection method</h3>
+            <p>
+              Choose a fixed question set or let the server create a
+              different random set for each attempt.
+            </p>
+          </div>
+          <div className="question-selection-mode__options">
+            <label
+              className={
+                questionSelectionMode === 'manual'
+                  ? 'selection-mode-card selection-mode-card--selected'
+                  : 'selection-mode-card'
+              }
+            >
+              <input
+                type="radio"
+                name="question-selection-mode"
+                value="manual"
+                checked={questionSelectionMode === 'manual'}
+                onChange={(event) =>
+                  setQuestionSelectionMode(event.target.value)
+                }
+              />
+              <span>
+                <strong>Manual question set</strong>
+                <small>
+                  Select specific questions, select all, or make a
+                  one-time random selection now.
+                </small>
+              </span>
+            </label>
+            <label
+              className={
+                questionSelectionMode === 'random_database'
+                  ? 'selection-mode-card selection-mode-card--selected'
+                  : 'selection-mode-card'
+              }
+            >
+              <input
+                type="radio"
+                name="question-selection-mode"
+                value="random_database"
+                checked={questionSelectionMode === 'random_database'}
+                onChange={(event) =>
+                  setQuestionSelectionMode(event.target.value)
+                }
+              />
+              <span>
+                <strong>Automatic random database set</strong>
+                <small>
+                  Supabase selects a fresh random subset when each
+                  student begins an attempt.
+                </small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        {questionSelectionMode === 'random_database' && (
+          <section className="automatic-question-pool">
+            <div>
+              <h3>Automatic random question pool</h3>
+              <p>
+                {eligiblePublishedQuestions.length} published question(s)
+                are currently eligible for this course and module.
+              </p>
+            </div>
+            <label>
+              Questions per student attempt
+              <input
+                type="number"
+                min="1"
+                max={Math.max(1, eligiblePublishedQuestions.length)}
+                value={automaticRandomCount}
+                onChange={(event) =>
+                  setAutomaticRandomCount(event.target.value)
+                }
+              />
+            </label>
+            <div className="assignment-requirement">
+              <strong>Per-attempt selection</strong>
+              <p>
+                Question IDs are selected securely by Supabase when the
+                attempt starts. Students do not receive the complete
+                question pool.
+              </p>
+            </div>
+          </section>
+        )}
+
+        {questionSelectionMode === 'manual' && (
         <section className="quiz-question-selector">
           <div className="section-heading">
             <div>
@@ -324,6 +500,49 @@ export default function QuizEditor({
               No eligible questions were found for this course and module.
             </div>
           ) : (
+            <>
+              <div className="question-selection-tools">
+                <div className="question-selection-tools__bulk">
+                  <button
+                    className="secondary"
+                    type="button"
+                    onClick={selectAllEligibleQuestions}
+                  >
+                    Select all ({eligibleQuestions.length})
+                  </button>
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={!selectedQuestionIds.length}
+                    onClick={clearSelectedQuestions}
+                  >
+                    Clear selection
+                  </button>
+                </div>
+
+                <div className="question-selection-tools__random">
+                  <label>
+                    Random question count
+                    <input
+                      type="number"
+                      min="1"
+                      max={eligibleQuestions.length}
+                      value={manualRandomCount}
+                      onChange={(event) =>
+                        setManualRandomCount(event.target.value)
+                      }
+                    />
+                  </label>
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={selectRandomQuestions}
+                  >
+                    Pick randomly
+                  </button>
+                </div>
+              </div>
+
             <div className="question-picker-list">
               {eligibleQuestions.map((question) => (
                 <label className="question-picker-row" key={question.id}>
@@ -343,10 +562,12 @@ export default function QuizEditor({
                 </label>
               ))}
             </div>
+            </>
           )}
         </section>
+        )}
 
-        {selectedQuestions.length > 0 && (
+        {questionSelectionMode === 'manual' && selectedQuestions.length > 0 && (
           <section className="selected-question-order">
             <h3>Question order</h3>
             {selectedQuestions.map((question, index) => (

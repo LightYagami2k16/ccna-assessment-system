@@ -119,6 +119,15 @@ export async function deleteQuestion(questionId) {
   if (error) throw error
 }
 
+export async function deleteQuestions(questionIds) {
+  const { data, error } = await supabase.rpc(
+    'delete_instructor_questions_bulk',
+    { p_question_ids: questionIds },
+  )
+  if (error) throw error
+  return data
+}
+
 export async function updateQuestion(payload) {
   const { data, error } = await supabase.rpc('update_instructor_question', {
     p_payload: payload,
@@ -132,6 +141,18 @@ export async function setQuestionStatus(questionId, status) {
     'set_instructor_question_status',
     {
       p_question_id: questionId,
+      p_status: status,
+    },
+  )
+  if (error) throw error
+  return data
+}
+
+export async function setQuestionsStatus(questionIds, status) {
+  const { data, error } = await supabase.rpc(
+    'set_instructor_questions_status_bulk',
+    {
+      p_question_ids: questionIds,
       p_status: status,
     },
   )

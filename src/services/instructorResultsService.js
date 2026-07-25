@@ -14,3 +14,12 @@ export async function getInstructorAttemptDetail(attemptId) {
   if (error) throw error
   return data
 }
+
+export async function resetInstructorAttempts(attemptIds) {
+  const { data, error } = await supabase.rpc(
+    'reset_instructor_quiz_attempts',
+    { p_attempt_ids: attemptIds },
+  )
+  if (error) throw error
+  return data
+}

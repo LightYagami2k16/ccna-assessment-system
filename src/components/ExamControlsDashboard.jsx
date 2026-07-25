@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   deleteStudentQuizAccommodation,
   getExamControlsWorkspace,
@@ -70,9 +70,8 @@ function AssignmentScheduleCard({ assignment, onSaved }) {
 
   return (
     <article className="schedule-card">
-      <span className="course-code">{assignment.classCode}</span>
+      <span className="course-code">QUIZ SCHEDULE</span>
       <h3>{assignment.quizTitle}</h3>
-      <p>{assignment.className}</p>
       <label>
         Opens
         <input
@@ -243,6 +242,35 @@ export default function ExamControlsDashboard() {
     return () => window.clearInterval(intervalId)
   }, [loadWorkspace])
 
+  const assignmentsByClass = useMemo(() => {
+    const groups = new Map()
+
+    for (const assignment of workspace.assignments) {
+      if (!groups.has(assignment.classId)) {
+        groups.set(assignment.classId, {
+          classId: assignment.classId,
+          classCode: assignment.classCode,
+          className: assignment.className,
+          assignments: [],
+        })
+      }
+
+      groups.get(assignment.classId).assignments.push(assignment)
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        assignments: [...group.assignments].sort((left, right) =>
+          left.quizTitle.localeCompare(right.quizTitle),
+        ),
+      }))
+      .sort((left, right) => {
+        const nameComparison = left.className.localeCompare(right.className)
+        return nameComparison || left.classCode.localeCompare(right.classCode)
+      })
+  }, [workspace.assignments])
+
   async function handleDelete(accommodation) {
     if (!window.confirm(`Remove the accommodation for ${accommodation.studentName}?`)) return
     setBusyId(accommodation.id)
@@ -289,13 +317,37 @@ export default function ExamControlsDashboard() {
             <p>Assign a quiz to a class before setting its schedule.</p>
           </div>
         ) : (
-          <div className="schedule-card-grid">
-            {workspace.assignments.map((assignment) => (
-              <AssignmentScheduleCard
-                key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
-                assignment={assignment}
-                onSaved={loadWorkspace}
-              />
+          <div className="assignment-class-groups">
+            {assignmentsByClass.map((classGroup) => (
+              <section
+                className="assignment-class-group"
+                key={classGroup.classId}
+              >
+                <header className="assignment-class-group__heading">
+                  <div>
+                    <span className="course-code">
+                      {classGroup.classCode}
+                    </span>
+                    <h3>{classGroup.className}</h3>
+                  </div>
+                  <span className="status-chip">
+                    {classGroup.assignments.length}{' '}
+                    {classGroup.assignments.length === 1
+                      ? 'quiz'
+                      : 'quizzes'}
+                  </span>
+                </header>
+
+                <div className="schedule-card-grid">
+                  {classGroup.assignments.map((assignment) => (
+                    <AssignmentScheduleCard
+                      key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
+                      assignment={assignment}
+                      onSaved={loadWorkspace}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}
