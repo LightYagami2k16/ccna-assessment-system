@@ -1030,3 +1030,131 @@ footer {
     width: 100%;
   }
 }
+
+/* Keep course cards independent when one course opens its module editor */
+.module-course-groups {
+  align-items: start;
+}
+
+.module-course-group,
+.module-course-group--collapsed,
+.module-course-group--expanded,
+.module-course-group--editing {
+  align-self: start;
+  height: auto;
+}
+
+/* Preserve equal dimensions only while cards are collapsed */
+.module-course-group--collapsed {
+  min-height: 164px;
+}
+
+.module-course-group--collapsed > header {
+  min-height: 132px;
+}
+
+.module-course-group--collapsed .module-course-group__identity {
+  min-height: 74px;
+}
+
+/* Expanded/editing cards grow only according to their own content */
+.module-course-group--expanded,
+.module-course-group--editing {
+  min-height: 0;
+}
+
+.module-course-group--expanded > header,
+.module-course-group--editing > header,
+.module-course-group--expanded .module-course-group__identity,
+.module-course-group--editing .module-course-group__identity {
+  min-height: 0;
+}
+
+@media (max-width: 680px) {
+  .module-course-group--collapsed,
+  .module-course-group--collapsed > header,
+  .module-course-group--collapsed .module-course-group__identity {
+    min-height: 0;
+  }
+}
+
+/* Keep all displayed collapsed course cards the same size */
+.module-course-groups {
+  grid-auto-rows: auto;
+  align-items: start;
+}
+
+.module-course-group--collapsed {
+  width: 100%;
+  min-height: 164px;
+}
+
+.module-course-group--collapsed > header {
+  display: flex;
+  flex-direction: column;
+  min-height: 132px;
+}
+
+.module-course-group--collapsed .module-course-group__identity {
+  min-height: 74px;
+}
+
+.module-course-group--collapsed .module-course-group__controls {
+  margin-top: auto;
+}
+
+/* Expanded and editing cards remain independent */
+.module-course-group--expanded,
+.module-course-group--editing {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  align-self: start;
+}
+
+@media (max-width: 680px) {
+  .module-course-group--collapsed,
+  .module-course-group--collapsed > header,
+  .module-course-group--collapsed .module-course-group__identity {
+    min-height: 0;
+  }
+}
+
+/* Final display-only fix: equal visible size for collapsed course cards */
+.module-course-group--collapsed {
+  height: 184px;
+  min-height: 184px;
+  max-height: 184px;
+}
+
+.module-course-group--collapsed > header {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.module-course-group--collapsed .module-course-group__identity {
+  min-height: 0;
+}
+
+.module-course-group--collapsed .module-course-group__controls {
+  margin-top: auto;
+}
+
+/* Expanded or editing cards continue to size independently */
+.module-course-group--expanded,
+.module-course-group--editing {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+@media (max-width: 680px) {
+  .module-course-group--collapsed {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
