@@ -145,6 +145,7 @@ export default function InstructorResultsDashboard() {
   const [messageIsError, setMessageIsError] = useState(false)
   const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('all')
+  const [exportClassId, setExportClassId] = useState('all')
   const [courseFilter, setCourseFilter] = useState('all')
   const [quizFilter, setQuizFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -220,6 +221,18 @@ export default function InstructorResultsDashboard() {
         ),
       ].sort(),
     [attempts],
+  )
+
+  const exportAttempts = useMemo(
+    () =>
+      exportClassId === 'all'
+        ? attempts
+        : attempts.filter(
+            (attempt) =>
+              (attempt.classId || 'unassigned') ===
+              exportClassId,
+          ),
+    [attempts, exportClassId],
   )
 
   const quizzes = useMemo(
@@ -337,7 +350,7 @@ export default function InstructorResultsDashboard() {
   }
 
   function handleExportCsv() {
-    if (!filteredAttempts.length) return
+    if (!exportAttempts.length) return
 
     const headers = [
       'Class Code',
@@ -361,7 +374,7 @@ export default function InstructorResultsDashboard() {
       'Time Used Seconds',
     ]
 
-    const rows = filteredAttempts.map((attempt) => [
+    const rows = exportAttempts.map((attempt) => [
       attempt.classCode,
       attempt.className,
       attempt.academicTerm,
@@ -397,9 +410,20 @@ export default function InstructorResultsDashboard() {
       .toISOString()
       .replaceAll(':', '-')
       .replace(/\.\d{3}Z$/, 'Z')
+    const selectedClassName =
+      exportClassId === 'all'
+        ? 'all-classes'
+        : classes.find(
+            ([classId]) => classId === exportClassId,
+          )?.[1] || 'selected-class'
+    const safeClassName = selectedClassName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
 
     link.href = downloadUrl
-    link.download = `ccna-student-results-${timestamp}.csv`
+    link.download =
+      `ccna-student-results-${safeClassName}-${timestamp}.csv`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -465,14 +489,32 @@ export default function InstructorResultsDashboard() {
         </div>
 
         <div className="results-heading-actions">
-          <button
-            className="secondary"
-            type="button"
-            disabled={!filteredAttempts.length}
-            onClick={handleExportCsv}
-          >
-            Export filtered CSV
-          </button>
+          <div className="results-export-control">
+            <label>
+              Export class
+              <select
+                value={exportClassId}
+                onChange={(event) =>
+                  setExportClassId(event.target.value)
+                }
+              >
+                <option value="all">All classes</option>
+                {classes.map(([classId, className]) => (
+                  <option key={classId} value={classId}>
+                    {className}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="primary"
+              type="button"
+              disabled={!exportAttempts.length}
+              onClick={handleExportCsv}
+            >
+              Export CSV
+            </button>
+          </div>
           <button
             className="secondary"
             type="button"

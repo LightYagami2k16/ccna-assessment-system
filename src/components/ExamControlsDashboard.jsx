@@ -221,6 +221,7 @@ export default function ExamControlsDashboard() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [expandedClassIds, setExpandedClassIds] = useState([])
 
   const loadWorkspace = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -271,6 +272,20 @@ export default function ExamControlsDashboard() {
       })
   }, [workspace.assignments])
 
+  function isClassExpanded(classId) {
+    return expandedClassIds.includes(String(classId))
+  }
+
+  function toggleClass(classId) {
+    const normalizedClassId = String(classId)
+
+    setExpandedClassIds((current) =>
+      current.includes(normalizedClassId)
+        ? current.filter((id) => id !== normalizedClassId)
+        : [...current, normalizedClassId],
+    )
+  }
+
   async function handleDelete(accommodation) {
     if (!window.confirm(`Remove the accommodation for ${accommodation.studentName}?`)) return
     setBusyId(accommodation.id)
@@ -318,37 +333,59 @@ export default function ExamControlsDashboard() {
           </div>
         ) : (
           <div className="assignment-class-groups">
-            {assignmentsByClass.map((classGroup) => (
-              <section
-                className="assignment-class-group"
-                key={classGroup.classId}
-              >
-                <header className="assignment-class-group__heading">
-                  <div>
-                    <span className="course-code">
-                      {classGroup.classCode}
-                    </span>
-                    <h3>{classGroup.className}</h3>
-                  </div>
-                  <span className="status-chip">
-                    {classGroup.assignments.length}{' '}
-                    {classGroup.assignments.length === 1
-                      ? 'quiz'
-                      : 'quizzes'}
-                  </span>
-                </header>
+            {assignmentsByClass.map((classGroup) => {
+              const expanded = isClassExpanded(classGroup.classId)
+              const panelId = `assignment-class-panel-${classGroup.classId}`
 
-                <div className="schedule-card-grid">
-                  {classGroup.assignments.map((assignment) => (
-                    <AssignmentScheduleCard
-                      key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
-                      assignment={assignment}
-                      onSaved={loadWorkspace}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+              return (
+                <section
+                  className="assignment-class-group"
+                  key={classGroup.classId}
+                >
+                  <header className="assignment-class-group__heading">
+                    <div>
+                      <span className="course-code">
+                        {classGroup.classCode}
+                      </span>
+                      <h3>{classGroup.className}</h3>
+                    </div>
+
+                    <div className="assignment-class-group__collapse-controls">
+                      <span className="status-chip">
+                        {classGroup.assignments.length}{' '}
+                        {classGroup.assignments.length === 1
+                          ? 'quiz'
+                          : 'quizzes'}
+                      </span>
+
+                      <button
+                        className="assignment-class-collapse-button"
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={panelId}
+                        onClick={() => toggleClass(classGroup.classId)}
+                      >
+                        {expanded ? 'Hide schedules' : 'Show schedules'}
+                      </button>
+                    </div>
+                  </header>
+
+                  {expanded && (
+                    <div id={panelId}>
+                      <div className="schedule-card-grid">
+                        {classGroup.assignments.map((assignment) => (
+                          <AssignmentScheduleCard
+                            key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
+                            assignment={assignment}
+                            onSaved={loadWorkspace}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )
+            })}
           </div>
         )}
       </section>

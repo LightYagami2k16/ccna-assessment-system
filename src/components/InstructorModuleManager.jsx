@@ -11,7 +11,32 @@ const emptyForm = {
   code: '',
   title: '',
   description: '',
-  sortOrder: 0,
+}
+
+function compareModuleCodes(left, right) {
+  return left.code.localeCompare(right.code, undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  })
+}
+
+const courseDisplayOrder = {
+  ITN: 1,
+  SRWE: 2,
+  ENSA: 3,
+}
+
+function compareCourses(left, right) {
+  const leftOrder = courseDisplayOrder[left.code] ?? 999
+  const rightOrder = courseDisplayOrder[right.code] ?? 999
+
+  return (
+    leftOrder - rightOrder ||
+    left.code.localeCompare(right.code, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  )
 }
 
 export default function InstructorModuleManager({ onChanged }) {
@@ -19,7 +44,13 @@ export default function InstructorModuleManager({ onChanged }) {
     courses: [],
     modules: [],
   })
+
   const [form, setForm] = useState(emptyForm)
+
+  // Course IDs stored here are currently expanded.
+  // Starting with an empty array makes every course collapsed initially.
+  const [expandedCourseIds, setExpandedCourseIds] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -31,7 +62,9 @@ export default function InstructorModuleManager({ onChanged }) {
       setLoading(true)
       setMessage('')
       setMessageIsError(false)
-      setWorkspace(await getInstructorModuleWorkspace())
+
+      const nextWorkspace = await getInstructorModuleWorkspace()
+      setWorkspace(nextWorkspace)
     } catch (error) {
       setMessage(error.message)
       setMessageIsError(true)
@@ -46,43 +79,112 @@ export default function InstructorModuleManager({ onChanged }) {
 
   const modulesByCourse = useMemo(
     () =>
-      workspace.courses.map((course) => ({
-        ...course,
-        modules: workspace.modules.filter(
-          (module) => module.course_id === course.id,
-        ),
-      })),
+      workspace.courses
+        .map((course) => ({
+          ...course,
+          modules: workspace.modules
+            .filter(
+              (module) =>
+                String(module.course_id) === String(course.id),
+            )
+            .sort(compareModuleCodes),
+        }))
+        .sort(compareCourses),
     [workspace],
   )
 
+  function isCourseExpanded(courseId) {
+    return expandedCourseIds.includes(String(courseId))
+  }
+
+  function expandCourse(courseId) {
+    const normalizedCourseId = String(courseId)
+
+    setExpandedCourseIds((current) => {
+      if (current.includes(normalizedCourseId)) {
+        return current
+      }
+
+      return [...current, normalizedCourseId]
+    })
+  }
+
+  function toggleCourse(course) {
+    const courseId = String(course.id)
+    const currentlyExpanded = isCourseExpanded(courseId)
+
+    setExpandedCourseIds((current) => {
+      if (currentlyExpanded) {
+        return current.filter((id) => id !== courseId)
+      }
+
+      return [...current, courseId]
+    })
+
+    // Avoid leaving a hidden editor open when collapsing its course.
+    if (currentlyExpanded && form.courseId === courseId) {
+      setForm(emptyForm)
+      setMessage('')
+      setMessageIsError(false)
+    }
+  }
+
+  function closeEditor() {
+    setForm(emptyForm)
+    setMessage('')
+    setMessageIsError(false)
+  }
+
+  function startAdd(course) {
+    expandCourse(course.id)
+
+    setForm({
+      ...emptyForm,
+      courseId: String(course.id),
+      code: `${course.code}-`,
+    })
+
+    setMessage('')
+    setMessageIsError(false)
+  }
+
   function startEdit(module) {
+    expandCourse(module.course_id)
+
     setForm({
       id: module.id,
-      courseId: module.course_id,
+      courseId: String(module.course_id),
       code: module.code,
       title: module.title,
       description: module.description ?? '',
-      sortOrder: module.sort_order ?? 0,
     })
+
     setMessage('')
     setMessageIsError(false)
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
+
+    const wasEditing = Boolean(form.id)
+    const affectedCourseId = form.courseId
+
     setSaving(true)
     setMessage('')
     setMessageIsError(false)
 
     try {
-      await saveInstructorModule({
-        ...form,
-        sortOrder: Number(form.sortOrder),
-      })
+      await saveInstructorModule(form)
+
       setForm(emptyForm)
+      expandCourse(affectedCourseId)
+
       await loadWorkspace()
       await onChanged?.()
-      setMessage(form.id ? 'Module updated.' : 'Module created.')
+
+      setMessage(
+        wasEditing ? 'Module updated.' : 'Module created.',
+      )
     } catch (error) {
       setMessage(error.message)
       setMessageIsError(true)
@@ -92,22 +194,30 @@ export default function InstructorModuleManager({ onChanged }) {
   }
 
   async function handleDelete(module) {
-    if (
-      !window.confirm(
-        `Delete module "${module.code} - ${module.title}"?`,
-      )
-    ) {
+    const confirmed = window.confirm(
+      `Delete module "${module.code} - ${module.title}"?`,
+    )
+
+    if (!confirmed) {
       return
     }
 
     setDeletingId(module.id)
     setMessage('')
     setMessageIsError(false)
+
     try {
       await deleteInstructorModule(module.id)
-      if (form.id === module.id) setForm(emptyForm)
+
+      if (form.id === module.id) {
+        setForm(emptyForm)
+      }
+
+      expandCourse(module.course_id)
+
       await loadWorkspace()
       await onChanged?.()
+
       setMessage('Module deleted.')
     } catch (error) {
       setMessage(error.message)
@@ -122,118 +232,20 @@ export default function InstructorModuleManager({ onChanged }) {
       <div className="section-heading">
         <div>
           <span className="eyebrow">COURSE STRUCTURE</span>
+
           <h2>Course modules</h2>
+
           <p>
-            Add or edit the modules instructors can select when creating
-            questions and quizzes.
+            Expand a course to view and manage its modules. Modules are
+            displayed automatically by module code.
           </p>
         </div>
-        <span className="status-chip">
-          {workspace.modules.length} modules
+
+        <span className="status-chip module-total-badge">
+          {workspace.modules.length}{' '}
+          {workspace.modules.length === 1 ? 'module' : 'modules'}
         </span>
       </div>
-
-      <form className="module-editor" onSubmit={handleSubmit}>
-        <div className="form-grid form-grid--three">
-          <label>
-            Course
-            <select
-              required
-              value={form.courseId}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  courseId: event.target.value,
-                }))
-              }
-            >
-              <option value="">Select course</option>
-              {workspace.courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.code} - {course.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Module code
-            <input
-              required
-              value={form.code}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  code: event.target.value,
-                }))
-              }
-              placeholder="Example: ITN-03"
-            />
-          </label>
-          <label>
-            Display order
-            <input
-              type="number"
-              min="0"
-              value={form.sortOrder}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  sortOrder: event.target.value,
-                }))
-              }
-            />
-          </label>
-        </div>
-
-        <label>
-          Module title
-          <input
-            required
-            value={form.title}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
-            placeholder="Example: Protocols and Models"
-          />
-        </label>
-
-        <label>
-          Description
-          <textarea
-            rows="2"
-            value={form.description}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-            placeholder="Optional module description"
-          />
-        </label>
-
-        <div className="module-editor__actions">
-          <button className="primary" type="submit" disabled={saving}>
-            {saving
-              ? 'Saving...'
-              : form.id
-                ? 'Save module'
-                : 'Add module'}
-          </button>
-          {form.id && (
-            <button
-              className="secondary"
-              type="button"
-              onClick={() => setForm(emptyForm)}
-            >
-              Cancel edit
-            </button>
-          )}
-        </div>
-      </form>
 
       {message && (
         <p
@@ -251,57 +263,248 @@ export default function InstructorModuleManager({ onChanged }) {
         <p>Loading course modules...</p>
       ) : (
         <div className="module-course-groups">
-          {modulesByCourse.map((course) => (
-            <article className="module-course-group" key={course.id}>
-              <header>
-                <div>
-                  <span className="course-code">{course.code}</span>
-                  <h3>{course.title}</h3>
-                </div>
-                <span className="status-chip">
-                  {course.modules.length}{' '}
-                  {course.modules.length === 1 ? 'module' : 'modules'}
-                </span>
-              </header>
+          {modulesByCourse.map((course) => {
+            const courseId = String(course.id)
+            const expanded = isCourseExpanded(courseId)
+            const editorIsOpen = form.courseId === courseId
+            const panelId = `course-module-panel-${courseId}`
 
-              {!course.modules.length ? (
-                <p className="muted-copy">No modules added yet.</p>
-              ) : (
-                <div className="module-list">
-                  {course.modules.map((module) => (
-                    <div className="module-list__row" key={module.id}>
-                      <div>
-                        <strong>{module.code}</strong>
-                        <span>{module.title}</span>
-                        {module.description && (
-                          <small>{module.description}</small>
-                        )}
-                      </div>
-                      <div className="module-list__actions">
-                        <button
-                          className="secondary"
-                          type="button"
-                          onClick={() => startEdit(module)}
+            return (
+              <article
+                className={[
+                  'module-course-group',
+                  expanded
+                    ? 'module-course-group--expanded'
+                    : 'module-course-group--collapsed',
+                  editorIsOpen
+                    ? 'module-course-group--editing'
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                key={course.id}
+              >
+                <header>
+                  <div className="module-course-group__identity">
+                    <span className="course-code">{course.code}</span>
+                    <h3>{course.title}</h3>
+                  </div>
+
+                  <div className="module-course-group__controls">
+                    <div className="module-course-group__meta">
+                      <span className="status-chip">
+                        {course.modules.length}{' '}
+                        {course.modules.length === 1
+                          ? 'module'
+                          : 'modules'}
+                      </span>
+
+                      <button
+                        className="module-collapse-button"
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={panelId}
+                        onClick={() => toggleCourse(course)}
+                      >
+                        <span
+                          className={[
+                            'module-collapse-button__icon',
+                            expanded
+                              ? 'module-collapse-button__icon--expanded'
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          aria-hidden="true"
                         >
-                          Edit
-                        </button>
-                        <button
-                          className="danger-button danger-button--compact"
-                          type="button"
-                          disabled={deletingId === module.id}
-                          onClick={() => void handleDelete(module)}
-                        >
-                          {deletingId === module.id
-                            ? 'Deleting...'
-                            : 'Delete'}
-                        </button>
-                      </div>
+                          ▾
+                        </span>
+
+                        <span>{expanded ? 'Hide' : 'Show'}</span>
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))}
+
+                    <button
+                      className="primary module-add-button"
+                      type="button"
+                      disabled={editorIsOpen}
+                      onClick={() => startAdd(course)}
+                    >
+                      Add module
+                    </button>
+                  </div>
+                </header>
+
+                {expanded && (
+                  <div
+                    className="module-course-group__content"
+                    id={panelId}
+                  >
+                    {editorIsOpen && (
+                      <form
+                        className="module-editor module-editor--embedded"
+                        onSubmit={handleSubmit}
+                      >
+                        <div className="module-editor__heading">
+                          <div>
+                            <strong>
+                              {form.id
+                                ? 'Edit module'
+                                : 'Add module'}
+                            </strong>
+
+                            <small>
+                              {course.code} — {course.title}
+                            </small>
+                          </div>
+
+                          <button
+                            className="module-editor__close"
+                            type="button"
+                            aria-label="Close module form"
+                            onClick={closeEditor}
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <div className="form-grid">
+                          <label>
+                            Module code
+
+                            <input
+                              required
+                              value={form.code}
+                              onChange={(event) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  code: event.target.value.toUpperCase(),
+                                }))
+                              }
+                              placeholder={`Example: ${course.code}-06`}
+                            />
+
+                            <small>
+                              The number in the code controls display
+                              order.
+                            </small>
+                          </label>
+
+                          <label>
+                            Module title
+
+                            <input
+                              required
+                              value={form.title}
+                              onChange={(event) =>
+                                setForm((current) => ({
+                                  ...current,
+                                  title: event.target.value,
+                                }))
+                              }
+                              placeholder="Example: Ethernet Switching"
+                            />
+                          </label>
+                        </div>
+
+                        <label>
+                          Description
+
+                          <textarea
+                            rows="2"
+                            value={form.description}
+                            onChange={(event) =>
+                              setForm((current) => ({
+                                ...current,
+                                description: event.target.value,
+                              }))
+                            }
+                            placeholder="Optional module description"
+                          />
+                        </label>
+
+                        <div className="module-editor__actions">
+                          <button
+                            className="primary"
+                            type="submit"
+                            disabled={saving}
+                          >
+                            {saving
+                              ? 'Saving...'
+                              : form.id
+                                ? 'Save module'
+                                : 'Add module'}
+                          </button>
+
+                          <button
+                            className="secondary"
+                            type="button"
+                            disabled={saving}
+                            onClick={closeEditor}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {!course.modules.length ? (
+                      <p className="muted-copy">
+                        No modules added yet.
+                      </p>
+                    ) : (
+                      <div className="module-list">
+                        {course.modules.map((module) => (
+                          <div
+                            className="module-list__row"
+                            key={module.id}
+                          >
+                            <div>
+                              <strong>{module.code}</strong>
+                              <span>{module.title}</span>
+
+                              {module.description && (
+                                <small>
+                                  {module.description}
+                                </small>
+                              )}
+                            </div>
+
+                            <div className="module-list__actions">
+                              <button
+                                className="secondary"
+                                type="button"
+                                disabled={editorIsOpen}
+                                onClick={() => startEdit(module)}
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                className="danger-button danger-button--compact"
+                                type="button"
+                                disabled={
+                                  editorIsOpen ||
+                                  deletingId === module.id
+                                }
+                                onClick={() =>
+                                  void handleDelete(module)
+                                }
+                              >
+                                {deletingId === module.id
+                                  ? 'Deleting...'
+                                  : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </article>
+            )
+          })}
         </div>
       )}
     </section>
