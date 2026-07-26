@@ -136,7 +136,8 @@ export default function InstructorModuleManager({ onChanged }) {
   }
 
   function startAdd(course) {
-    expandCourse(course.id)
+    // Keep only the course being edited expanded.
+    setExpandedCourseIds([String(course.id)])
 
     setForm({
       ...emptyForm,

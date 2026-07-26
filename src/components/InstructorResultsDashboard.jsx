@@ -151,6 +151,10 @@ export default function InstructorResultsDashboard() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedAttemptIds, setSelectedAttemptIds] = useState([])
   const [selectedAttemptId, setSelectedAttemptId] = useState(null)
+  const [expandedResultClassIds, setExpandedResultClassIds] =
+    useState([])
+  const [expandedResultStudentIds, setExpandedResultStudentIds] =
+    useState([])
   const [resetting, setResetting] = useState(false)
 
   const loadAttempts = useCallback(async () => {
@@ -347,6 +351,22 @@ export default function InstructorResultsDashboard() {
         (attemptId) => !attemptIds.includes(attemptId),
       )
     })
+  }
+
+  function toggleResultClass(classKey) {
+    setExpandedResultClassIds((current) =>
+      current.includes(classKey)
+        ? current.filter((key) => key !== classKey)
+        : [...current, classKey],
+    )
+  }
+
+  function toggleResultStudent(studentKey) {
+    setExpandedResultStudentIds((current) =>
+      current.includes(studentKey)
+        ? current.filter((key) => key !== studentKey)
+        : [...current, studentKey],
+    )
   }
 
   function handleExportCsv() {
@@ -721,11 +741,17 @@ export default function InstructorResultsDashboard() {
                   ),
                 ),
             )
+            const classKey = String(
+              classGroup.classId || 'unassigned',
+            )
+            const classExpanded =
+              expandedResultClassIds.includes(classKey)
+            const classPanelId = `result-class-${classKey}`
 
             return (
               <section
                 className="class-result-group"
-                key={classGroup.classId || 'unassigned'}
+                key={classKey}
               >
                 <header className="class-result-group__header">
                   <label className="bulk-select-control">
@@ -754,15 +780,34 @@ export default function InstructorResultsDashboard() {
                     </span>
                   </label>
 
-                  <span className="status-chip">
-                    {classGroup.students.length}{' '}
-                    {classGroup.students.length === 1
-                      ? 'student'
-                      : 'students'}
-                  </span>
+                  <div className="result-group__controls">
+                    <span className="status-chip">
+                      {classGroup.students.length}{' '}
+                      {classGroup.students.length === 1
+                        ? 'student'
+                        : 'students'}
+                    </span>
+                    <button
+                      className="result-collapse-button"
+                      type="button"
+                      aria-expanded={classExpanded}
+                      aria-controls={classPanelId}
+                      onClick={() =>
+                        toggleResultClass(classKey)
+                      }
+                    >
+                      {classExpanded
+                        ? 'Hide students'
+                        : 'Show students'}
+                    </button>
+                  </div>
                 </header>
 
-                <div className="class-result-group__students">
+                {classExpanded && (
+                <div
+                  className="class-result-group__students"
+                  id={classPanelId}
+                >
                   {classGroup.students.map((student) => {
                     const studentAttemptIds =
                       student.quizzes.flatMap((quiz) =>
@@ -770,14 +815,19 @@ export default function InstructorResultsDashboard() {
                           (attempt) => attempt.attemptId,
                         ),
                       )
+                    const studentKey = `${classKey}:${
+                      student.studentId || student.studentEmail
+                    }`
+                    const studentExpanded =
+                      expandedResultStudentIds.includes(
+                        studentKey,
+                      )
+                    const studentPanelId = `result-student-${studentKey}`
 
                     return (
                       <article
                         className="student-result-group"
-                        key={
-                          student.studentId ||
-                          student.studentEmail
-                        }
+                        key={studentKey}
                       >
                         <header className="student-result-group__header">
                           <label className="bulk-select-control student-result-group__identity">
@@ -814,15 +864,34 @@ export default function InstructorResultsDashboard() {
                             </span>
                           </label>
 
-                          <span className="student-result-group__count">
-                            {studentAttemptIds.length}{' '}
-                            {studentAttemptIds.length === 1
-                              ? 'attempt'
-                              : 'attempts'}
-                          </span>
+                          <div className="result-group__controls">
+                            <span className="student-result-group__count">
+                              {studentAttemptIds.length}{' '}
+                              {studentAttemptIds.length === 1
+                                ? 'attempt'
+                                : 'attempts'}
+                            </span>
+                            <button
+                              className="module-collapse-button"
+                              type="button"
+                              aria-expanded={studentExpanded}
+                              aria-controls={studentPanelId}
+                              onClick={() =>
+                                toggleResultStudent(studentKey)
+                              }
+                            >
+                              {studentExpanded
+                                ? 'Hide records'
+                                : 'Show records'}
+                            </button>
+                          </div>
                         </header>
 
-                        <div className="student-result-group__quizzes">
+                        {studentExpanded && (
+                        <div
+                          className="student-result-group__quizzes"
+                          id={studentPanelId}
+                        >
                           {student.quizzes.map((quiz) => {
                             const quizAttemptIds =
                               quiz.attempts.map(
@@ -1054,10 +1123,12 @@ export default function InstructorResultsDashboard() {
                             )
                           })}
                         </div>
+                        )}
                       </article>
                     )
                   })}
                 </div>
+                )}
               </section>
             )
           })}

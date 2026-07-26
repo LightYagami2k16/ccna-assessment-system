@@ -12,11 +12,49 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkAction, setBulkAction] = useState(null)
   const [rowActions, setRowActions] = useState({})
+  const [expandedCourseIds, setExpandedCourseIds] = useState([])
 
   const questionIds = useMemo(
     () => questions.map((question) => question.id),
     [questions],
   )
+
+  const courseGroups = useMemo(() => {
+    const groups = new Map()
+
+    for (const question of questions) {
+      const courseId = String(
+        question.course_id ?? question.courses?.id ?? 'uncategorized',
+      )
+
+      if (!groups.has(courseId)) {
+        groups.set(courseId, {
+          id: courseId,
+          code: question.courses?.code ?? 'OTHER',
+          title: question.courses?.title ?? 'Uncategorized',
+          questions: [],
+        })
+      }
+
+      groups.get(courseId).questions.push(question)
+    }
+
+    const courseOrder = {
+      ITN: 1,
+      SRWE: 2,
+      ENSA: 3,
+    }
+
+    return [...groups.values()].sort(
+      (left, right) =>
+        (courseOrder[left.code] ?? 999) -
+          (courseOrder[right.code] ?? 999) ||
+        left.code.localeCompare(right.code, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+    )
+  }, [questions])
 
   const selectedQuestions = useMemo(
     () =>
@@ -37,6 +75,22 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
       current.filter((id) => questionIds.includes(id)),
     )
   }, [questionIds])
+
+  useEffect(() => {
+    const courseIds = courseGroups.map((course) => course.id)
+
+    setExpandedCourseIds((current) =>
+      current.filter((id) => courseIds.includes(id)),
+    )
+  }, [courseGroups])
+
+  function toggleCourseGroup(courseId) {
+    setExpandedCourseIds((current) =>
+      current.includes(courseId)
+        ? current.filter((id) => id !== courseId)
+        : [...current, courseId],
+    )
+  }
 
   function toggleSelection(ids, checked) {
     setSelectedIds((current) =>
@@ -230,101 +284,191 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
           <p>Your first saved question will appear here.</p>
         </div>
       ) : (
-        <div className="question-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Select</th>
-                <th>Course</th>
-                <th>Question</th>
-                <th>Type</th>
-                <th>Points</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {questions.map((question) => (
-                <tr key={question.id}>
-                  <td className="table-select-cell">
-                    <input
-                      aria-label={`Select ${question.title}`}
-                      type="checkbox"
-                      checked={selectedIds.includes(question.id)}
-                      disabled={bulkAction !== null}
-                      title="Select this question for a bulk action"
-                      onChange={(event) =>
-                        toggleSelection(
-                          [question.id],
-                          event.target.checked,
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <strong>{question.courses?.code ?? '-'}</strong>
-                    <small>{question.modules?.code ?? 'General'}</small>
-                  </td>
-                  <td>
-                    <strong>{question.title}</strong>
-                    <small>{question.question_text}</small>
-                  </td>
-                  <td>
-                    {question.question_type === 'multiple_choice'
-                      ? 'Multiple choice'
-                      : 'True or false'}
-                  </td>
-                  <td>{Number(question.points)}</td>
-                  <td>
-                    <span className={`content-status content-status--${question.status}`}>
-                      {question.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="question-action-control">
-                      <select
-                        aria-label={`Action for ${question.title}`}
-                        value={rowActions[question.id] ?? ''}
-                        disabled={busyId === question.id}
-                        onChange={(event) =>
-                          setRowActions((current) => ({
-                            ...current,
-                            [question.id]: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Choose action</option>
-                        {question.status === 'draft' && (
-                          <option value="edit">Edit</option>
-                        )}
-                        <option value="status">
-                          {question.status === 'published'
-                            ? 'Unpublish'
-                            : 'Publish'}
-                        </option>
-                        {question.status === 'draft' && (
-                          <option value="delete">Delete</option>
-                        )}
-                      </select>
-                      <button
-                        className="primary"
-                        type="button"
-                        disabled={
-                          busyId === question.id ||
-                          !rowActions[question.id]
-                        }
-                        onClick={() =>
-                          void handleRowAction(question)
-                        }
-                      >
-                        {busyId === question.id ? 'Working...' : 'OK'}
-                      </button>
+        <div className="question-course-groups">
+          {courseGroups.map((course) => {
+            const expanded = expandedCourseIds.includes(course.id)
+            const panelId = `question-course-panel-${course.id}`
+            const courseQuestionIds = course.questions.map(
+              (question) => question.id,
+            )
+            const allCourseQuestionsSelected =
+              courseQuestionIds.length > 0 &&
+              courseQuestionIds.every((id) =>
+                selectedIds.includes(id),
+              )
+
+            return (
+              <section className="question-course-group" key={course.id}>
+                <header className="question-course-group__header">
+                  <div className="question-course-group__summary">
+                    <div className="question-course-group__identity">
+                      <span className="course-code">{course.code}</span>
+
+                      <div>
+                        <h3>{course.title}</h3>
+                        <small>
+                          {course.questions.length}{' '}
+                          {course.questions.length === 1
+                            ? 'question'
+                            : 'questions'}
+                        </small>
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+                    <label className="bulk-select-control">
+                      <input
+                        type="checkbox"
+                        checked={allCourseQuestionsSelected}
+                        disabled={
+                          !courseQuestionIds.length ||
+                          bulkAction !== null
+                        }
+                        onChange={(event) =>
+                          toggleSelection(
+                            courseQuestionIds,
+                            event.target.checked,
+                          )
+                        }
+                      />
+                      Select all in {course.code}
+                    </label>
+                  </div>
+
+                  <button
+                    className="module-collapse-button"
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    onClick={() => toggleCourseGroup(course.id)}
+                  >
+                    {expanded
+                      ? 'Hide questions'
+                      : 'Show questions'}
+                  </button>
+                </header>
+
+                {expanded && (
+                  <div
+                    className="question-table-wrapper"
+                    id={panelId}
+                  >
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Select</th>
+                          <th>Course</th>
+                          <th>Question</th>
+                          <th>Type</th>
+                          <th>Points</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {course.questions.map((question) => (
+                          <tr key={question.id}>
+                            <td className="table-select-cell">
+                              <input
+                                aria-label={`Select ${question.title}`}
+                                type="checkbox"
+                                checked={selectedIds.includes(
+                                  question.id,
+                                )}
+                                disabled={bulkAction !== null}
+                                title="Select this question for a bulk action"
+                                onChange={(event) =>
+                                  toggleSelection(
+                                    [question.id],
+                                    event.target.checked,
+                                  )
+                                }
+                              />
+                            </td>
+                            <td>
+                              <strong>
+                                {question.courses?.code ?? '-'}
+                              </strong>
+                              <small>
+                                {question.modules?.code ?? 'General'}
+                              </small>
+                            </td>
+                            <td>
+                              <strong>{question.title}</strong>
+                              <small>{question.question_text}</small>
+                            </td>
+                            <td>
+                              {question.question_type ===
+                              'multiple_choice'
+                                ? 'Multiple choice'
+                                : 'True or false'}
+                            </td>
+                            <td>{Number(question.points)}</td>
+                            <td>
+                              <span
+                                className={`content-status content-status--${question.status}`}
+                              >
+                                {question.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="question-action-control">
+                                <select
+                                  aria-label={`Action for ${question.title}`}
+                                  value={
+                                    rowActions[question.id] ?? ''
+                                  }
+                                  disabled={busyId === question.id}
+                                  onChange={(event) =>
+                                    setRowActions((current) => ({
+                                      ...current,
+                                      [question.id]:
+                                        event.target.value,
+                                    }))
+                                  }
+                                >
+                                  <option value="">
+                                    Choose action
+                                  </option>
+                                  {question.status === 'draft' && (
+                                    <option value="edit">Edit</option>
+                                  )}
+                                  <option value="status">
+                                    {question.status === 'published'
+                                      ? 'Unpublish'
+                                      : 'Publish'}
+                                  </option>
+                                  {question.status === 'draft' && (
+                                    <option value="delete">
+                                      Delete
+                                    </option>
+                                  )}
+                                </select>
+                                <button
+                                  className="primary"
+                                  type="button"
+                                  disabled={
+                                    busyId === question.id ||
+                                    !rowActions[question.id]
+                                  }
+                                  onClick={() =>
+                                    void handleRowAction(question)
+                                  }
+                                >
+                                  {busyId === question.id
+                                    ? 'Working...'
+                                    : 'OK'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )
+          })}
         </div>
       )}
     </section>

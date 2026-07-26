@@ -57,6 +57,13 @@ export default function QuestionEditor({
   const [options, setOptions] = useState(() => optionsForQuestion(question))
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [expanded, setExpanded] = useState(isEditing)
+
+  useEffect(() => {
+    if (isEditing) {
+      setExpanded(true)
+    }
+  }, [isEditing, question?.id])
 
   useEffect(() => {
     let active = true
@@ -94,6 +101,29 @@ export default function QuestionEditor({
         ? newMultipleChoiceOptions()
         : trueFalseOptions(),
     )
+  }
+
+  function resetNewQuestionForm() {
+    setCourseId('')
+    setModuleId('')
+    setModules([])
+    setQuestionType('multiple_choice')
+    setTitle('')
+    setQuestionText('')
+    setExplanation('')
+    setPoints(1)
+    setDifficulty('beginner')
+    setStatus('draft')
+    setOptions(newMultipleChoiceOptions())
+    setMessage('')
+  }
+
+  function toggleEditor() {
+    if (!expanded && !isEditing) {
+      resetNewQuestionForm()
+    }
+
+    setExpanded((current) => !current)
   }
 
   function updateOptionText(index, optionText) {
@@ -185,10 +215,27 @@ export default function QuestionEditor({
             </p>
           )}
         </div>
-        <span className="status-chip">Phase 1.4</span>
+        <div className="question-editor__heading-controls">
+          <span className="status-chip">Phase 1.4</span>
+
+          <button
+            className="module-collapse-button"
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="question-editor-form"
+            onClick={toggleEditor}
+          >
+            {expanded
+              ? 'Hide form'
+              : isEditing
+                ? 'Show form'
+                : 'Create question'}
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      {expanded && (
+      <form id="question-editor-form" onSubmit={handleSubmit}>
         <div className="form-grid">
           <label>
             Course
@@ -341,6 +388,7 @@ export default function QuestionEditor({
         </div>
         {message && <p className="form-message">{message}</p>}
       </form>
+      )}
     </section>
   )
 }

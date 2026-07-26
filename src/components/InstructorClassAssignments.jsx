@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import QRCode from 'qrcode'
 import {
   addStudentToClassByEmail,
@@ -12,6 +17,7 @@ import {
 } from '../services/assignmentService'
 
 function ClassEditor({ students, classSection, onSaved, onCancel }) {
+  const isEditing = Boolean(classSection)
   const [name, setName] = useState(classSection?.name ?? '')
   const [code, setCode] = useState(classSection?.code ?? '')
   const [academicTerm, setAcademicTerm] = useState(classSection?.academicTerm ?? '')
@@ -19,6 +25,13 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
   const [studentIds, setStudentIds] = useState(classSection?.studentIds ?? [])
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [expanded, setExpanded] = useState(isEditing)
+
+  useEffect(() => {
+    if (isEditing) {
+      setExpanded(true)
+    }
+  }, [isEditing, classSection?.id])
 
   function toggleStudent(studentId) {
     setStudentIds((current) =>
@@ -65,14 +78,31 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
             generated automatically.
           </p>
         </div>
-        {classSection && (
-          <button className="secondary" type="button" onClick={onCancel}>
-            Cancel
+        <div className="class-editor__heading-controls">
+          {classSection && (
+            <button className="secondary" type="button" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+
+          <button
+            className="module-collapse-button"
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="class-editor-form"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded
+              ? 'Hide form'
+              : classSection
+                ? 'Show form'
+                : 'Create class'}
           </button>
-        )}
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      {expanded && (
+      <form id="class-editor-form" onSubmit={handleSubmit}>
         <div className="form-grid form-grid--three">
           <label>
             Class name
@@ -144,6 +174,7 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
         </button>
         {message && <p className="form-message form-message--error">{message}</p>}
       </form>
+      )}
     </section>
   )
 }
@@ -513,8 +544,55 @@ export default function InstructorClassAssignments() {
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState(null)
   const [selectedClassIds, setSelectedClassIds] = useState([])
+  const [expandedClassIds, setExpandedClassIds] = useState([])
+  const [expandedQuizCourseCodes, setExpandedQuizCourseCodes] =
+    useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [message, setMessage] = useState('')
+
+  const quizzesByCourse = useMemo(() => {
+    const courseTitles = {
+      ITN: 'Introduction to Networks',
+      SRWE: 'Switching, Routing, and Wireless Essentials',
+      ENSA: 'Enterprise Networking, Security, and Automation',
+    }
+    const courseOrder = {
+      ITN: 1,
+      SRWE: 2,
+      ENSA: 3,
+    }
+    const groups = new Map()
+
+    workspace.quizzes.forEach((quiz) => {
+      const courseCode = quiz.courseCode || 'OTHER'
+
+      if (!groups.has(courseCode)) {
+        groups.set(courseCode, {
+          code: courseCode,
+          title: courseTitles[courseCode] || 'Other CCNA quizzes',
+          quizzes: [],
+        })
+      }
+
+      groups.get(courseCode).quizzes.push(quiz)
+    })
+
+    return [...groups.values()]
+      .map((group) => ({
+        ...group,
+        quizzes: [...group.quizzes].sort((left, right) =>
+          left.title.localeCompare(right.title, undefined, {
+            sensitivity: 'base',
+          }),
+        ),
+      }))
+      .sort(
+        (left, right) =>
+          (courseOrder[left.code] ?? 99) -
+            (courseOrder[right.code] ?? 99) ||
+          left.code.localeCompare(right.code),
+      )
+  }, [workspace.quizzes])
 
   const loadWorkspace = useCallback(async () => {
     try {
@@ -567,6 +645,22 @@ export default function InstructorClassAssignments() {
       checked
         ? [...new Set([...current, ...classIds])]
         : current.filter((id) => !classIds.includes(id)),
+    )
+  }
+
+  function toggleClassDetails(classId) {
+    setExpandedClassIds((current) =>
+      current.includes(classId)
+        ? current.filter((id) => id !== classId)
+        : [...current, classId],
+    )
+  }
+
+  function toggleQuizCourse(courseCode) {
+    setExpandedQuizCourseCodes((current) =>
+      current.includes(courseCode)
+        ? current.filter((code) => code !== courseCode)
+        : [...current, courseCode],
     )
   }
 
@@ -669,7 +763,13 @@ export default function InstructorClassAssignments() {
             </div>
 
             <div className="class-card-grid">
-              {workspace.classes.map((classSection) => (
+              {workspace.classes.map((classSection) => {
+                const expanded = expandedClassIds.includes(
+                  classSection.id,
+                )
+                const detailsId = `class-details-${classSection.id}`
+
+                return (
                 <article className="class-card" key={classSection.id}>
                   <label className="card-select-control">
                     <input
@@ -689,42 +789,62 @@ export default function InstructorClassAssignments() {
                   </label>
                 <header>
                   <span className="course-code">{classSection.code}</span>
-                  <span
-                    className={`content-status ${
-                      classSection.isActive
-                        ? 'content-status--published'
-                        : 'content-status--draft'
-                    }`}
-                  >
-                    {classSection.isActive ? 'active' : 'inactive'}
-                  </span>
+                  <div className="class-card__header-controls">
+                    <span
+                      className={`content-status ${
+                        classSection.isActive
+                          ? 'content-status--published'
+                          : 'content-status--draft'
+                      }`}
+                    >
+                      {classSection.isActive ? 'active' : 'inactive'}
+                    </span>
+                    <button
+                      className="module-collapse-button"
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={detailsId}
+                      onClick={() =>
+                        toggleClassDetails(classSection.id)
+                      }
+                    >
+                      {expanded ? 'Hide details' : 'Show details'}
+                    </button>
+                  </div>
                 </header>
                 <h3>{classSection.name}</h3>
                 <p>{classSection.academicTerm || 'No academic term'}</p>
                 <strong>{classSection.studentIds.length} students</strong>
-                <ClassEnrollmentTools
-                  classSection={classSection}
-                  onChanged={loadWorkspace}
-                />
-                <div className="class-card__actions">
-                  <button
-                    className="primary"
-                    type="button"
-                    onClick={() => setEditingClass(classSection)}
-                  >
-                    Edit class
-                  </button>
-                  <button
-                    className="secondary"
-                    type="button"
-                    disabled={deletingId === classSection.id}
-                    onClick={() => void handleDelete(classSection)}
-                  >
-                    {deletingId === classSection.id ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
+                {expanded && (
+                  <div className="class-card__details" id={detailsId}>
+                    <ClassEnrollmentTools
+                      classSection={classSection}
+                      onChanged={loadWorkspace}
+                    />
+                    <div className="class-card__actions">
+                      <button
+                        className="primary"
+                        type="button"
+                        onClick={() => setEditingClass(classSection)}
+                      >
+                        Edit class
+                      </button>
+                      <button
+                        className="secondary"
+                        type="button"
+                        disabled={deletingId === classSection.id}
+                        onClick={() => void handleDelete(classSection)}
+                      >
+                        {deletingId === classSection.id
+                          ? 'Deleting...'
+                          : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 </article>
-              ))}
+                )
+              })}
             </div>
           </>
         )}
@@ -759,24 +879,72 @@ export default function InstructorClassAssignments() {
             <p>Create a quiz before configuring class access.</p>
           </div>
         ) : (
-          <div className="quiz-access-grid">
-            {workspace.quizzes.map((quiz) => (
-              <QuizAccessCard
-                key={[
-                  quiz.id,
-                  quiz.accessMode,
-                  quiz.classIds.join('-'),
-                  workspace.classes
-                    .map((classSection) =>
-                      `${classSection.id}:${classSection.isActive}`,
-                    )
-                    .join('-'),
-                ].join('|')}
-                quiz={quiz}
-                classes={workspace.classes.filter((item) => item.isActive)}
-                onSaved={loadWorkspace}
-              />
-            ))}
+          <div className="quiz-access-course-groups">
+            {quizzesByCourse.map((courseGroup) => {
+              const expanded = expandedQuizCourseCodes.includes(
+                courseGroup.code,
+              )
+              const panelId = `quiz-access-course-${courseGroup.code}`
+
+              return (
+                <section
+                  className="quiz-access-course-group"
+                  key={courseGroup.code}
+                >
+                  <header className="quiz-access-course-group__header">
+                    <div className="quiz-access-course-group__identity">
+                      <span className="course-code">
+                        {courseGroup.code}
+                      </span>
+                      <div>
+                        <h3>{courseGroup.title}</h3>
+                        <p>
+                          {courseGroup.quizzes.length}{' '}
+                          {courseGroup.quizzes.length === 1
+                            ? 'quiz'
+                            : 'quizzes'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className="module-collapse-button"
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={panelId}
+                      onClick={() =>
+                        toggleQuizCourse(courseGroup.code)
+                      }
+                    >
+                      {expanded ? 'Hide quizzes' : 'Show quizzes'}
+                    </button>
+                  </header>
+
+                  {expanded && (
+                    <div className="quiz-access-grid" id={panelId}>
+                      {courseGroup.quizzes.map((quiz) => (
+                        <QuizAccessCard
+                          key={[
+                            quiz.id,
+                            quiz.accessMode,
+                            quiz.classIds.join('-'),
+                            workspace.classes
+                              .map((classSection) =>
+                                `${classSection.id}:${classSection.isActive}`,
+                              )
+                              .join('-'),
+                          ].join('|')}
+                          quiz={quiz}
+                          classes={workspace.classes.filter(
+                            (item) => item.isActive,
+                          )}
+                          onSaved={loadWorkspace}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )
+            })}
           </div>
         )}
       </section>
