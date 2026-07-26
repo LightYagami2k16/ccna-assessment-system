@@ -1,14 +1,32 @@
 import { supabase } from '../lib/supabase'
 
 export async function getExamControlsWorkspace() {
-  const { data, error } = await supabase.rpc('get_exam_controls_workspace')
+  const [
+    { data, error },
+    { data: cliAttempts, error: cliError },
+  ] = await Promise.all([
+    supabase.rpc('get_exam_controls_workspace'),
+    supabase.rpc('get_cli_live_monitoring_attempts'),
+  ])
   if (error) throw error
+  if (cliError) throw cliError
   return {
     students: data?.students ?? [],
     quizzes: data?.quizzes ?? [],
     assignments: data?.assignments ?? [],
     accommodations: data?.accommodations ?? [],
-    activeAttempts: data?.activeAttempts ?? [],
+    activeAttempts: [
+      ...(data?.activeAttempts ?? []).map((attempt) => ({
+        ...attempt,
+        assessmentType: 'quiz',
+        assessmentTitle: attempt.quizTitle,
+      })),
+      ...(cliAttempts ?? []),
+    ].sort(
+      (left, right) =>
+        new Date(right.startedAt).getTime() -
+        new Date(left.startedAt).getTime(),
+    ),
   }
 }
 
@@ -63,11 +81,14 @@ export async function grantStudentExtraAttempt(quizId, studentId) {
 
 export async function recordExamIntegrityEvent({
   attemptId,
+  attemptType = 'quiz',
   eventType,
   details = {},
 }) {
   const { data, error } = await supabase.rpc(
-    'record_exam_integrity_event',
+    attemptType === 'cli'
+      ? 'record_cli_integrity_event'
+      : 'record_exam_integrity_event',
     {
       p_attempt_id: attemptId,
       p_event_type: eventType,

@@ -222,6 +222,7 @@ export default function ExamControlsDashboard() {
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [expandedClassIds, setExpandedClassIds] = useState([])
+  const [expandedMonitorStudents, setExpandedMonitorStudents] = useState([])
 
   const loadWorkspace = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -272,6 +273,44 @@ export default function ExamControlsDashboard() {
       })
   }, [workspace.assignments])
 
+  const activeAttemptsByStudent = useMemo(() => {
+    const groups = new Map()
+
+    for (const attempt of workspace.activeAttempts) {
+      const studentKey = String(
+        attempt.studentEmail
+        || attempt.studentName
+        || attempt.attemptId,
+      ).toLowerCase()
+
+      if (!groups.has(studentKey)) {
+        groups.set(studentKey, {
+          studentKey,
+          studentName: attempt.studentName || attempt.studentEmail || 'Student',
+          eventCount: 0,
+          attempts: [],
+        })
+      }
+
+      const group = groups.get(studentKey)
+      group.eventCount += Number(attempt.eventCount) || 0
+      group.attempts.push(attempt)
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        attempts: [...group.attempts].sort(
+          (left, right) =>
+            new Date(right.startedAt).getTime()
+            - new Date(left.startedAt).getTime(),
+        ),
+      }))
+      .sort((left, right) =>
+        left.studentName.localeCompare(right.studentName),
+      )
+  }, [workspace.activeAttempts])
+
   function isClassExpanded(classId) {
     return expandedClassIds.includes(String(classId))
   }
@@ -283,6 +322,14 @@ export default function ExamControlsDashboard() {
       current.includes(normalizedClassId)
         ? current.filter((id) => id !== normalizedClassId)
         : [...current, normalizedClassId],
+    )
+  }
+
+  function toggleMonitorStudent(studentKey) {
+    setExpandedMonitorStudents((current) =>
+      current.includes(studentKey)
+        ? current.filter((key) => key !== studentKey)
+        : [...current, studentKey],
     )
   }
 
@@ -476,35 +523,102 @@ export default function ExamControlsDashboard() {
             <p>Students currently taking an exam will appear here.</p>
           </div>
         ) : (
-          <div className="monitor-card-grid">
-            {workspace.activeAttempts.map((attempt) => (
-              <article className="monitor-card" key={attempt.attemptId}>
-                <header>
-                  <div>
-                    <h3>{attempt.studentName}</h3>
-                    <small>{attempt.studentEmail}</small>
-                  </div>
-                  <span className="integrity-count">
-                    {attempt.eventCount} events
-                  </span>
-                </header>
-                <strong>{attempt.quizTitle}</strong>
-                <dl>
-                  <div>
-                    <dt>Started</dt>
-                    <dd>{formatDate(attempt.startedAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Expires</dt>
-                    <dd>{formatDate(attempt.expiresAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>Latest event</dt>
-                    <dd>{eventLabel(attempt.latestEvent?.type)}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
+          <div className="monitor-student-groups">
+            {activeAttemptsByStudent.map((studentGroup) => {
+              const expanded = expandedMonitorStudents.includes(
+                studentGroup.studentKey,
+              )
+              const panelId = `monitor-student-${studentGroup.studentKey
+                .replace(/[^a-z0-9]+/g, '-')}`
+
+              return (
+                <section
+                  className="monitor-student-group"
+                  key={studentGroup.studentKey}
+                >
+                  <button
+                    className="monitor-student-summary"
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    onClick={() =>
+                      toggleMonitorStudent(studentGroup.studentKey)
+                    }
+                  >
+                    <strong>{studentGroup.studentName}</strong>
+                    <span className="monitor-student-summary__events">
+                      {studentGroup.eventCount}{' '}
+                      {studentGroup.eventCount === 1 ? 'event' : 'events'}
+                    </span>
+                    <span
+                      className="monitor-student-summary__chevron"
+                      aria-hidden="true"
+                    >
+                      {expanded ? '−' : '+'}
+                    </span>
+                  </button>
+
+                  {expanded && (
+                    <div
+                      className="monitor-student-attempts"
+                      id={panelId}
+                    >
+                      <div className="monitor-card-grid">
+                        {studentGroup.attempts.map((attempt) => (
+                          <article
+                            className="monitor-card"
+                            key={attempt.attemptId}
+                          >
+                            <header>
+                              <span
+                                className={
+                                  attempt.assessmentType === 'cli'
+                                    ? 'monitor-type-badge monitor-type-badge--cli'
+                                    : 'monitor-type-badge'
+                                }
+                              >
+                                {attempt.assessmentType === 'cli'
+                                  ? 'CLI practical'
+                                  : 'Quiz'}
+                              </span>
+                              <span className="integrity-count">
+                                {attempt.eventCount}{' '}
+                                {Number(attempt.eventCount) === 1
+                                  ? 'event'
+                                  : 'events'}
+                              </span>
+                            </header>
+                            <strong>
+                              {attempt.assessmentTitle || attempt.quizTitle}
+                            </strong>
+                            <dl>
+                              <div>
+                                <dt>Started</dt>
+                                <dd>{formatDate(attempt.startedAt)}</dd>
+                              </div>
+                              <div>
+                                <dt>Expires</dt>
+                                <dd>{formatDate(attempt.expiresAt)}</dd>
+                              </div>
+                              <div>
+                                <dt>Latest event</dt>
+                                <dd>{eventLabel(attempt.latestEvent?.type)}</dd>
+                              </div>
+                              {attempt.assessmentType === 'cli' && (
+                                <div>
+                                  <dt>Commands entered</dt>
+                                  <dd>{attempt.commandCount ?? 0}</dd>
+                                </div>
+                              )}
+                            </dl>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )
+            })}
           </div>
         )}
       </section>

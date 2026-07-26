@@ -495,6 +495,94 @@ input:focus { border-color: #1771b9; box-shadow: 0 0 0 3px rgba(23,113,185,.12);
   .quiz-access-course-group__identity { align-items: flex-start; }
 }
 
+/* Phase 2 single-device Cisco CLI practicals */
+.cli-lab-builder { display: grid; gap: 1.25rem; }
+.cli-lab-panel, .student-cli-labs { padding: 1.5rem; border-radius: 18px; background: #fff; box-shadow: 0 8px 25px rgba(25,52,77,.07); }
+.cli-lab-editor { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.cli-lab-editor input, .cli-lab-editor select, .cli-lab-editor textarea { width: 100%; padding: .78rem .9rem; border: 1px solid #c9d4df; border-radius: 10px; color: inherit; background: #fff; }
+.cli-criteria-editor, .cli-class-assignments { display: grid; gap: .8rem; margin: 0; padding: 1rem; border: 1px solid #d5e3ee; border-radius: 14px; background: #f8fbfd; }
+.cli-criteria-editor legend, .cli-class-assignments legend { padding: 0 .4rem; color: #0d3158; font-weight: 900; }
+.cli-criterion-row { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr .6fr auto; align-items: end; gap: .65rem; padding: .85rem; border: 1px solid #dce6ef; border-radius: 12px; background: #fff; }
+.cli-criterion-row label { margin: 0; }
+.cli-criterion-row small { grid-column: 1 / -1; color: #637286; }
+.cli-class-assignments label { display: flex; align-items: center; gap: .6rem; margin: 0; padding: .65rem; border-radius: 9px; background: #fff; }
+.cli-class-assignments input { width: auto; }
+.cli-lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.cli-lab-card { display: grid; gap: .85rem; padding: 1.1rem; border: 1px solid #dce6ef; border-radius: 14px; background: #f8fbfd; }
+.cli-lab-card header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.cli-lab-card h3, .cli-lab-card p { margin: 0; }
+.cli-lab-card p { color: #637286; }
+.cli-lab-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: .55rem; margin: 0; }
+.cli-lab-card dl div { padding: .65rem; border-radius: 9px; background: #fff; }
+.cli-lab-card dt { color: #637286; font-size: .72rem; text-transform: uppercase; }
+.cli-lab-card dd { margin: .2rem 0 0; color: #0d3158; font-weight: 800; }
+.cli-focus-shell { display: grid; gap: 1rem; width: min(1500px, 100%); margin: 0 auto; }
+.cli-practical-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-radius: 14px; background: #fff; }
+.cli-practical-header h1 { margin: .25rem 0 0; }
+.cli-practical-layout { display: grid; grid-template-columns: minmax(260px, 30%) minmax(0, 1fr); min-height: 650px; gap: 1rem; }
+.cli-instructions { display: grid; align-content: start; gap: 1rem; padding: 1.25rem; border-radius: 14px; background: #fff; }
+.cli-instructions h2, .cli-instructions p { margin: 0; }
+.cli-instructions p { white-space: pre-wrap; line-height: 1.65; }
+.cli-device-summary { display: grid; grid-template-columns: 1fr auto; gap: .55rem; padding: .85rem; border-radius: 10px; background: #f1f7fb; }
+.cli-device-summary span { color: #637286; }
+.cisco-terminal { overflow: hidden; border: 1px solid #20394c; border-radius: 14px; background: #07131d; box-shadow: 0 12px 30px rgba(5,15,25,.25); }
+.cisco-terminal__titlebar { display: flex; align-items: center; justify-content: space-between; min-height: 46px; padding: .6rem 1rem; color: #d9e7f0; background: #183247; font-weight: 800; }
+.cisco-terminal__titlebar button { min-height: 32px; padding: .35rem .7rem; border: 1px solid #7793a7; border-radius: 7px; color: #fff; background: transparent; }
+.cisco-terminal__screen { height: 100%; min-height: 600px; overflow-y: auto; padding: 1rem; color: #e8f4ec; background: #07131d; font: 15px/1.5 Consolas, "Courier New", monospace; }
+.cisco-terminal__screen pre { margin: 0; color: inherit; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cisco-terminal__screen form { display: flex; align-items: center; gap: .55rem; }
+.cisco-terminal__screen form label { flex: 0 0 auto; margin: 0; color: #9ce6a8; font: inherit; }
+.cisco-terminal__screen form input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0; color: #fff; background: transparent; font: inherit; box-shadow: none; }
+.monitor-type-badge { display: inline-block; width: fit-content; margin-bottom: .35rem; padding: .25rem .5rem; border-radius: 999px; color: #0d507f; background: #e0f2fe; font-size: .68rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+.monitor-type-badge--cli { color: #166534; background: #dcfce7; }
+.combined-results-workspace { display: grid; gap: 1.25rem; }
+.student-cli-history { margin-top: 1.25rem; }
+.cli-history-table-wrapper, .cli-results-table-wrapper { overflow-x: auto; border: 1px solid #dce6ef; border-radius: 12px; background: #fff; }
+.cli-history-table, .cli-results-table { width: 100%; min-width: 880px; border-collapse: collapse; }
+.cli-history-table th, .cli-history-table td, .cli-results-table th, .cli-results-table td { padding: .8rem; border-bottom: 1px solid #e4eaf0; text-align: left; vertical-align: middle; }
+.cli-history-table th, .cli-results-table th { color: #637286; font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
+.cli-history-table td strong, .cli-history-table td small, .cli-results-table td strong, .cli-results-table td small { display: block; }
+.cli-history-table td small, .cli-results-table td small { margin-top: .2rem; color: #637286; }
+.cli-results-panel { padding: 1.5rem; border-radius: 18px; background: #fff; box-shadow: 0 8px 25px rgba(25,52,77,.07); }
+.cli-result-class-groups { display: grid; gap: 1rem; }
+.cli-result-class-groups .class-result-group__header > div:first-child { display: grid; gap: .15rem; }
+.cli-review-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; margin: 1.25rem 0; }
+.cli-review-summary article { padding: 1rem; border: 1px solid #dce6ef; border-radius: 12px; background: #f8fbfd; }
+.cli-review-summary span { display: block; color: #637286; font-size: .78rem; }
+.cli-review-summary strong { display: block; margin-top: .3rem; color: #0d3158; font-size: 1.25rem; }
+.cli-criterion-review-list { display: grid; gap: .65rem; }
+.cli-criterion-review { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: .9rem; border: 1px solid #dce6ef; border-radius: 12px; }
+.cli-criterion-review--correct { border-color: #86d8a2; background: #f0fdf4; }
+.cli-criterion-review--incorrect { border-color: #f0aaaa; background: #fff5f5; }
+.cli-criterion-review__mark { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; color: #fff; background: #b91c1c; font-weight: 900; }
+.cli-criterion-review--correct .cli-criterion-review__mark { background: #15803d; }
+.cli-criterion-review p { margin: .2rem 0 0; color: #637286; }
+.cli-command-review { display: grid; overflow: hidden; border: 1px solid #20394c; border-radius: 12px; background: #07131d; }
+.cli-command-review > div { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: .7rem; padding: .7rem .9rem; border-bottom: 1px solid #1f384b; color: #d9e7f0; }
+.cli-command-review > div:last-child { border-bottom: 0; }
+.cli-command-review code { color: #9ce6a8; font: 14px Consolas, monospace; }
+.cli-command-review pre { grid-column: 2 / -1; margin: 0; color: #c8d8e3; white-space: pre-wrap; }
+.command-valid { color: #86efac; }
+.command-invalid { color: #fca5a5; }
+
+@media (max-width: 900px) {
+  .cli-criterion-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cli-criterion-row small { grid-column: 1 / -1; }
+  .cli-practical-layout { grid-template-columns: 1fr; }
+  .cisco-terminal__screen { min-height: 520px; }
+  .cli-review-summary { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .cli-criterion-row, .cli-lab-card dl { grid-template-columns: 1fr; }
+  .cli-practical-header { align-items: stretch; flex-direction: column; }
+  .student-assessment-tabs { overflow-x: auto; }
+  .student-assessment-tab { min-width: 150px; }
+  .cli-review-summary, .cli-criterion-review { grid-template-columns: 1fr; }
+  .cli-command-review > div { grid-template-columns: 36px minmax(0, 1fr); }
+  .cli-command-review > div > span:last-of-type { grid-column: 2; }
+}
+
 /* Phase 1.6 student recent quiz results */
 .student-quiz-area { display: grid; gap: 1.25rem; }
 .student-recent-results { padding: 1.5rem; border-radius: 18px; background: white; box-shadow: 0 8px 25px rgba(25,52,77,.07); }
@@ -536,6 +624,17 @@ input:focus { border-color: #1771b9; box-shadow: 0 0 0 3px rgba(23,113,185,.12);
 .schedule-card-grid, .monitor-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
 .schedule-card, .monitor-card { display: grid; gap: .75rem; padding: 1rem; border: 1px solid #dce6ef; border-radius: 14px; background: #f8fbfd; }
 .schedule-card h3, .monitor-card h3 { margin: .2rem 0; }
+.monitor-student-groups { display: grid; gap: .85rem; }
+.monitor-student-group { overflow: hidden; border: 1px solid #dce6ef; border-radius: 14px; background: #f8fbfd; }
+.monitor-student-summary { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto 32px; align-items: center; gap: .85rem; padding: 1rem 1.1rem; border: 0; border-radius: 0; color: #102b46; background: transparent; text-align: left; cursor: pointer; }
+.monitor-student-summary:hover { background: #eef6fb; }
+.monitor-student-summary:focus-visible { outline: 3px solid rgba(23,113,185,.22); outline-offset: -3px; }
+.monitor-student-summary > strong { min-width: 0; overflow-wrap: anywhere; font-size: 1rem; }
+.monitor-student-summary__events { min-width: 72px; padding: .32rem .6rem; border-radius: 999px; color: #991b1b; background: #fee2e2; font-size: .75rem; font-weight: 900; text-align: center; white-space: nowrap; }
+.monitor-student-summary__chevron { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; color: #0d507f; background: #e4f1fa; font-size: 1.1rem; font-weight: 900; }
+.monitor-student-attempts { padding: 0 1rem 1rem; border-top: 1px solid #dce6ef; }
+.monitor-student-attempts .monitor-card-grid { padding-top: 1rem; }
+.monitor-student-attempts .monitor-card { background: white; }
 .schedule-card p { margin: 0; color: #637286; }
 .schedule-card input, .accommodation-editor input, .accommodation-editor select { width: 100%; padding: .75rem .85rem; border: 1px solid #c9d4df; border-radius: 10px; background: white; color: inherit; }
 .assignment-class-groups { display: grid; gap: 1.25rem; }

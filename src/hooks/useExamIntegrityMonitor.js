@@ -3,6 +3,7 @@ import { recordExamIntegrityEvent } from '../services/examControlService'
 
 export default function useExamIntegrityMonitor({
   attemptId,
+  attemptType = 'quiz',
   enabled,
   onIncident,
 }) {
@@ -15,6 +16,7 @@ export default function useExamIntegrityMonitor({
     function record(eventType, details = {}) {
       void recordExamIntegrityEvent({
         attemptId,
+        attemptType,
         eventType,
         details,
       }).catch(() => {})
@@ -76,5 +78,5 @@ export default function useExamIntegrityMonitor({
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('online', handleOnline)
     }
-  }, [attemptId, enabled, onIncident])
+  }, [attemptId, attemptType, enabled, onIncident])
 }

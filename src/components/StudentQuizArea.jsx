@@ -3,6 +3,8 @@ import QuizPlayer from './QuizPlayer'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentQuizList from './StudentQuizList'
 import StudentRecentResults from './StudentRecentResults'
+import StudentCliArea from './StudentCliArea'
+import StudentCliHistory from './StudentCliHistory'
 
 export default function StudentQuizArea() {
   const [activeAttemptId, setActiveAttemptId] = useState(null)
@@ -59,6 +61,17 @@ export default function StudentQuizArea() {
         >
           Quiz history
         </button>
+        <button
+          className={
+            activeSection === 'cli'
+              ? 'student-assessment-tab student-assessment-tab--active'
+              : 'student-assessment-tab'
+          }
+          type="button"
+          onClick={() => setActiveSection('cli')}
+        >
+          CLI practicals
+        </button>
       </nav>
 
       {activeSection === 'available' ? (
@@ -70,14 +83,19 @@ export default function StudentQuizArea() {
             setActiveSection('history')
           }}
         />
+      ) : activeSection === 'history' ? (
+        <>
+          <StudentRecentResults
+            key={resultsVersion}
+            onRestored={() => {
+              setResultsVersion((current) => current + 1)
+              setActiveSection('available')
+            }}
+          />
+          <StudentCliHistory key={`cli-${resultsVersion}`} />
+        </>
       ) : (
-        <StudentRecentResults
-          key={resultsVersion}
-          onRestored={() => {
-            setResultsVersion((current) => current + 1)
-            setActiveSection('available')
-          }}
-        />
+        <StudentCliArea />
       )}
     </div>
   )

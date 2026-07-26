@@ -4,6 +4,8 @@ import InstructorQuizBuilder from './InstructorQuizBuilder'
 import InstructorResultsDashboard from './InstructorResultsDashboard'
 import InstructorClassAssignments from './InstructorClassAssignments'
 import ExamControlsDashboard from './ExamControlsDashboard'
+import InstructorCliLabBuilder from './InstructorCliLabBuilder'
+import InstructorCliResults from './InstructorCliResults'
 
 export default function InstructorWorkspace({ user }) {
   const [activeSection, setActiveSection] = useState('questions')
@@ -24,6 +26,13 @@ export default function InstructorWorkspace({ user }) {
           onClick={() => setActiveSection('quizzes')}
         >
           Quizzes
+        </button>
+        <button
+          className={activeSection === 'cli-practicals' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
+          type="button"
+          onClick={() => setActiveSection('cli-practicals')}
+        >
+          CLI practicals
         </button>
         <button
           className={activeSection === 'assignments' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
@@ -50,9 +59,15 @@ export default function InstructorWorkspace({ user }) {
 
       {activeSection === 'questions' && <InstructorQuestionBank user={user} />}
       {activeSection === 'quizzes' && <InstructorQuizBuilder />}
+      {activeSection === 'cli-practicals' && <InstructorCliLabBuilder />}
       {activeSection === 'assignments' && <InstructorClassAssignments />}
       {activeSection === 'exam-controls' && <ExamControlsDashboard />}
-      {activeSection === 'results' && <InstructorResultsDashboard />}
+      {activeSection === 'results' && (
+        <div className="combined-results-workspace">
+          <InstructorResultsDashboard />
+          <InstructorCliResults />
+        </div>
+      )}
     </div>
   )
 }

@@ -73,7 +73,7 @@ export default function Dashboard({
         <section className="welcome">
           <div>
             <span className="eyebrow">
-              PHASE 1
+              PHASE 2
             </span>
 
             <h1>
@@ -85,8 +85,8 @@ export default function Dashboard({
 
             <p>
               {isInstructor
-                ? 'Build question banks and review class results.'
-                : 'Your assigned quizzes will appear here.'}
+                ? 'Build quizzes and Cisco CLI practical examinations.'
+                : 'Complete assigned quizzes and Cisco CLI practicals.'}
             </p>
           </div>
 
