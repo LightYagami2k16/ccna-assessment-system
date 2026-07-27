@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import InstructorQuestionBank from './InstructorQuestionBank'
 import InstructorQuizBuilder from './InstructorQuizBuilder'
 import InstructorResultsDashboard from './InstructorResultsDashboard'
@@ -7,8 +7,48 @@ import ExamControlsDashboard from './ExamControlsDashboard'
 import InstructorCliLabBuilder from './InstructorCliLabBuilder'
 import InstructorCliResults from './InstructorCliResults'
 
+const instructorSections = new Set([
+  'questions',
+  'quizzes',
+  'cli-practicals',
+  'assignments',
+  'exam-controls',
+  'results',
+])
+
+function getStoredSection(userId) {
+  if (!userId) return 'questions'
+
+  try {
+    const storedSection = window.localStorage.getItem(
+      `ccna-instructor-active-section:${userId}`,
+    )
+
+    return instructorSections.has(storedSection)
+      ? storedSection
+      : 'questions'
+  } catch {
+    return 'questions'
+  }
+}
+
 export default function InstructorWorkspace({ user }) {
-  const [activeSection, setActiveSection] = useState('questions')
+  const [activeSection, setActiveSection] = useState(() =>
+    getStoredSection(user?.id),
+  )
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    try {
+      window.localStorage.setItem(
+        `ccna-instructor-active-section:${user.id}`,
+        activeSection,
+      )
+    } catch {
+      // The workspace still works when browser storage is unavailable.
+    }
+  }, [activeSection, user?.id])
 
   return (
     <div className="instructor-workspace">

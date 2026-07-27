@@ -7,6 +7,15 @@ import {
   saveStudentQuizAccommodation,
 } from '../services/examControlService'
 
+const courseTitles = {
+  ITN: 'Introduction to Networks',
+  SRWE: 'Switching, Routing, and Wireless Essentials',
+  ENSA: 'Enterprise Networking, Security, and Automation',
+  OTHER: 'Other assessments',
+}
+
+const courseOrder = { ITN: 1, SRWE: 2, ENSA: 3, OTHER: 99 }
+
 function toLocalDateTime(value) {
   if (!value) return ''
   const date = new Date(value)
@@ -222,6 +231,10 @@ export default function ExamControlsDashboard() {
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [expandedClassIds, setExpandedClassIds] = useState([])
+  const [expandedScheduleCourseCodes, setExpandedScheduleCourseCodes] =
+    useState([])
+  const [expandedMonitorClassIds, setExpandedMonitorClassIds] =
+    useState([])
   const [expandedMonitorStudents, setExpandedMonitorStudents] = useState([])
 
   const loadWorkspace = useCallback(async ({ silent = false } = {}) => {
@@ -244,70 +257,107 @@ export default function ExamControlsDashboard() {
     return () => window.clearInterval(intervalId)
   }, [loadWorkspace])
 
-  const assignmentsByClass = useMemo(() => {
-    const groups = new Map()
+  const assignmentsByCourse = useMemo(() => {
+    const courseGroups = new Map()
 
     for (const assignment of workspace.assignments) {
-      if (!groups.has(assignment.classId)) {
-        groups.set(assignment.classId, {
+      const quiz = workspace.quizzes.find(
+        (item) => item.id === assignment.quizId,
+      )
+      const courseCode = quiz?.courseCode || 'OTHER'
+      if (!courseGroups.has(courseCode)) {
+        courseGroups.set(courseCode, {
+          code: courseCode,
+          title: courseTitles[courseCode] || 'Other assessments',
+          classes: new Map(),
+        })
+      }
+      const classGroups = courseGroups.get(courseCode).classes
+      if (!classGroups.has(assignment.classId)) {
+        classGroups.set(assignment.classId, {
           classId: assignment.classId,
           classCode: assignment.classCode,
           className: assignment.className,
           assignments: [],
         })
       }
-
-      groups.get(assignment.classId).assignments.push(assignment)
+      classGroups.get(assignment.classId).assignments.push(assignment)
     }
 
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        assignments: [...group.assignments].sort((left, right) =>
-          left.quizTitle.localeCompare(right.quizTitle),
-        ),
+    return [...courseGroups.values()]
+      .map((courseGroup) => ({
+        ...courseGroup,
+        classes: [...courseGroup.classes.values()]
+          .map((classGroup) => ({
+            ...classGroup,
+            assignments: [...classGroup.assignments].sort((left, right) =>
+              left.quizTitle.localeCompare(right.quizTitle),
+            ),
+          }))
+          .sort((left, right) =>
+            left.className.localeCompare(right.className),
+          ),
       }))
-      .sort((left, right) => {
-        const nameComparison = left.className.localeCompare(right.className)
-        return nameComparison || left.classCode.localeCompare(right.classCode)
-      })
-  }, [workspace.assignments])
+      .sort(
+        (left, right) =>
+          (courseOrder[left.code] ?? 98)
+          - (courseOrder[right.code] ?? 98)
+          || left.code.localeCompare(right.code),
+      )
+  }, [workspace.assignments, workspace.quizzes])
 
-  const activeAttemptsByStudent = useMemo(() => {
-    const groups = new Map()
+  const activeAttemptsByClass = useMemo(() => {
+    const classGroups = new Map()
 
     for (const attempt of workspace.activeAttempts) {
+      const classId = String(attempt.classId || 'unassigned')
+      if (!classGroups.has(classId)) {
+        classGroups.set(classId, {
+          classId,
+          classCode: attempt.classCode || 'UNASSIGNED',
+          className: attempt.className || 'Unassigned or unresolved class',
+          eventCount: 0,
+          students: new Map(),
+        })
+      }
+      const classGroup = classGroups.get(classId)
+      classGroup.eventCount += Number(attempt.eventCount) || 0
       const studentKey = String(
         attempt.studentEmail
         || attempt.studentName
         || attempt.attemptId,
       ).toLowerCase()
-
-      if (!groups.has(studentKey)) {
-        groups.set(studentKey, {
-          studentKey,
+      if (!classGroup.students.has(studentKey)) {
+        classGroup.students.set(studentKey, {
+          studentKey: `${classId}:${studentKey}`,
           studentName: attempt.studentName || attempt.studentEmail || 'Student',
           eventCount: 0,
           attempts: [],
         })
       }
-
-      const group = groups.get(studentKey)
-      group.eventCount += Number(attempt.eventCount) || 0
-      group.attempts.push(attempt)
+      const studentGroup = classGroup.students.get(studentKey)
+      studentGroup.eventCount += Number(attempt.eventCount) || 0
+      studentGroup.attempts.push(attempt)
     }
 
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        attempts: [...group.attempts].sort(
-          (left, right) =>
-            new Date(right.startedAt).getTime()
-            - new Date(left.startedAt).getTime(),
-        ),
+    return [...classGroups.values()]
+      .map((classGroup) => ({
+        ...classGroup,
+        students: [...classGroup.students.values()]
+          .map((studentGroup) => ({
+            ...studentGroup,
+            attempts: [...studentGroup.attempts].sort(
+              (left, right) =>
+                new Date(right.startedAt).getTime()
+                - new Date(left.startedAt).getTime(),
+            ),
+          }))
+          .sort((left, right) =>
+            left.studentName.localeCompare(right.studentName),
+          ),
       }))
       .sort((left, right) =>
-        left.studentName.localeCompare(right.studentName),
+        left.className.localeCompare(right.className),
       )
   }, [workspace.activeAttempts])
 
@@ -322,6 +372,22 @@ export default function ExamControlsDashboard() {
       current.includes(normalizedClassId)
         ? current.filter((id) => id !== normalizedClassId)
         : [...current, normalizedClassId],
+    )
+  }
+
+  function toggleScheduleCourse(courseCode) {
+    setExpandedScheduleCourseCodes((current) =>
+      current.includes(courseCode)
+        ? current.filter((code) => code !== courseCode)
+        : [...current, courseCode],
+    )
+  }
+
+  function toggleMonitorClass(classId) {
+    setExpandedMonitorClassIds((current) =>
+      current.includes(classId)
+        ? current.filter((id) => id !== classId)
+        : [...current, classId],
     )
   }
 
@@ -379,55 +445,105 @@ export default function ExamControlsDashboard() {
             <p>Assign a quiz to a class before setting its schedule.</p>
           </div>
         ) : (
-          <div className="assignment-class-groups">
-            {assignmentsByClass.map((classGroup) => {
-              const expanded = isClassExpanded(classGroup.classId)
-              const panelId = `assignment-class-panel-${classGroup.classId}`
-
+          <div className="assignment-course-groups">
+            {assignmentsByCourse.map((courseGroup) => {
+              const courseExpanded = expandedScheduleCourseCodes.includes(
+                courseGroup.code,
+              )
+              const coursePanelId =
+                `assignment-course-panel-${courseGroup.code}`
+              const assignmentCount = courseGroup.classes.reduce(
+                (total, classGroup) =>
+                  total + classGroup.assignments.length,
+                0,
+              )
               return (
                 <section
-                  className="assignment-class-group"
-                  key={classGroup.classId}
+                  className="assignment-course-group"
+                  key={courseGroup.code}
                 >
-                  <header className="assignment-class-group__heading">
-                    <div>
-                      <span className="course-code">
-                        {classGroup.classCode}
-                      </span>
-                      <h3>{classGroup.className}</h3>
-                    </div>
-
-                    <div className="assignment-class-group__collapse-controls">
-                      <span className="status-chip">
-                        {classGroup.assignments.length}{' '}
-                        {classGroup.assignments.length === 1
-                          ? 'quiz'
-                          : 'quizzes'}
-                      </span>
-
-                      <button
-                        className="assignment-class-collapse-button"
-                        type="button"
-                        aria-expanded={expanded}
-                        aria-controls={panelId}
-                        onClick={() => toggleClass(classGroup.classId)}
-                      >
-                        {expanded ? 'Hide schedules' : 'Show schedules'}
-                      </button>
-                    </div>
-                  </header>
-
-                  {expanded && (
-                    <div id={panelId}>
-                      <div className="schedule-card-grid">
-                        {classGroup.assignments.map((assignment) => (
-                          <AssignmentScheduleCard
-                            key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
-                            assignment={assignment}
-                            onSaved={loadWorkspace}
-                          />
-                        ))}
+                  <header className="assignment-course-group__header">
+                    <div className="assignment-course-group__identity">
+                      <span className="course-code">{courseGroup.code}</span>
+                      <div>
+                        <h3>{courseGroup.title}</h3>
+                        <small>
+                          {assignmentCount}{' '}
+                          {assignmentCount === 1 ? 'schedule' : 'schedules'}
+                        </small>
                       </div>
+                    </div>
+                    <button
+                      className="module-collapse-button"
+                      type="button"
+                      aria-expanded={courseExpanded}
+                      aria-controls={coursePanelId}
+                      onClick={() => toggleScheduleCourse(courseGroup.code)}
+                    >
+                      {courseExpanded
+                        ? 'Hide course schedules'
+                        : 'Show course schedules'}
+                    </button>
+                  </header>
+                  {courseExpanded && (
+                    <div
+                      className="assignment-class-groups"
+                      id={coursePanelId}
+                    >
+                      {courseGroup.classes.map((classGroup) => {
+                        const expanded = isClassExpanded(classGroup.classId)
+                        const panelId =
+                          `assignment-class-panel-${classGroup.classId}`
+                        return (
+                          <section
+                            className="assignment-class-group"
+                            key={classGroup.classId}
+                          >
+                            <header className="assignment-class-group__heading">
+                              <div>
+                                <span className="course-code">
+                                  {classGroup.classCode}
+                                </span>
+                                <h3>{classGroup.className}</h3>
+                              </div>
+                              <div className="assignment-class-group__collapse-controls">
+                                <span className="status-chip">
+                                  {classGroup.assignments.length}{' '}
+                                  {classGroup.assignments.length === 1
+                                    ? 'quiz'
+                                    : 'quizzes'}
+                                </span>
+                                <button
+                                  className="assignment-class-collapse-button"
+                                  type="button"
+                                  aria-expanded={expanded}
+                                  aria-controls={panelId}
+                                  onClick={() =>
+                                    toggleClass(classGroup.classId)
+                                  }
+                                >
+                                  {expanded
+                                    ? 'Hide schedules'
+                                    : 'Show schedules'}
+                                </button>
+                              </div>
+                            </header>
+                            {expanded && (
+                              <div id={panelId}>
+                                <div className="schedule-card-grid">
+                                  {classGroup.assignments.map((assignment) => (
+                                    <AssignmentScheduleCard
+                                      key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
+                                      assignment={assignment}
+                                      onSaved={loadWorkspace}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </section>
+                        )
+                      })}
                     </div>
                   )}
                 </section>
@@ -523,8 +639,40 @@ export default function ExamControlsDashboard() {
             <p>Students currently taking an exam will appear here.</p>
           </div>
         ) : (
-          <div className="monitor-student-groups">
-            {activeAttemptsByStudent.map((studentGroup) => {
+          <div className="monitor-class-groups">
+            {activeAttemptsByClass.map((classGroup) => {
+              const classExpanded = expandedMonitorClassIds.includes(
+                classGroup.classId,
+              )
+              const classPanelId = `monitor-class-${classGroup.classId
+                .replace(/[^a-z0-9]+/gi, '-')}`
+              return (
+              <section className="monitor-class-group" key={classGroup.classId}>
+                <button
+                  className="monitor-class-summary"
+                  type="button"
+                  aria-expanded={classExpanded}
+                  aria-controls={classPanelId}
+                  onClick={() => toggleMonitorClass(classGroup.classId)}
+                >
+                  <span className="course-code">{classGroup.classCode}</span>
+                  <strong>{classGroup.className}</strong>
+                  <span>
+                    {classGroup.students.length}{' '}
+                    {classGroup.students.length === 1 ? 'student' : 'students'}
+                  </span>
+                  <span className="monitor-student-summary__events">
+                    {classGroup.eventCount}{' '}
+                    {classGroup.eventCount === 1 ? 'event' : 'events'}
+                  </span>
+                  <span aria-hidden="true">{classExpanded ? '−' : '+'}</span>
+                </button>
+                {classExpanded && (
+                  <div
+                    className="monitor-student-groups"
+                    id={classPanelId}
+                  >
+            {classGroup.students.map((studentGroup) => {
               const expanded = expandedMonitorStudents.includes(
                 studentGroup.studentKey,
               )
@@ -617,6 +765,11 @@ export default function ExamControlsDashboard() {
                     </div>
                   )}
                 </section>
+              )
+            })}
+                  </div>
+                )}
+              </section>
               )
             })}
           </div>

@@ -18,6 +18,15 @@ export async function deleteCliLab(labId) {
   return data
 }
 
+export async function bulkManageCliLabs(labIds, action) {
+  const { data, error } = await supabase.rpc('bulk_manage_cli_labs', {
+    p_lab_ids: labIds,
+    p_action: action,
+  })
+  if (error) throw error
+  return data
+}
+
 export async function getAvailableCliLabs() {
   const { data, error } = await supabase.rpc('get_available_cli_labs')
   if (error) throw error

@@ -142,7 +142,7 @@ export default function Dashboard({
 
         {isStudent && (
           <section className="dashboard-role-content">
-            <StudentQuizArea />
+            <StudentQuizArea user={user} />
           </section>
         )}
 

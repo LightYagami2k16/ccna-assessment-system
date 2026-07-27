@@ -16,6 +16,30 @@ import {
   saveQuizAccess,
 } from '../services/assignmentService'
 
+const courseTitles = {
+  ITN: 'Introduction to Networks',
+  SRWE: 'Switching, Routing, and Wireless Essentials',
+  ENSA: 'Enterprise Networking, Security, and Automation',
+  MULTI: 'Multiple CCNA courses',
+  OTHER: 'Other classes',
+}
+
+const courseOrder = {
+  ITN: 1,
+  SRWE: 2,
+  ENSA: 3,
+  MULTI: 98,
+  OTHER: 99,
+}
+
+function sortCourseGroups(groups) {
+  return [...groups].sort(
+    (left, right) =>
+      (courseOrder[left.code] ?? 97) - (courseOrder[right.code] ?? 97)
+      || left.code.localeCompare(right.code),
+  )
+}
+
 function ClassEditor({ students, classSection, onSaved, onCancel }) {
   const isEditing = Boolean(classSection)
   const [name, setName] = useState(classSection?.name ?? '')
@@ -351,9 +375,25 @@ function ClassEnrollmentTools({ classSection, onChanged }) {
   )
 }
 
-function EnrollmentApprovalPanel({ requests, onChanged }) {
+function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
   const [reviewingId, setReviewingId] = useState(null)
   const [message, setMessage] = useState('')
+  const [expandedCourseCodes, setExpandedCourseCodes] = useState([])
+
+  useEffect(() => {
+    const availableCodes = courseGroups.map((group) => group.code)
+    setExpandedCourseCodes((current) =>
+      current.filter((code) => availableCodes.includes(code)),
+    )
+  }, [courseGroups])
+
+  function toggleCourse(code) {
+    setExpandedCourseCodes((current) =>
+      current.includes(code)
+        ? current.filter((item) => item !== code)
+        : [...current, code],
+    )
+  }
 
   async function handleDecision(request, decision) {
     setReviewingId(request.id)
@@ -395,8 +435,38 @@ function EnrollmentApprovalPanel({ requests, onChanged }) {
           <p>New student requests will appear here for approval.</p>
         </div>
       ) : (
-        <div className="approval-request-list">
-          {requests.map((request) => (
+        <div className="approval-course-groups">
+          {courseGroups.map((courseGroup) => {
+            const expanded = expandedCourseCodes.includes(courseGroup.code)
+            const panelId = `approval-course-${courseGroup.code}`
+            return (
+            <section className="approval-course-group" key={courseGroup.code}>
+              <header className="approval-course-group__header">
+                <div className="approval-course-group__identity">
+                  <span className="course-code">{courseGroup.code}</span>
+                  <div>
+                    <h3>{courseGroup.title}</h3>
+                    <small>
+                      {courseGroup.requests.length}{' '}
+                      {courseGroup.requests.length === 1
+                        ? 'request'
+                        : 'requests'}
+                    </small>
+                  </div>
+                </div>
+                <button
+                  className="module-collapse-button"
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  onClick={() => toggleCourse(courseGroup.code)}
+                >
+                  {expanded ? 'Hide requests' : 'Show requests'}
+                </button>
+              </header>
+              {expanded && (
+                <div className="approval-request-list" id={panelId}>
+                {courseGroup.requests.map((request) => (
             <article className="approval-request-card" key={request.id}>
               <div>
                 <span className="course-code">{request.classCode}</span>
@@ -431,7 +501,12 @@ function EnrollmentApprovalPanel({ requests, onChanged }) {
                 </button>
               </div>
             </article>
-          ))}
+                ))}
+                </div>
+              )}
+            </section>
+            )
+          })}
         </div>
       )}
 
@@ -551,16 +626,6 @@ export default function InstructorClassAssignments() {
   const [message, setMessage] = useState('')
 
   const quizzesByCourse = useMemo(() => {
-    const courseTitles = {
-      ITN: 'Introduction to Networks',
-      SRWE: 'Switching, Routing, and Wireless Essentials',
-      ENSA: 'Enterprise Networking, Security, and Automation',
-    }
-    const courseOrder = {
-      ITN: 1,
-      SRWE: 2,
-      ENSA: 3,
-    }
     const groups = new Map()
 
     workspace.quizzes.forEach((quiz) => {
@@ -577,22 +642,91 @@ export default function InstructorClassAssignments() {
       groups.get(courseCode).quizzes.push(quiz)
     })
 
-    return [...groups.values()]
-      .map((group) => ({
+    return sortCourseGroups(
+      [...groups.values()].map((group) => ({
         ...group,
         quizzes: [...group.quizzes].sort((left, right) =>
           left.title.localeCompare(right.title, undefined, {
             sensitivity: 'base',
           }),
         ),
-      }))
-      .sort(
-        (left, right) =>
-          (courseOrder[left.code] ?? 99) -
-            (courseOrder[right.code] ?? 99) ||
-          left.code.localeCompare(right.code),
-      )
+      })),
+    )
   }, [workspace.quizzes])
+
+  const classCourseGroups = useMemo(() => {
+    const groups = new Map()
+
+    workspace.classes.forEach((classSection) => {
+      const assignedCourseCodes = [
+        ...new Set(
+          classSection.courseCodes?.length
+            ? classSection.courseCodes
+            : workspace.quizzes
+              .filter((quiz) => quiz.classIds?.includes(classSection.id))
+              .map((quiz) => quiz.courseCode)
+              .filter(Boolean),
+        ),
+      ]
+      const normalizedClassCode = String(classSection.code ?? '').toUpperCase()
+      const codePrefix = ['ITN', 'SRWE', 'ENSA'].find(
+        (code) =>
+          normalizedClassCode === code
+          || normalizedClassCode.startsWith(`${code}-`)
+          || normalizedClassCode.startsWith(`${code}_`),
+      )
+      const courseCode =
+        assignedCourseCodes.length === 1
+          ? assignedCourseCodes[0]
+          : assignedCourseCodes.length > 1
+            ? 'MULTI'
+            : codePrefix || 'OTHER'
+
+      if (!groups.has(courseCode)) {
+        groups.set(courseCode, {
+          code: courseCode,
+          title: courseTitles[courseCode] || 'Other classes',
+          classes: [],
+        })
+      }
+      groups.get(courseCode).classes.push(classSection)
+    })
+
+    return sortCourseGroups(
+      [...groups.values()].map((group) => ({
+        ...group,
+        classes: [...group.classes].sort((left, right) =>
+          left.name.localeCompare(right.name, undefined, {
+            sensitivity: 'base',
+          }),
+        ),
+      })),
+    )
+  }, [workspace.classes, workspace.quizzes])
+
+  const approvalCourseGroups = useMemo(() => {
+    const classCourseCodes = new Map()
+    classCourseGroups.forEach((group) => {
+      group.classes.forEach((classSection) => {
+        classCourseCodes.set(classSection.id, group.code)
+      })
+    })
+    const groups = new Map()
+
+    workspace.approvalRequests.forEach((request) => {
+      const code = classCourseCodes.get(request.classId) || 'OTHER'
+      if (!groups.has(code)) {
+        groups.set(code, {
+          code,
+          title: courseTitles[code] || 'Other classes',
+          requests: [],
+        })
+      }
+      groups.get(code).requests.push(request)
+    })
+
+    return sortCourseGroups([...groups.values()])
+  }, [classCourseGroups, workspace.approvalRequests])
 
   const loadWorkspace = useCallback(async () => {
     try {
@@ -770,79 +904,85 @@ export default function InstructorClassAssignments() {
                 const detailsId = `class-details-${classSection.id}`
 
                 return (
-                <article className="class-card" key={classSection.id}>
-                  <label className="card-select-control">
-                    <input
-                      type="checkbox"
-                      checked={selectedClassIds.includes(
-                        classSection.id,
-                      )}
-                      disabled={bulkDeleting}
-                      onChange={(event) =>
-                        toggleClassSelection(
-                          [classSection.id],
-                          event.target.checked,
-                        )
-                      }
-                    />
-                    Select for deletion
-                  </label>
-                <header>
-                  <span className="course-code">{classSection.code}</span>
-                  <div className="class-card__header-controls">
-                    <span
-                      className={`content-status ${
-                        classSection.isActive
-                          ? 'content-status--published'
-                          : 'content-status--draft'
-                      }`}
-                    >
-                      {classSection.isActive ? 'active' : 'inactive'}
-                    </span>
-                    <button
-                      className="module-collapse-button"
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={detailsId}
-                      onClick={() =>
-                        toggleClassDetails(classSection.id)
-                      }
-                    >
-                      {expanded ? 'Hide details' : 'Show details'}
-                    </button>
-                  </div>
-                </header>
-                <h3>{classSection.name}</h3>
-                <p>{classSection.academicTerm || 'No academic term'}</p>
-                <strong>{classSection.studentIds.length} students</strong>
-                {expanded && (
-                  <div className="class-card__details" id={detailsId}>
-                    <ClassEnrollmentTools
-                      classSection={classSection}
-                      onChanged={loadWorkspace}
-                    />
-                    <div className="class-card__actions">
-                      <button
-                        className="primary"
-                        type="button"
-                        onClick={() => setEditingClass(classSection)}
-                      >
-                        Edit class
-                      </button>
-                      <button
-                        className="secondary"
-                        type="button"
-                        disabled={deletingId === classSection.id}
-                        onClick={() => void handleDelete(classSection)}
-                      >
-                        {deletingId === classSection.id
-                          ? 'Deleting...'
-                          : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                </article>
+                  <article className="class-card" key={classSection.id}>
+                    <label className="card-select-control">
+                      <input
+                        type="checkbox"
+                        checked={selectedClassIds.includes(
+                          classSection.id,
+                        )}
+                        disabled={bulkDeleting}
+                        onChange={(event) =>
+                          toggleClassSelection(
+                            [classSection.id],
+                            event.target.checked,
+                          )
+                        }
+                      />
+                      Select for deletion
+                    </label>
+                    <header>
+                      <span className="course-code">
+                        {classSection.code}
+                      </span>
+                      <div className="class-card__header-controls">
+                        <span
+                          className={`content-status ${
+                            classSection.isActive
+                              ? 'content-status--published'
+                              : 'content-status--draft'
+                          }`}
+                        >
+                          {classSection.isActive ? 'active' : 'inactive'}
+                        </span>
+                        <button
+                          className="module-collapse-button"
+                          type="button"
+                          aria-expanded={expanded}
+                          aria-controls={detailsId}
+                          onClick={() =>
+                            toggleClassDetails(classSection.id)
+                          }
+                        >
+                          {expanded ? 'Hide details' : 'Show details'}
+                        </button>
+                      </div>
+                    </header>
+                    <h3>{classSection.name}</h3>
+                    <p>
+                      {classSection.academicTerm || 'No academic term'}
+                    </p>
+                    <strong>
+                      {classSection.studentIds.length} students
+                    </strong>
+                    {expanded && (
+                      <div className="class-card__details" id={detailsId}>
+                        <ClassEnrollmentTools
+                          classSection={classSection}
+                          onChanged={loadWorkspace}
+                        />
+                        <div className="class-card__actions">
+                          <button
+                            className="primary"
+                            type="button"
+                            onClick={() => setEditingClass(classSection)}
+                          >
+                            Edit class
+                          </button>
+                          <button
+                            className="secondary"
+                            type="button"
+                            disabled={deletingId === classSection.id}
+                            onClick={() => void handleDelete(classSection)}
+                          >
+                            {deletingId === classSection.id
+                              ? 'Deleting...'
+                              : 'Delete'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
                 )
               })}
             </div>
@@ -851,6 +991,7 @@ export default function InstructorClassAssignments() {
       </section>
 
       <EnrollmentApprovalPanel
+        courseGroups={approvalCourseGroups}
         requests={workspace.approvalRequests}
         onChanged={loadWorkspace}
       />

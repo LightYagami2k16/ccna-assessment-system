@@ -4,12 +4,28 @@ export async function getExamControlsWorkspace() {
   const [
     { data, error },
     { data: cliAttempts, error: cliError },
+    { data: classContexts },
   ] = await Promise.all([
     supabase.rpc('get_exam_controls_workspace'),
     supabase.rpc('get_cli_live_monitoring_attempts'),
+    supabase.rpc('get_live_attempt_class_context'),
   ])
   if (error) throw error
   if (cliError) throw cliError
+  const classContextByAttempt = new Map(
+    (classContexts ?? []).map((context) => [
+      `${context.assessmentType}:${context.attemptId}`,
+      context,
+    ]),
+  )
+  const withClassContext = (attempt) => ({
+    ...attempt,
+    ...(
+      classContextByAttempt.get(
+        `${attempt.assessmentType}:${attempt.attemptId}`,
+      ) ?? {}
+    ),
+  })
   return {
     students: data?.students ?? [],
     quizzes: data?.quizzes ?? [],
@@ -22,7 +38,7 @@ export async function getExamControlsWorkspace() {
         assessmentTitle: attempt.quizTitle,
       })),
       ...(cliAttempts ?? []),
-    ].sort(
+    ].map(withClassContext).sort(
       (left, right) =>
         new Date(right.startedAt).getTime() -
         new Date(left.startedAt).getTime(),

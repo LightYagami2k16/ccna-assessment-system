@@ -4,6 +4,8 @@ import {
   getInstructorCliResults,
   resetInstructorCliAttempts,
 } from '../services/cliLabService'
+import BrowserEventReview from './BrowserEventReview'
+import ResultActionMenu from './ResultActionMenu'
 
 const criterionLabels = {
   hostname: 'Hostname',
@@ -13,6 +15,18 @@ const criterionLabels = {
   interface_access_vlan: 'Interface access VLAN',
   interface_enabled: 'Interface enabled',
   interface_ip: 'Interface IP address',
+  ip_routing_enabled: 'Layer 3 IP routing enabled',
+  default_gateway: 'Switch default gateway',
+  static_route: 'Static route',
+  default_route: 'Default route',
+  ospf_process: 'OSPF process exists',
+  ospf_router_id: 'OSPF router ID',
+  ospf_network: 'OSPF network statement',
+  ospf_passive_interface: 'OSPF passive interface',
+  ospf_default_information: 'OSPF default information originate',
+  acl_exists: 'Access list exists',
+  acl_entry: 'Access list entry',
+  interface_acl: 'Interface access list',
   config_saved: 'Configuration saved',
 }
 
@@ -131,6 +145,7 @@ function CliAttemptReview({ attemptId, onBack }) {
 export default function InstructorCliResults() {
   const [attempts, setAttempts] = useState([])
   const [selectedAttemptId, setSelectedAttemptId] = useState(null)
+  const [browserEventAttemptId, setBrowserEventAttemptId] = useState(null)
   const [expandedClasses, setExpandedClasses] = useState([])
   const [expandedStudents, setExpandedStudents] = useState([])
   const [selectedAttemptIds, setSelectedAttemptIds] = useState([])
@@ -193,6 +208,16 @@ export default function InstructorCliResults() {
     } finally {
       setResetting(false)
     }
+  }
+
+  if (browserEventAttemptId) {
+    return (
+      <BrowserEventReview
+        attemptId={browserEventAttemptId}
+        attemptType="cli"
+        onBack={() => setBrowserEventAttemptId(null)}
+      />
+    )
   }
 
   if (selectedAttemptId) {
@@ -315,22 +340,43 @@ export default function InstructorCliResults() {
                                       <td>{attempt.commandCount}</td>
                                       <td>{formatDate(attempt.submittedAt)}</td>
                                       <td>
-                                        <div className="row-action-buttons">
-                                          <button className="primary" type="button" onClick={() => setSelectedAttemptId(attempt.attemptId)}>Review</button>
-                                          <button
-                                            className="danger-button danger-button--compact"
-                                            type="button"
-                                            disabled={resetting}
-                                            onClick={() =>
-                                              void handleReset(
+                                        <ResultActionMenu
+                                          ariaLabel={`Actions for CLI attempt ${attempt.attemptNumber} of ${attempt.labTitle}`}
+                                          options={[
+                                            {
+                                              value: 'review',
+                                              label: 'Review grading',
+                                            },
+                                            {
+                                              value: 'events',
+                                              label: 'Browser events',
+                                            },
+                                            {
+                                              value: 'reset',
+                                              label: 'Reset attempt',
+                                            },
+                                          ]}
+                                          disabledActions={
+                                            resetting ? ['reset'] : []
+                                          }
+                                          onAction={(action) => {
+                                            if (action === 'review') {
+                                              setSelectedAttemptId(attempt.attemptId)
+                                              return undefined
+                                            }
+                                            if (action === 'events') {
+                                              setBrowserEventAttemptId(attempt.attemptId)
+                                              return undefined
+                                            }
+                                            if (action === 'reset') {
+                                              return handleReset(
                                                 [attempt.attemptId],
                                                 `attempt #${attempt.attemptNumber} for ${attempt.labTitle}`,
                                               )
                                             }
-                                          >
-                                            Reset
-                                          </button>
-                                        </div>
+                                            return undefined
+                                          }}
+                                        />
                                       </td>
                                     </tr>
                                   ))}

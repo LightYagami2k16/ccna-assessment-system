@@ -5,6 +5,8 @@ import {
   useState,
 } from 'react'
 import InstructorAttemptReview from './InstructorAttemptReview'
+import BrowserEventReview from './BrowserEventReview'
+import ResultActionMenu from './ResultActionMenu'
 import {
   getInstructorAttempts,
   resetInstructorAttempts,
@@ -151,6 +153,7 @@ export default function InstructorResultsDashboard() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedAttemptIds, setSelectedAttemptIds] = useState([])
   const [selectedAttemptId, setSelectedAttemptId] = useState(null)
+  const [browserEventAttemptId, setBrowserEventAttemptId] = useState(null)
   const [expandedResultClassIds, setExpandedResultClassIds] =
     useState([])
   const [expandedResultStudentIds, setExpandedResultStudentIds] =
@@ -485,6 +488,16 @@ export default function InstructorResultsDashboard() {
     } finally {
       setResetting(false)
     }
+  }
+
+  if (browserEventAttemptId) {
+    return (
+      <BrowserEventReview
+        attemptId={browserEventAttemptId}
+        attemptType="quiz"
+        onBack={() => setBrowserEventAttemptId(null)}
+      />
+    )
   }
 
   if (selectedAttemptId) {
@@ -1082,36 +1095,47 @@ export default function InstructorResultsDashboard() {
                                             </td>
 
                                             <td className="results-table__action">
-                                              <div className="row-action-buttons">
-                                                <button
-                                                  className="secondary"
-                                                  type="button"
-                                                  onClick={() =>
+                                              <ResultActionMenu
+                                                ariaLabel={`Actions for attempt ${attempt.attemptNumber} of ${quiz.quizTitle}`}
+                                                options={[
+                                                  {
+                                                    value: 'review',
+                                                    label: 'Review answers',
+                                                  },
+                                                  {
+                                                    value: 'events',
+                                                    label: 'Browser events',
+                                                  },
+                                                  {
+                                                    value: 'reset',
+                                                    label: 'Reset attempt',
+                                                  },
+                                                ]}
+                                                disabledActions={
+                                                  resetting ? ['reset'] : []
+                                                }
+                                                onAction={(action) => {
+                                                  if (action === 'review') {
                                                     setSelectedAttemptId(
                                                       attempt.attemptId,
                                                     )
+                                                    return undefined
                                                   }
-                                                >
-                                                  Review
-                                                </button>
-                                                <button
-                                                  className="danger-button danger-button--compact"
-                                                  type="button"
-                                                  disabled={
-                                                    resetting
+                                                  if (action === 'events') {
+                                                    setBrowserEventAttemptId(
+                                                      attempt.attemptId,
+                                                    )
+                                                    return undefined
                                                   }
-                                                  onClick={() =>
-                                                    void handleReset(
-                                                      [
-                                                        attempt.attemptId,
-                                                      ],
+                                                  if (action === 'reset') {
+                                                    return handleReset(
+                                                      [attempt.attemptId],
                                                       `attempt #${attempt.attemptNumber} for ${quiz.quizTitle}`,
                                                     )
                                                   }
-                                                >
-                                                  Reset
-                                                </button>
-                                              </div>
+                                                  return undefined
+                                                }}
+                                              />
                                             </td>
                                           </tr>
                                         ),

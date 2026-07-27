@@ -5,9 +5,23 @@ import {
   startCliAttempt,
 } from '../services/cliLabService'
 
-export default function StudentCliArea() {
+function readStoredAttempt(userId) {
+  if (!userId) return null
+
+  try {
+    return window.localStorage.getItem(
+      `ccna-student-active-cli-attempt:${userId}`,
+    )
+  } catch {
+    return null
+  }
+}
+
+export default function StudentCliArea({ userId }) {
   const [labs, setLabs] = useState([])
-  const [activeAttemptId, setActiveAttemptId] = useState(null)
+  const [activeAttemptId, setActiveAttemptId] = useState(() =>
+    readStoredAttempt(userId),
+  )
   const [startingId, setStartingId] = useState(null)
   const [message, setMessage] = useState('')
 
@@ -23,6 +37,22 @@ export default function StudentCliArea() {
   }, [])
 
   useEffect(() => { void loadLabs() }, [loadLabs])
+
+  useEffect(() => {
+    if (!userId) return
+
+    try {
+      const storageKey = `ccna-student-active-cli-attempt:${userId}`
+
+      if (activeAttemptId) {
+        window.localStorage.setItem(storageKey, activeAttemptId)
+      } else {
+        window.localStorage.removeItem(storageKey)
+      }
+    } catch {
+      // The practical remains usable when browser storage is unavailable.
+    }
+  }, [activeAttemptId, userId])
 
   async function startLab(lab) {
     setStartingId(lab.id)

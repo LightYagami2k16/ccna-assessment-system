@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import QuizPlayer from './QuizPlayer'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentQuizList from './StudentQuizList'
@@ -6,11 +6,58 @@ import StudentRecentResults from './StudentRecentResults'
 import StudentCliArea from './StudentCliArea'
 import StudentCliHistory from './StudentCliHistory'
 
-export default function StudentQuizArea() {
-  const [activeAttemptId, setActiveAttemptId] = useState(null)
+const studentSections = new Set(['available', 'history', 'cli'])
+
+function readStoredValue(key, fallback = null) {
+  if (!key) return fallback
+
+  try {
+    return window.localStorage.getItem(key) || fallback
+  } catch {
+    return fallback
+  }
+}
+
+function storeValue(key, value) {
+  if (!key) return
+
+  try {
+    if (value) {
+      window.localStorage.setItem(key, value)
+    } else {
+      window.localStorage.removeItem(key)
+    }
+  } catch {
+    // Student assessments continue normally when storage is unavailable.
+  }
+}
+
+export default function StudentQuizArea({ user }) {
+  const userId = user?.id ?? null
+  const sectionStorageKey = userId
+    ? `ccna-student-active-section:${userId}`
+    : null
+  const attemptStorageKey = userId
+    ? `ccna-student-active-quiz-attempt:${userId}`
+    : null
+
+  const [activeAttemptId, setActiveAttemptId] = useState(() =>
+    readStoredValue(attemptStorageKey),
+  )
   const [resultsVersion, setResultsVersion] = useState(0)
   const [enrollmentVersion, setEnrollmentVersion] = useState(0)
-  const [activeSection, setActiveSection] = useState('available')
+  const [activeSection, setActiveSection] = useState(() => {
+    const storedSection = readStoredValue(sectionStorageKey, 'available')
+    return studentSections.has(storedSection) ? storedSection : 'available'
+  })
+
+  useEffect(() => {
+    storeValue(sectionStorageKey, activeSection)
+  }, [activeSection, sectionStorageKey])
+
+  useEffect(() => {
+    storeValue(attemptStorageKey, activeAttemptId)
+  }, [activeAttemptId, attemptStorageKey])
 
   if (activeAttemptId) {
     return (
@@ -95,7 +142,7 @@ export default function StudentQuizArea() {
           <StudentCliHistory key={`cli-${resultsVersion}`} />
         </>
       ) : (
-        <StudentCliArea />
+        <StudentCliArea userId={userId} />
       )}
     </div>
   )

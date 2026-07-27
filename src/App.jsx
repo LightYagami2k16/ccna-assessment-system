@@ -7,6 +7,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const userId = session?.user?.id ?? null
 
   useEffect(() => {
     let active = true
@@ -21,7 +22,15 @@ export default function App() {
     void loadSession()
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
-        setSession(nextSession)
+        setSession((currentSession) => {
+          const currentUserId = currentSession?.user?.id ?? null
+          const nextUserId = nextSession?.user?.id ?? null
+
+          return currentUserId === nextUserId
+            ? currentSession
+            : nextSession
+        })
+
         if (!nextSession) {
           setProfile(null)
           setLoading(false)
@@ -39,12 +48,14 @@ export default function App() {
     let active = true
 
     async function loadProfile() {
-      if (!session?.user) return
+      if (!userId) return
+
       setLoading(true)
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, role')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single()
 
       if (active) {
@@ -57,7 +68,7 @@ export default function App() {
     return () => {
       active = false
     }
-  }, [session])
+  }, [userId])
 
   if (loading) {
     return <div className="loading-screen">Loading CCNA Assessment…</div>

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCourses, getModules } from '../services/questionService'
 import {
+  bulkManageCliLabs,
   deleteCliLab,
   getInstructorCliWorkspace,
   saveCliLab,
@@ -24,10 +25,31 @@ const criterionTypes = [
   ['interface_voice_vlan', 'Interface voice VLAN'],
   ['interface_trunk_native_vlan', 'Trunk native VLAN'],
   ['interface_trunk_allowed_vlans', 'Trunk allowed VLANs'],
+  ['interface_dot1q', 'Subinterface 802.1Q VLAN'],
+  ['interface_dot1q_native', 'Native 802.1Q VLAN'],
   ['interface_enabled', 'Interface enabled'],
   ['interface_ip', 'Interface IP address'],
+  ['ip_routing_enabled', 'Layer 3 IP routing enabled'],
+  ['default_gateway', 'Switch default gateway'],
+  ['static_route', 'Static route'],
+  ['default_route', 'Default route'],
+  ['ospf_process', 'OSPF process exists'],
+  ['ospf_router_id', 'OSPF router ID'],
+  ['ospf_network', 'OSPF network statement'],
+  ['ospf_passive_interface', 'OSPF passive interface'],
+  ['ospf_default_information', 'OSPF default information originate'],
+  ['acl_exists', 'Access list exists'],
+  ['acl_entry', 'Access list entry'],
+  ['interface_acl', 'Interface access list'],
   ['config_saved', 'Configuration saved'],
 ]
+
+const criterionTypeLabels = Object.fromEntries(criterionTypes)
+const sensitiveCriterionTypes = new Set([
+  'enable_secret',
+  'local_user',
+  'line_password',
+])
 
 const targetNotRequired = [
   'hostname',
@@ -35,6 +57,9 @@ const targetNotRequired = [
   'password_encryption',
   'banner_motd',
   'domain_name',
+  'ip_routing_enabled',
+  'default_gateway',
+  'default_route',
   'config_saved',
 ]
 
@@ -43,11 +68,283 @@ const expectedNotRequired = [
   'line_login',
   'vlan_exists',
   'interface_enabled',
+  'ip_routing_enabled',
+  'ospf_process',
+  'ospf_default_information',
+  'acl_exists',
   'config_saved',
 ]
 
 function blankCriterion() {
   return { type: 'hostname', target: '', expected: '', points: 10 }
+}
+
+function presetCriteria(preset) {
+  const criterion = (type, expected = '') => ({
+    type,
+    target: '',
+    expected,
+    points: 10,
+  })
+
+  const presets = {
+    basic_device: [
+      criterion('hostname'),
+      criterion('enable_secret'),
+      criterion('password_encryption'),
+      criterion('banner_motd'),
+      criterion('config_saved'),
+    ],
+    vlan_access: [
+      criterion('vlan_exists'),
+      criterion('vlan_name'),
+      criterion('interface_mode', 'access'),
+      criterion('interface_access_vlan'),
+      criterion('interface_enabled'),
+      criterion('config_saved'),
+    ],
+    router_on_stick: [
+      criterion('interface_dot1q'),
+      criterion('interface_ip'),
+      criterion('interface_enabled'),
+      criterion('default_route'),
+      criterion('config_saved'),
+    ],
+    static_routing: [
+      criterion('interface_ip'),
+      criterion('interface_enabled'),
+      criterion('static_route'),
+      criterion('default_route'),
+      criterion('config_saved'),
+    ],
+    single_area_ospf: [
+      criterion('ospf_process'),
+      criterion('ospf_router_id'),
+      criterion('ospf_network'),
+      criterion('ospf_passive_interface'),
+      criterion('config_saved'),
+    ],
+    standard_acl: [
+      criterion('acl_exists'),
+      criterion('acl_entry'),
+      criterion('interface_acl'),
+      criterion('config_saved'),
+    ],
+    extended_acl: [
+      criterion('acl_exists'),
+      criterion('acl_entry'),
+      criterion('interface_acl'),
+      criterion('config_saved'),
+    ],
+  }
+
+  return presets[preset] ?? []
+}
+
+function criterionSummary(criterion) {
+  const values = []
+  if (criterion.target?.trim()) values.push(criterion.target.trim())
+  if (criterion.expected?.trim()) {
+    values.push(
+      sensitiveCriterionTypes.has(criterion.type)
+        ? 'Value configured'
+        : criterion.expected.trim(),
+    )
+  }
+  return values.length ? values.join(' → ') : 'Details not entered'
+}
+
+function criterionRequiredState(type) {
+  return {
+    password_encryption: 'Enabled',
+    line_login: 'Enabled',
+    vlan_exists: 'Must exist',
+    interface_enabled: 'Enabled (no shutdown)',
+    ip_routing_enabled: 'Enabled',
+    ospf_process: 'Must exist',
+    ospf_default_information: 'Enabled',
+    acl_exists: 'Must exist',
+    config_saved: 'Running configuration saved',
+  }[type] ?? 'Configured'
+}
+
+function configurationCommands(...commands) {
+  return [
+    'enable',
+    'configure terminal',
+    ...commands.filter(Boolean),
+    'end',
+  ]
+}
+
+function lineConfigurationTarget(target) {
+  const normalized = String(target ?? '').trim().toLowerCase()
+  if (normalized === 'console' || normalized === 'console 0') {
+    return 'line console 0'
+  }
+  if (normalized === 'vty') return 'line vty 0 4'
+  return `line ${String(target ?? '').trim()}`
+}
+
+function inferNamedAclType(statement) {
+  const protocol = String(statement ?? '')
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)[1]
+  return [
+    'ahp',
+    'eigrp',
+    'esp',
+    'gre',
+    'icmp',
+    'igmp',
+    'ip',
+    'ipinip',
+    'nos',
+    'ospf',
+    'pcp',
+    'pim',
+    'tcp',
+    'udp',
+  ].includes(protocol)
+    ? 'extended'
+    : 'standard'
+}
+
+function aclConfigurationCommands(target, statement = '') {
+  const aclId = String(target ?? '').trim()
+  const aclStatement = String(statement ?? '').trim()
+  if (/^\d+$/.test(aclId)) {
+    const aclNumber = Number(aclId)
+    const isExtended =
+      (aclNumber >= 100 && aclNumber <= 199)
+      || (aclNumber >= 2000 && aclNumber <= 2699)
+    return configurationCommands(
+      `access-list ${aclId} ${
+        aclStatement || (isExtended ? 'permit ip any any' : 'permit any')
+      }`,
+    )
+  }
+
+  const aclType = inferNamedAclType(aclStatement)
+  return configurationCommands(
+    `ip access-list ${aclType} ${aclId}`,
+    aclStatement || (aclType === 'extended' ? 'permit ip any any' : 'permit any'),
+    'exit',
+  )
+}
+
+function criterionConfigurationCommands(criterion, allCriteria) {
+  const target = String(criterion.target ?? '').trim()
+  const expected = String(criterion.expected ?? '').trim()
+  const interfaceCommands = (...commands) =>
+    configurationCommands(`interface ${target}`, ...commands)
+  const routerCommands = (...commands) =>
+    configurationCommands(`router ospf ${target}`, ...commands)
+
+  switch (criterion.type) {
+    case 'hostname':
+      return configurationCommands(`hostname ${expected}`)
+    case 'enable_secret':
+      return configurationCommands(`enable secret ${expected}`)
+    case 'password_encryption':
+      return configurationCommands('service password-encryption')
+    case 'banner_motd': {
+      const delimiter = expected.includes('#') ? '^' : '#'
+      return configurationCommands(
+        `banner motd ${delimiter}${expected}${delimiter}`,
+      )
+    }
+    case 'domain_name':
+      return configurationCommands(`ip domain-name ${expected}`)
+    case 'local_user':
+      return configurationCommands(`username ${target} secret ${expected}`)
+    case 'line_password':
+      return configurationCommands(
+        lineConfigurationTarget(target),
+        `password ${expected}`,
+        'exit',
+      )
+    case 'line_login':
+      return configurationCommands(
+        lineConfigurationTarget(target),
+        'login',
+        'exit',
+      )
+    case 'line_transport_input':
+      return configurationCommands(
+        lineConfigurationTarget(target),
+        `transport input ${expected}`,
+        'exit',
+      )
+    case 'vlan_exists':
+      return configurationCommands(`vlan ${target}`, 'exit')
+    case 'vlan_name':
+      return configurationCommands(
+        `vlan ${target}`,
+        `name ${expected}`,
+        'exit',
+      )
+    case 'interface_mode':
+      return interfaceCommands(`switchport mode ${expected}`)
+    case 'interface_description':
+      return interfaceCommands(`description ${expected}`)
+    case 'interface_access_vlan':
+      return interfaceCommands(`switchport access vlan ${expected}`)
+    case 'interface_voice_vlan':
+      return interfaceCommands(`switchport voice vlan ${expected}`)
+    case 'interface_trunk_native_vlan':
+      return interfaceCommands(`switchport trunk native vlan ${expected}`)
+    case 'interface_trunk_allowed_vlans':
+      return interfaceCommands(`switchport trunk allowed vlan ${expected}`)
+    case 'interface_dot1q':
+      return interfaceCommands(`encapsulation dot1q ${expected}`)
+    case 'interface_dot1q_native':
+      return interfaceCommands(`encapsulation dot1q ${expected} native`)
+    case 'interface_enabled':
+      return interfaceCommands('no shutdown')
+    case 'interface_ip':
+      return interfaceCommands(`ip address ${expected}`)
+    case 'ip_routing_enabled':
+      return configurationCommands('ip routing')
+    case 'default_gateway':
+      return configurationCommands(`ip default-gateway ${expected}`)
+    case 'static_route':
+      return configurationCommands(`ip route ${target} ${expected}`)
+    case 'default_route':
+      return configurationCommands(
+        `ip route 0.0.0.0 0.0.0.0 ${expected}`,
+      )
+    case 'ospf_process':
+      return routerCommands()
+    case 'ospf_router_id':
+      return routerCommands(`router-id ${expected}`)
+    case 'ospf_network':
+      return routerCommands(`network ${expected}`)
+    case 'ospf_passive_interface':
+      return routerCommands(`passive-interface ${expected}`)
+    case 'ospf_default_information':
+      return routerCommands('default-information originate')
+    case 'acl_exists': {
+      const relatedEntry = allCriteria.find(
+        (item) =>
+          item.type === 'acl_entry'
+          && String(item.target ?? '').trim().toLowerCase()
+            === target.toLowerCase(),
+      )
+      return aclConfigurationCommands(target, relatedEntry?.expected)
+    }
+    case 'acl_entry':
+      return aclConfigurationCommands(target, expected)
+    case 'interface_acl':
+      return interfaceCommands(`ip access-group ${expected}`)
+    case 'config_saved':
+      return ['enable', 'copy running-config startup-config']
+    default:
+      return configurationCommands(
+        `! Configure ${criterionTypeLabels[criterion.type] ?? criterion.type}`,
+      )
+  }
 }
 
 function blankLab() {
@@ -87,8 +384,22 @@ function criterionHelp(type) {
   if (type === 'interface_voice_vlan') return 'Target: interface; expected: voice VLAN number'
   if (type === 'interface_trunk_native_vlan') return 'Target: trunk interface; expected: native VLAN number'
   if (type === 'interface_trunk_allowed_vlans') return 'Target: trunk interface; expected: 10,20,30-32'
+  if (type === 'interface_dot1q') return 'Target: subinterface, such as G0/0.10; expected: VLAN number'
+  if (type === 'interface_dot1q_native') return 'Target: subinterface; expected: native VLAN number'
   if (type === 'interface_enabled') return 'Target: GigabitEthernet0/1'
   if (type === 'interface_ip') return 'Target: GigabitEthernet0/1; expected: 192.168.1.1 255.255.255.0'
+  if (type === 'ip_routing_enabled') return 'Checks whether the multilayer switch has ip routing enabled'
+  if (type === 'default_gateway') return 'Expected value: the Layer 2 switch default gateway'
+  if (type === 'static_route') return 'Target: destination and mask; expected: next-hop IP or exit interface'
+  if (type === 'default_route') return 'Expected value: next-hop IP or exit interface'
+  if (type === 'ospf_process') return 'Target: OSPF process ID, such as 10'
+  if (type === 'ospf_router_id') return 'Target: process ID; expected: router ID, such as 1.1.1.1'
+  if (type === 'ospf_network') return 'Target: process ID; expected: network wildcard area area-ID'
+  if (type === 'ospf_passive_interface') return 'Target: process ID; expected: interface name or default'
+  if (type === 'ospf_default_information') return 'Target: OSPF process ID'
+  if (type === 'acl_exists') return 'Target: ACL number or name, such as 10 or WEB-FILTER'
+  if (type === 'acl_entry') return 'Target: ACL number or name; expected: complete permit or deny statement'
+  if (type === 'interface_acl') return 'Target: interface; expected: ACL number or name followed by in or out'
   return 'No target or expected value is needed.'
 }
 
@@ -101,6 +412,49 @@ export default function InstructorCliLabBuilder() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [expandedCriterionIndex, setExpandedCriterionIndex] = useState(0)
+  const [selectedPreset, setSelectedPreset] = useState('')
+  const [selectedLabIds, setSelectedLabIds] = useState([])
+  const [bulkLabAction, setBulkLabAction] = useState('')
+  const [bulkManaging, setBulkManaging] = useState(false)
+  const [answerKeyLabId, setAnswerKeyLabId] = useState(null)
+  const [expandedLabIds, setExpandedLabIds] = useState([])
+  const [expandedCourseIds, setExpandedCourseIds] = useState([])
+
+  const practicalCourseGroups = useMemo(() => {
+    const groups = new Map()
+
+    workspace.labs.forEach((item) => {
+      const courseId = String(item.courseId ?? 'uncategorized')
+      const course = courses.find(
+        (courseItem) => String(courseItem.id) === courseId,
+      )
+      if (!groups.has(courseId)) {
+        groups.set(courseId, {
+          id: courseId,
+          code: item.courseCode || course?.code || 'OTHER',
+          title: course?.title || 'Uncategorized practicals',
+          labs: [],
+        })
+      }
+      groups.get(courseId).labs.push(item)
+    })
+
+    const courseOrder = { ITN: 1, SRWE: 2, ENSA: 3 }
+    return [...groups.values()].sort(
+      (left, right) =>
+        (courseOrder[left.code] ?? 999) - (courseOrder[right.code] ?? 999)
+        || left.code.localeCompare(right.code, undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+    )
+  }, [courses, workspace.labs])
+
+  const totalCriterionPoints = lab.criteria.reduce(
+    (total, criterion) => total + (Number(criterion.points) || 0),
+    0,
+  )
 
   const loadData = useCallback(async () => {
     try {
@@ -112,6 +466,12 @@ export default function InstructorCliLabBuilder() {
       ])
       setWorkspace(workspaceData)
       setCourses(courseData)
+      setSelectedLabIds((current) =>
+        current.filter((id) => workspaceData.labs.some((item) => item.id === id)),
+      )
+      setExpandedLabIds((current) =>
+        current.filter((id) => workspaceData.labs.some((item) => item.id === id)),
+      )
     } catch (error) {
       setMessage(
         `${error.message} Run migration 020_phase2_single_device_cli_practicals.sql if it has not been applied.`,
@@ -124,6 +484,13 @@ export default function InstructorCliLabBuilder() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    const courseIds = practicalCourseGroups.map((course) => course.id)
+    setExpandedCourseIds((current) =>
+      current.filter((id) => courseIds.includes(id)),
+    )
+  }, [practicalCourseGroups])
 
   async function loadCourseModules(courseId) {
     setModules(courseId ? await getModules(courseId) : [])
@@ -138,6 +505,69 @@ export default function InstructorCliLabBuilder() {
     }))
   }
 
+  function changeCriterionType(index, type) {
+    setLab((current) => ({
+      ...current,
+      criteria: current.criteria.map((criterion, itemIndex) =>
+        itemIndex === index
+          ? { ...criterion, type, target: '', expected: '' }
+          : criterion,
+      ),
+    }))
+  }
+
+  function addCriterion() {
+    const newIndex = lab.criteria.length
+    setLab((current) => ({
+      ...current,
+      criteria: [...current.criteria, blankCriterion()],
+    }))
+    setExpandedCriterionIndex(newIndex)
+  }
+
+  function duplicateCriterion(index) {
+    setLab((current) => {
+      const nextCriteria = [...current.criteria]
+      nextCriteria.splice(index + 1, 0, { ...current.criteria[index] })
+      return { ...current, criteria: nextCriteria }
+    })
+    setExpandedCriterionIndex(index + 1)
+  }
+
+  function removeCriterion(index) {
+    setLab((current) => ({
+      ...current,
+      criteria: current.criteria.filter(
+        (_, itemIndex) => itemIndex !== index,
+      ),
+    }))
+    setExpandedCriterionIndex((current) => {
+      if (current === null || current === index) return null
+      return current > index ? current - 1 : current
+    })
+  }
+
+  function addPreset() {
+    const additions = presetCriteria(selectedPreset)
+    if (!additions.length) return
+
+    const replaceBlankCriterion =
+      lab.criteria.length === 1
+      && lab.criteria[0].type === 'hostname'
+      && !lab.criteria[0].target
+      && !lab.criteria[0].expected
+
+    const startIndex = replaceBlankCriterion ? 0 : lab.criteria.length
+    setLab((current) => ({
+      ...current,
+      criteria: replaceBlankCriterion
+        ? additions
+        : [...current.criteria, ...additions],
+    }))
+    setExpandedCriterionIndex(startIndex)
+    setSelectedPreset('')
+  }
+
   function toggleClass(classId) {
     setLab((current) => ({
       ...current,
@@ -150,6 +580,7 @@ export default function InstructorCliLabBuilder() {
   async function editLab(item) {
     setLab({ ...blankLab(), ...item })
     await loadCourseModules(String(item.courseId))
+    setExpandedCriterionIndex(0)
     setShowEditor(true)
   }
 
@@ -170,6 +601,8 @@ export default function InstructorCliLabBuilder() {
       })
       setLab(blankLab())
       setModules([])
+      setExpandedCriterionIndex(0)
+      setSelectedPreset('')
       setShowEditor(false)
       await loadData()
     } catch (error) {
@@ -189,6 +622,86 @@ export default function InstructorCliLabBuilder() {
     }
   }
 
+  function toggleLabSelection(labId) {
+    setSelectedLabIds((current) =>
+      current.includes(labId)
+        ? current.filter((id) => id !== labId)
+        : [...current, labId],
+    )
+  }
+
+  function toggleLabExpanded(labId) {
+    setExpandedLabIds((current) =>
+      current.includes(labId)
+        ? current.filter((id) => id !== labId)
+        : [...current, labId],
+    )
+    if (answerKeyLabId === labId) setAnswerKeyLabId(null)
+  }
+
+  function togglePracticalCourse(courseId) {
+    setExpandedCourseIds((current) =>
+      current.includes(courseId)
+        ? current.filter((id) => id !== courseId)
+        : [...current, courseId],
+    )
+  }
+
+  function toggleCourseLabSelection(labIds, checked) {
+    setSelectedLabIds((current) =>
+      checked
+        ? [...new Set([...current, ...labIds])]
+        : current.filter((id) => !labIds.includes(id)),
+    )
+  }
+
+  function toggleAllLabs() {
+    setSelectedLabIds((current) =>
+      workspace.labs.length > 0
+      && workspace.labs.every((item) => current.includes(item.id))
+        ? []
+        : workspace.labs.map((item) => item.id),
+    )
+  }
+
+  async function handleBulkLabAction() {
+    if (!selectedLabIds.length || !bulkLabAction) {
+      setMessage('Select one or more practicals and choose a bulk action.')
+      return
+    }
+
+    if (
+      bulkLabAction === 'delete'
+      && !window.confirm(
+        `Delete ${selectedLabIds.length} selected practical(s) and their attempts? This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    try {
+      setBulkManaging(true)
+      setMessage('')
+      const affectedCount = await bulkManageCliLabs(selectedLabIds, bulkLabAction)
+      const completedAction = {
+        publish: 'published',
+        unpublish: 'unpublished',
+        delete: 'deleted',
+      }[bulkLabAction]
+
+      setSelectedLabIds([])
+      setBulkLabAction('')
+      await loadData()
+      setMessage(`${affectedCount} practical(s) ${completedAction}.`)
+    } catch (error) {
+      setMessage(
+        `${error.message} Run migration 028_bulk_cli_lab_management.sql if it has not been applied.`,
+      )
+    } finally {
+      setBulkManaging(false)
+    }
+  }
+
   return (
     <div className="cli-lab-builder">
       <section className="cli-lab-panel">
@@ -204,6 +717,8 @@ export default function InstructorCliLabBuilder() {
             onClick={() => {
               setLab(blankLab())
               setModules([])
+              setExpandedCriterionIndex(0)
+              setSelectedPreset('')
               setShowEditor((current) => !current)
             }}
           >
@@ -307,50 +822,228 @@ export default function InstructorCliLabBuilder() {
 
             <fieldset className="cli-criteria-editor">
               <legend>Grading criteria</legend>
-              {lab.criteria.map((criterion, index) => (
-                <div className="cli-criterion-row" key={`${index}-${criterion.type}`}>
-                  <label>
-                    Requirement
-                    <select value={criterion.type} onChange={(event) =>
-                      updateCriterion(index, 'type', event.target.value)
-                    }>
-                      {criterionTypes.map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Target
-                    <input
-                      disabled={targetNotRequired.includes(criterion.type)}
-                      value={criterion.target}
-                      onChange={(event) => updateCriterion(index, 'target', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Expected value
-                    <input
-                      disabled={expectedNotRequired.includes(criterion.type)}
-                      value={criterion.expected}
-                      onChange={(event) => updateCriterion(index, 'expected', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Points
-                    <input type="number" min="1" value={criterion.points}
-                      onChange={(event) => updateCriterion(index, 'points', event.target.value)} />
-                  </label>
-                  <button className="danger-button" type="button" disabled={lab.criteria.length === 1}
-                    onClick={() => setLab((current) => ({
-                      ...current,
-                      criteria: current.criteria.filter((_, itemIndex) => itemIndex !== index),
-                    }))}>Remove</button>
-                  <small>{criterionHelp(criterion.type)}</small>
+              <div className="cli-criteria-overview">
+                <div>
+                  <strong>{lab.criteria.length} requirements</strong>
+                  <span>
+                    Expand one requirement at a time to edit its details.
+                  </span>
                 </div>
-              ))}
-              <button className="secondary" type="button" onClick={() =>
-                setLab((current) => ({ ...current, criteria: [...current.criteria, blankCriterion()] }))
-              }>Add criterion</button>
+                <div className="cli-criteria-total">
+                  <span>Total</span>
+                  <strong>{totalCriterionPoints} points</strong>
+                </div>
+              </div>
+
+              <div className="cli-criteria-toolbar">
+                <div className="cli-preset-control">
+                  <label htmlFor="cli-criterion-preset">
+                    Quick preset
+                  </label>
+                  <div>
+                    <select
+                      id="cli-criterion-preset"
+                      value={selectedPreset}
+                      onChange={(event) =>
+                        setSelectedPreset(event.target.value)
+                      }
+                    >
+                      <option value="">Select a preset</option>
+                      <option value="basic_device">
+                        Basic device configuration
+                      </option>
+                      <option value="vlan_access">
+                        VLAN and access ports
+                      </option>
+                      <option value="router_on_stick">
+                        Router-on-a-stick
+                      </option>
+                      <option value="static_routing">
+                        Static routing
+                      </option>
+                      <option value="single_area_ospf">
+                        Single-area OSPF
+                      </option>
+                      <option value="standard_acl">
+                        Standard ACL
+                      </option>
+                      <option value="extended_acl">
+                        Extended ACL
+                      </option>
+                    </select>
+                    <button
+                      className="secondary"
+                      type="button"
+                      disabled={!selectedPreset}
+                      onClick={addPreset}
+                    >
+                      Add preset
+                    </button>
+                  </div>
+                </div>
+
+                <div className="cli-criteria-toolbar__actions">
+                  <button
+                    className="secondary cli-answer-key-toggle"
+                    type="button"
+                    onClick={() => setExpandedCriterionIndex(null)}
+                  >
+                    Collapse all
+                  </button>
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={addCriterion}
+                  >
+                    Add criterion
+                  </button>
+                </div>
+              </div>
+
+              <div className="cli-criterion-list">
+                {lab.criteria.map((criterion, index) => {
+                  const expanded = expandedCriterionIndex === index
+                  const panelId = `cli-criterion-panel-${index}`
+
+                  return (
+                    <article
+                      className={[
+                        'cli-criterion-card',
+                        expanded ? 'cli-criterion-card--expanded' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={index}
+                    >
+                      <button
+                        className="cli-criterion-summary"
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={panelId}
+                        onClick={() =>
+                          setExpandedCriterionIndex(
+                            expanded ? null : index,
+                          )
+                        }
+                      >
+                        <span className="cli-criterion-summary__number">
+                          {index + 1}
+                        </span>
+                        <span className="cli-criterion-summary__content">
+                          <strong>
+                            {criterionTypeLabels[criterion.type]
+                              ?? criterion.type}
+                          </strong>
+                          <small>{criterionSummary(criterion)}</small>
+                        </span>
+                        <span className="cli-criterion-summary__points">
+                          {Number(criterion.points) || 0} pts
+                        </span>
+                        <span
+                          className="cli-criterion-summary__toggle"
+                          aria-hidden="true"
+                        >
+                          {expanded ? '−' : '+'}
+                        </span>
+                      </button>
+
+                      {expanded && (
+                        <div
+                          className="cli-criterion-panel"
+                          id={panelId}
+                        >
+                          <div className="cli-criterion-fields">
+                            <label>
+                              Requirement
+                              <select
+                                value={criterion.type}
+                                onChange={(event) =>
+                                  changeCriterionType(
+                                    index,
+                                    event.target.value,
+                                  )
+                                }
+                              >
+                                {criterionTypes.map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Target
+                              <input
+                                disabled={targetNotRequired.includes(
+                                  criterion.type,
+                                )}
+                                value={criterion.target}
+                                onChange={(event) =>
+                                  updateCriterion(
+                                    index,
+                                    'target',
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                            <label>
+                              Expected value
+                              <input
+                                disabled={expectedNotRequired.includes(
+                                  criterion.type,
+                                )}
+                                value={criterion.expected}
+                                onChange={(event) =>
+                                  updateCriterion(
+                                    index,
+                                    'expected',
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                            <label>
+                              Points
+                              <input
+                                type="number"
+                                min="1"
+                                value={criterion.points}
+                                onChange={(event) =>
+                                  updateCriterion(
+                                    index,
+                                    'points',
+                                    event.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                          </div>
+
+                          <div className="cli-criterion-panel__footer">
+                            <small>{criterionHelp(criterion.type)}</small>
+                            <div>
+                              <button
+                                className="secondary"
+                                type="button"
+                                onClick={() => duplicateCriterion(index)}
+                              >
+                                Duplicate
+                              </button>
+                              <button
+                                className="danger-button"
+                                type="button"
+                                disabled={lab.criteria.length === 1}
+                                onClick={() => removeCriterion(index)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
             </fieldset>
 
             <fieldset className="cli-class-assignments">
@@ -383,15 +1076,140 @@ export default function InstructorCliLabBuilder() {
         {loading ? <p>Loading CLI practicals...</p> : !workspace.labs.length ? (
           <div className="empty-state"><h3>No CLI practicals yet</h3><p>Create the first single-device lab.</p></div>
         ) : (
-          <div className="cli-lab-grid">
-            {workspace.labs.map((item) => (
-              <article className="cli-lab-card" key={item.id}>
+          <div className="cli-library-content">
+            <div className="cli-library-bulk-toolbar">
+              <label className="cli-library-select-all">
+                <input
+                  type="checkbox"
+                  checked={
+                    workspace.labs.length > 0
+                    && workspace.labs.every((item) => selectedLabIds.includes(item.id))
+                  }
+                  onChange={toggleAllLabs}
+                />
+                <span>Select all practicals</span>
+              </label>
+              <span className="cli-library-selected-count">
+                {selectedLabIds.length} selected
+              </span>
+              <div className="cli-library-bulk-actions">
+                <select
+                  aria-label="Bulk practical action"
+                  value={bulkLabAction}
+                  onChange={(event) => setBulkLabAction(event.target.value)}
+                >
+                  <option value="">Choose action</option>
+                  <option value="publish">Publish</option>
+                  <option value="unpublish">Unpublish</option>
+                  <option value="delete">Delete</option>
+                </select>
+                <button
+                  className={bulkLabAction === 'delete' ? 'danger-button' : 'primary'}
+                  type="button"
+                  disabled={!selectedLabIds.length || !bulkLabAction || bulkManaging}
+                  onClick={() => void handleBulkLabAction()}
+                >
+                  {bulkManaging ? 'Applying...' : 'Apply'}
+                </button>
+              </div>
+            </div>
+            <div className="cli-practical-course-groups">
+            {practicalCourseGroups.map((course) => {
+              const courseExpanded = expandedCourseIds.includes(course.id)
+              const coursePanelId = `cli-course-panel-${course.id}`
+              const courseLabIds = course.labs.map((item) => item.id)
+              const allCourseLabsSelected =
+                courseLabIds.length > 0
+                && courseLabIds.every((id) => selectedLabIds.includes(id))
+
+              return (
+                <section className="cli-practical-course-group" key={course.id}>
+                  <header className="cli-practical-course-group__header">
+                    <div className="cli-practical-course-group__summary">
+                      <div className="cli-practical-course-group__identity">
+                        <span className="course-code">{course.code}</span>
+                        <div>
+                          <h3>{course.title}</h3>
+                          <small>
+                            {course.labs.length}{' '}
+                            {course.labs.length === 1
+                              ? 'practical'
+                              : 'practicals'}
+                          </small>
+                        </div>
+                      </div>
+                      <label className="bulk-select-control">
+                        <input
+                          type="checkbox"
+                          checked={allCourseLabsSelected}
+                          disabled={bulkManaging}
+                          onChange={(event) =>
+                            toggleCourseLabSelection(
+                              courseLabIds,
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        Select all in {course.code}
+                      </label>
+                    </div>
+                    <button
+                      className="module-collapse-button"
+                      type="button"
+                      aria-expanded={courseExpanded}
+                      aria-controls={coursePanelId}
+                      onClick={() => togglePracticalCourse(course.id)}
+                    >
+                      {courseExpanded
+                        ? 'Hide practicals'
+                        : 'Show practicals'}
+                    </button>
+                  </header>
+                  {courseExpanded && (
+                    <div className="cli-lab-grid" id={coursePanelId}>
+            {course.labs.map((item) => {
+              const isExpanded = expandedLabIds.includes(item.id)
+              return (
+              <article
+                className={`cli-lab-card${
+                  isExpanded ? ' cli-lab-card--expanded' : ''
+                }`}
+                key={item.id}
+              >
                 <header>
-                  <span className="course-code">{item.courseCode}</span>
-                  <span className={`content-status content-status--${item.status}`}>{item.status}</span>
+                  <label className="cli-lab-select">
+                    <input
+                      type="checkbox"
+                      checked={selectedLabIds.includes(item.id)}
+                      onChange={() => toggleLabSelection(item.id)}
+                    />
+                    <span>Select</span>
+                  </label>
+                  <div className="cli-lab-card__badges">
+                    <span className="course-code">{item.courseCode}</span>
+                    <span className={`content-status content-status--${item.status}`}>{item.status}</span>
+                  </div>
                 </header>
-                <h3>{item.title}</h3>
+                <div className="cli-lab-card__summary">
+                  <div>
+                    <h3>{item.title}</h3>
                 <p>{item.moduleCode || 'All modules'} · {item.deviceType}</p>
+                  </div>
+                  <button
+                    className="secondary cli-lab-card__toggle"
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={`cli-lab-details-${item.id}`}
+                    onClick={() => toggleLabExpanded(item.id)}
+                  >
+                    {isExpanded ? 'Collapse' : 'Expand'}
+                  </button>
+                </div>
+                {isExpanded && (
+                  <div
+                    className="cli-lab-card__details"
+                    id={`cli-lab-details-${item.id}`}
+                  >
                 <dl>
                   <div><dt>Duration</dt><dd>{item.durationMinutes} minutes</dd></div>
                   <div><dt>Criteria</dt><dd>{item.criteria.length}</dd></div>
@@ -399,14 +1217,103 @@ export default function InstructorCliLabBuilder() {
                   <div><dt>Attempts</dt><dd>{item.maxAttempts}</dd></div>
                 </dl>
                 <div className="class-card__actions">
+                  <button
+                    className="secondary"
+                    type="button"
+                    aria-expanded={answerKeyLabId === item.id}
+                    onClick={() =>
+                      setAnswerKeyLabId((current) =>
+                        current === item.id ? null : item.id
+                      )
+                    }
+                  >
+                    {answerKeyLabId === item.id
+                      ? 'Hide answer key'
+                      : 'Show answer key'}
+                  </button>
                   <button className="primary" type="button" onClick={() => void editLab(item)}>Edit</button>
                   <button className="danger-button" type="button" onClick={() => void handleDelete(item)}>Delete</button>
                 </div>
+                {answerKeyLabId === item.id && (
+                  <section className="cli-answer-key">
+                    <div className="cli-answer-key__heading">
+                      <div>
+                        <span className="eyebrow">INSTRUCTOR ONLY</span>
+                        <h4>Answer key</h4>
+                      </div>
+                      <strong>
+                        {(item.criteria ?? []).reduce(
+                          (total, criterion) =>
+                            total + (Number(criterion.points) || 0),
+                          0,
+                        )}{' '}
+                        points
+                      </strong>
+                    </div>
+                    <p className="cli-answer-key__note">
+                      Students may use any valid command order. Grading checks
+                      the final configuration against these requirements.
+                    </p>
+                    <ol className="cli-answer-key__criteria">
+                      {(item.criteria ?? []).map((criterion, index) => (
+                        <li
+                          key={`${item.id}-${criterion.type}-${index}`}
+                          className="cli-answer-key__criterion"
+                        >
+                          <div className="cli-answer-key__criterion-heading">
+                            <strong>
+                              {criterionTypeLabels[criterion.type]
+                                ?? criterion.type}
+                            </strong>
+                            <span>{Number(criterion.points) || 0} points</span>
+                          </div>
+                          <dl>
+                            {criterion.target?.trim() && (
+                              <div>
+                                <dt>Target</dt>
+                                <dd>{criterion.target.trim()}</dd>
+                              </div>
+                            )}
+                            <div>
+                              <dt>
+                                {criterion.expected?.trim()
+                                  ? 'Expected'
+                                  : 'Required state'}
+                              </dt>
+                              <dd>
+                                {criterion.expected?.trim()
+                                  || criterionRequiredState(criterion.type)}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div className="cli-answer-key__commands">
+                            <span>Configuration commands</span>
+                            <pre>
+                              <code>{criterionConfigurationCommands(
+                                  criterion,
+                                  item.criteria ?? [],
+                                ).join('\n')}</code>
+                            </pre>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
+                  </div>
+                )}
               </article>
-            ))}
+              )
+            })}
+                    </div>
+                  )}
+                </section>
+              )
+            })}
+            </div>
           </div>
         )}
-        {message && <p className="form-message form-message--error">{message}</p>}
+        {message && <p className="form-message">{message}</p>}
       </section>
     </div>
   )

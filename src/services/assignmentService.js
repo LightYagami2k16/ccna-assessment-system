@@ -1,11 +1,26 @@
 import { supabase } from '../lib/supabase'
 
 export async function getAssignmentWorkspace() {
-  const { data, error } = await supabase.rpc('get_assignment_workspace')
+  const [
+    { data, error },
+    { data: classCourseContexts },
+  ] = await Promise.all([
+    supabase.rpc('get_assignment_workspace'),
+    supabase.rpc('get_instructor_class_course_context'),
+  ])
   if (error) throw error
+  const courseCodesByClass = new Map(
+    (classCourseContexts ?? []).map((context) => [
+      context.classId,
+      context.courseCodes ?? [],
+    ]),
+  )
   return {
     students: data?.students ?? [],
-    classes: data?.classes ?? [],
+    classes: (data?.classes ?? []).map((classSection) => ({
+      ...classSection,
+      courseCodes: courseCodesByClass.get(classSection.id) ?? [],
+    })),
     approvalRequests: data?.approvalRequests ?? [],
     quizzes: data?.quizzes ?? [],
   }
