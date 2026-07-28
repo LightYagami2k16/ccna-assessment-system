@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import AuthForm from './components/AuthForm'
+import InvitationPasswordSetup from './components/InvitationPasswordSetup'
 import WorkspaceLoading from './components/WorkspaceLoading'
 import { supabase } from './lib/supabase'
 
@@ -8,9 +9,33 @@ const Dashboard = lazy(() => import('./components/Dashboard'))
 const uatRole = import.meta.env.DEV
   ? new URLSearchParams(window.location.search).get('uat-role')
   : null
-const activeUatRole = ['instructor', 'student'].includes(uatRole)
+const activeUatRole = ['administrator', 'instructor', 'student'].includes(uatRole)
   ? uatRole
   : null
+
+function getAuthenticationLinkError() {
+  const hashParameters = new URLSearchParams(
+    window.location.hash.replace(/^#/, ''),
+  )
+
+  return (
+    hashParameters.get('error_description') ||
+    hashParameters.get('error') ||
+    ''
+  ).replace(/\+/g, ' ')
+}
+
+function userNeedsInvitationPassword(user) {
+  const metadata = user?.user_metadata ?? {}
+  const invitationAccount =
+    metadata.invitation_pending === true ||
+    Boolean(user?.invited_at)
+
+  return (
+    invitationAccount &&
+    metadata.password_initialized !== true
+  )
+}
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -18,7 +43,13 @@ export default function App() {
   const [profileError, setProfileError] = useState('')
   const [profileLoadVersion, setProfileLoadVersion] = useState(0)
   const [loading, setLoading] = useState(!activeUatRole)
+  const [authenticationLinkError] = useState(
+    getAuthenticationLinkError,
+  )
   const userId = session?.user?.id ?? null
+  const requiresInvitationPassword = userNeedsInvitationPassword(
+    session?.user,
+  )
 
   useEffect(() => {
     if (activeUatRole) return undefined
@@ -35,14 +66,7 @@ export default function App() {
     void loadSession()
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
-        setSession((currentSession) => {
-          const currentUserId = currentSession?.user?.id ?? null
-          const nextUserId = nextSession?.user?.id ?? null
-
-          return currentUserId === nextUserId
-            ? currentSession
-            : nextSession
-        })
+        setSession(nextSession)
 
         if (!nextSession) {
           setProfile(null)
@@ -102,6 +126,22 @@ export default function App() {
     }
   }
 
+  function handleInvitationPasswordComplete(updatedUser) {
+    setSession((currentSession) =>
+      currentSession
+        ? { ...currentSession, user: updatedUser }
+        : currentSession,
+    )
+  }
+
+  function handleProfileUpdated(changes) {
+    setProfile((currentProfile) =>
+      currentProfile
+        ? { ...currentProfile, ...changes }
+        : currentProfile,
+    )
+  }
+
   if (activeUatRole) {
     const previewUser = {
       id: `uat-${activeUatRole}`,
@@ -110,9 +150,11 @@ export default function App() {
     const previewProfile = {
       id: previewUser.id,
       full_name:
-        activeUatRole === 'instructor'
-          ? 'UAT Instructor'
-          : 'UAT Student',
+        activeUatRole === 'administrator'
+          ? 'UAT Administrator'
+          : activeUatRole === 'instructor'
+            ? 'UAT Instructor'
+            : 'UAT Student',
       role: activeUatRole,
     }
 
@@ -138,7 +180,17 @@ export default function App() {
   if (loading) {
     return <div className="loading-screen">Loading CCNA Assessment…</div>
   }
-  if (!session) return <AuthForm />
+  if (!session) {
+    return <AuthForm initialMessage={authenticationLinkError} />
+  }
+  if (requiresInvitationPassword) {
+    return (
+      <InvitationPasswordSetup
+        user={session.user}
+        onComplete={handleInvitationPasswordComplete}
+      />
+    )
+  }
   if (profileError || !profile) {
     return (
       <main className="session-recovery-screen">
@@ -175,7 +227,11 @@ export default function App() {
   }
   return (
     <Suspense fallback={<WorkspaceLoading label="Loading your dashboard..." />}>
-      <Dashboard profile={profile} user={session.user} />
+      <Dashboard
+        profile={profile}
+        user={session.user}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </Suspense>
   )
 }

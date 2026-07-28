@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function AuthForm() {
+export default function AuthForm({ initialMessage = '' }) {
   const [mode, setMode] = useState('sign-in')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(initialMessage)
   const [busy, setBusy] = useState(false)
 
   async function handleSubmit(event) {
@@ -56,7 +56,15 @@ export default function AuthForm() {
           <label>Password<input type="password" minLength="8" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
           <button className="primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button>
         </form>
-        {message && <p className="notice" role="status" aria-live="polite">{message}</p>}
+        {message && (
+          <p
+            className="notice"
+            role="status"
+            aria-live="polite"
+          >
+            {message}
+          </p>
+        )}
         <button className="link-button" type="button" onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
           {mode === 'sign-in' ? 'Create an account' : 'Return to sign in'}
         </button>

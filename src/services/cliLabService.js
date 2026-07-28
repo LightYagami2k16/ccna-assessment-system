@@ -105,23 +105,12 @@ export async function getCliAttempt(attemptId) {
   })
   if (error) throw error
   const [labWithTopology] = await attachTopologyData([data.lab])
-  const { data: commandDevices, error: commandDeviceError } = await supabase
-    .from('cli_commands')
-    .select('id, device_id')
-    .eq('attempt_id', attemptId)
-  if (commandDeviceError) throw commandDeviceError
-  const deviceByCommandId = new Map(
-    (commandDevices ?? []).map((item) => [
-      String(item.id),
-      item.device_id || 'device-1',
-    ]),
-  )
   return {
     ...data,
     lab: labWithTopology,
     commands: (data.commands ?? []).map((item) => ({
       ...item,
-      deviceId: deviceByCommandId.get(String(item.id)) ?? 'device-1',
+      deviceId: item.deviceId ?? 'device-1',
     })),
   }
 }

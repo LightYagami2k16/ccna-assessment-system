@@ -1513,7 +1513,7 @@ export default function InstructorCliLabBuilder() {
                             <div className="cli-criterion-device-empty">
                               <strong>No criteria for this device</strong>
                               <span>
-                                Add a criterion, then select this device.
+                                Add a criterion to grade this device.
                               </span>
                             </div>
                           ) : group.criteria.map(
@@ -1567,29 +1567,6 @@ export default function InstructorCliLabBuilder() {
                           id={panelId}
                         >
                           <div className="cli-criterion-fields">
-                            <label>
-                              Device
-                              <select
-                                value={
-                                  criterion.deviceId
-                                  ?? lab.devices[0]?.id
-                                  ?? 'device-1'
-                                }
-                                onChange={(event) =>
-                                  updateCriterion(
-                                    index,
-                                    'deviceId',
-                                    event.target.value,
-                                  )
-                                }
-                              >
-                                {lab.devices.map((device) => (
-                                  <option key={device.id} value={device.id}>
-                                    {device.label} ({device.hostname})
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
                             <label>
                               Requirement
                               <select

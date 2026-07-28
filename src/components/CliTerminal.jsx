@@ -29,6 +29,11 @@ export default function CliTerminal({ attemptId, onExit }) {
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false)
   const endRef = useRef(null)
   const commandInputRef = useRef(null)
+  const onExitRef = useRef(onExit)
+
+  useEffect(() => {
+    onExitRef.current = onExit
+  }, [onExit])
 
   const focusCommandInput = useCallback(() => {
     if (
@@ -65,6 +70,10 @@ export default function CliTerminal({ attemptId, onExit }) {
   const loadAttempt = useCallback(async () => {
     try {
       const attemptData = await getCliAttempt(attemptId)
+      if (attemptData.attempt.status !== 'in_progress') {
+        onExitRef.current?.({ completed: true })
+        return
+      }
       const devices = attemptData.lab.devices?.length
         ? attemptData.lab.devices
         : [{

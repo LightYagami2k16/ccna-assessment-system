@@ -17,6 +17,18 @@ function readStoredAttempt(userId) {
   }
 }
 
+function clearStoredAttempt(userId) {
+  if (!userId) return
+
+  try {
+    window.localStorage.removeItem(
+      `ccna-student-active-cli-attempt:${userId}`,
+    )
+  } catch {
+    // Navigation still works when browser storage is unavailable.
+  }
+}
+
 export default function StudentCliArea({
   userId,
   onCompletedAttempt,
@@ -34,7 +46,7 @@ export default function StudentCliArea({
       setLabs(await getAvailableCliLabs())
     } catch (error) {
       setMessage(
-        `${error.message} Ask the instructor to confirm that Phase 2 migration 020 is installed.`,
+        `${error.message} Ask the instructor to confirm that migrations 020 and 038 are installed.`,
       )
     }
   }, [])
@@ -86,6 +98,7 @@ export default function StudentCliArea({
         <CliTerminal
           attemptId={activeAttemptId}
           onExit={({ completed = false } = {}) => {
+            clearStoredAttempt(userId)
             setActiveAttemptId(null)
             void loadLabs()
             if (completed) onCompletedAttempt?.()
