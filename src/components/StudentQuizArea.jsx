@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
-import QuizPlayer from './QuizPlayer'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentQuizList from './StudentQuizList'
-import StudentRecentResults from './StudentRecentResults'
-import StudentCliArea from './StudentCliArea'
-import StudentCliHistory from './StudentCliHistory'
+import WorkspaceLoading from './WorkspaceLoading'
+
+const QuizPlayer = lazy(() => import('./QuizPlayer'))
+const StudentRecentResults = lazy(() => import('./StudentRecentResults'))
+const StudentCliArea = lazy(() => import('./StudentCliArea'))
+const StudentCliHistory = lazy(() => import('./StudentCliHistory'))
 
 const studentSections = new Set(['available', 'history', 'cli'])
+const studentSectionOrder = ['available', 'history', 'cli']
 
 function readStoredValue(key, fallback = null) {
   if (!key) return fallback
@@ -59,23 +62,68 @@ export default function StudentQuizArea({ user }) {
     storeValue(attemptStorageKey, activeAttemptId)
   }, [activeAttemptId, attemptStorageKey])
 
+  function handleTabKeyDown(event) {
+    const currentIndex = studentSectionOrder.indexOf(activeSection)
+    let nextIndex = currentIndex
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % studentSectionOrder.length
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex =
+        (currentIndex - 1 + studentSectionOrder.length) %
+        studentSectionOrder.length
+    } else if (event.key === 'Home') {
+      nextIndex = 0
+    } else if (event.key === 'End') {
+      nextIndex = studentSectionOrder.length - 1
+    } else {
+      return
+    }
+
+    event.preventDefault()
+    const nextSection = studentSectionOrder[nextIndex]
+    setActiveSection(nextSection)
+    window.requestAnimationFrame(() => {
+      document.getElementById(`student-tab-${nextSection}`)?.focus()
+    })
+  }
+
   if (activeAttemptId) {
     return (
       <div className="quiz-focus-mode">
-        <QuizPlayer
-          attemptId={activeAttemptId}
-          onExit={() => {
-            setActiveAttemptId(null)
-            setResultsVersion((current) => current + 1)
-            setActiveSection('history')
-          }}
-        />
+        <Suspense
+          fallback={<WorkspaceLoading label="Loading quiz attempt..." />}
+        >
+          <QuizPlayer
+            attemptId={activeAttemptId}
+            onExit={() => {
+              setActiveAttemptId(null)
+              setResultsVersion((current) => current + 1)
+              setActiveSection('history')
+            }}
+          />
+        </Suspense>
       </div>
     )
   }
 
   return (
     <div className="student-quiz-area">
+      <header className="student-workspace-header">
+        <div>
+          <span className="eyebrow">STUDENT WORKSPACE</span>
+          <h2>My assessments</h2>
+          <p>
+            Join a class, complete assigned assessments, and review your
+            results from one workspace.
+          </p>
+        </div>
+        <span className="student-workspace-header__track">
+          <strong>CCNA</strong>
+          <small>ITN · SRWE · ENSA</small>
+        </span>
+      </header>
+
       <StudentClassEnrollment
         onEnrollmentChanged={() =>
           setEnrollmentVersion((current) => current + 1)
@@ -85,6 +133,8 @@ export default function StudentQuizArea({ user }) {
       <nav
         className="student-assessment-tabs"
         aria-label="Student assessments"
+        role="tablist"
+        onKeyDown={handleTabKeyDown}
       >
         <button
           className={
@@ -93,9 +143,15 @@ export default function StudentQuizArea({ user }) {
               : 'student-assessment-tab'
           }
           type="button"
+          id="student-tab-available"
+          role="tab"
+          aria-selected={activeSection === 'available'}
+          aria-controls="student-panel-available"
+          tabIndex={activeSection === 'available' ? 0 : -1}
           onClick={() => setActiveSection('available')}
         >
-          Available quizzes
+          <strong>Available</strong>
+          <small>Assigned quizzes</small>
         </button>
         <button
           className={
@@ -104,9 +160,15 @@ export default function StudentQuizArea({ user }) {
               : 'student-assessment-tab'
           }
           type="button"
+          id="student-tab-history"
+          role="tab"
+          aria-selected={activeSection === 'history'}
+          aria-controls="student-panel-history"
+          tabIndex={activeSection === 'history' ? 0 : -1}
           onClick={() => setActiveSection('history')}
         >
-          Quiz history
+          <strong>History</strong>
+          <small>Quiz and CLI results</small>
         </button>
         <button
           className={
@@ -115,35 +177,59 @@ export default function StudentQuizArea({ user }) {
               : 'student-assessment-tab'
           }
           type="button"
+          id="student-tab-cli"
+          role="tab"
+          aria-selected={activeSection === 'cli'}
+          aria-controls="student-panel-cli"
+          tabIndex={activeSection === 'cli' ? 0 : -1}
           onClick={() => setActiveSection('cli')}
         >
-          CLI practicals
+          <strong>CLI practicals</strong>
+          <small>Cisco configuration</small>
         </button>
       </nav>
 
-      {activeSection === 'available' ? (
-        <StudentQuizList
-          key={`${enrollmentVersion}-${resultsVersion}`}
-          onOpenAttempt={setActiveAttemptId}
-          onArchived={() => {
-            setResultsVersion((current) => current + 1)
-            setActiveSection('history')
-          }}
-        />
-      ) : activeSection === 'history' ? (
-        <>
-          <StudentRecentResults
-            key={resultsVersion}
-            onRestored={() => {
-              setResultsVersion((current) => current + 1)
-              setActiveSection('available')
-            }}
-          />
-          <StudentCliHistory key={`cli-${resultsVersion}`} />
-        </>
-      ) : (
-        <StudentCliArea userId={userId} />
-      )}
+      <section
+        className="student-assessment-panel"
+        id={`student-panel-${activeSection}`}
+        role="tabpanel"
+        aria-labelledby={`student-tab-${activeSection}`}
+        tabIndex="-1"
+      >
+        <Suspense
+          fallback={<WorkspaceLoading label="Loading assessments..." />}
+        >
+          {activeSection === 'available' ? (
+            <StudentQuizList
+              key={`${enrollmentVersion}-${resultsVersion}`}
+              onOpenAttempt={setActiveAttemptId}
+              onArchived={() => {
+                setResultsVersion((current) => current + 1)
+                setActiveSection('history')
+              }}
+            />
+          ) : activeSection === 'history' ? (
+            <>
+              <StudentRecentResults
+                key={resultsVersion}
+                onRestored={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('available')
+                }}
+              />
+              <StudentCliHistory key={`cli-${resultsVersion}`} />
+            </>
+          ) : (
+            <StudentCliArea
+              userId={userId}
+              onCompletedAttempt={() => {
+                setResultsVersion((current) => current + 1)
+                setActiveSection('history')
+              }}
+            />
+          )}
+        </Suspense>
+      </section>
     </div>
   )
 }

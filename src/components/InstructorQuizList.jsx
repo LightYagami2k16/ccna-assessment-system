@@ -5,6 +5,7 @@ import {
   setInstructorQuizStatus,
   setInstructorQuizzesStatus,
 } from '../services/quizBuilderService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 function formatDate(value) {
   if (!value) return 'No limit'
@@ -21,6 +22,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkAction, setBulkAction] = useState(null)
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const quizIds = useMemo(
     () => quizzes.map((quiz) => quiz.id),
@@ -105,7 +107,13 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   }
 
   async function handleDelete(quiz) {
-    if (!window.confirm(`Delete the unused draft quiz "${quiz.title}"?`)) return
+    const confirmed = await confirm({
+      title: 'Delete draft quiz?',
+      message: `Delete “${quiz.title}”? A quiz with student attempts cannot be deleted. This action cannot be undone.`,
+      confirmLabel: 'Delete quiz',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setDeletingId(quiz.id)
     setMessage('')
@@ -122,7 +130,13 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   async function handleStatusChange(quiz) {
     const nextStatus = quiz.status === 'published' ? 'draft' : 'published'
     const verb = nextStatus === 'published' ? 'Publish' : 'Unpublish'
-    if (!window.confirm(`${verb} "${quiz.title}"?`)) return
+    const confirmed = await confirm({
+      title: `${verb} quiz?`,
+      message: `${verb} “${quiz.title}”?`,
+      confirmLabel: verb,
+      tone: 'default',
+    })
+    if (!confirmed) return
 
     setStatusChangingId(quiz.id)
     setMessage('')
@@ -139,15 +153,16 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   async function handleBulkDelete() {
     if (!selectedIds.length) return
 
-    if (
-      !window.confirm(
-        `Delete ${selectedIds.length} selected draft ${
-          selectedIds.length === 1 ? 'quiz' : 'quizzes'
-        }?\n\nA quiz with student attempts cannot be deleted. This cannot be undone.`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `Delete ${selectedIds.length} selected ${
+        selectedIds.length === 1 ? 'quiz' : 'quizzes'
+      }?`,
+      message:
+        'A quiz with student attempts cannot be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete selected',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setBulkAction('delete')
     setMessage('')
@@ -166,15 +181,15 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
     if (!selectedIds.length) return
 
     const verb = status === 'published' ? 'Publish' : 'Unpublish'
-    if (
-      !window.confirm(
-        `${verb} ${selectedIds.length} selected ${
-          selectedIds.length === 1 ? 'quiz' : 'quizzes'
-        }?`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `${verb} selected quizzes?`,
+      message: `${verb} ${selectedIds.length} selected ${
+        selectedIds.length === 1 ? 'quiz' : 'quizzes'
+      }?`,
+      confirmLabel: `${verb} selected`,
+      tone: 'default',
+    })
+    if (!confirmed) return
 
     setBulkAction(status)
     setMessage('')
@@ -190,6 +205,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
 
   return (
     <section className="instructor-quiz-list">
+      {confirmationDialog}
       {message && <p className="form-message form-message--error">{message}</p>}
       {!!quizzes.length && (
         <div className="bulk-action-bar">

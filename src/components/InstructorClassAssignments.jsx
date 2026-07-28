@@ -15,6 +15,7 @@ import {
   saveClassSection,
   saveQuizAccess,
 } from '../services/assignmentService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 const courseTitles = {
   ITN: 'Introduction to Networks',
@@ -216,15 +217,17 @@ function ClassEnrollmentTools({ classSection, onChanged }) {
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [showQr, setShowQr] = useState(false)
   const [message, setMessage] = useState('')
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   async function handleRegenerateCode() {
-    if (
-      !window.confirm(
-        'Generate a new class join code? The previous code and QR code will stop working.',
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: 'Generate a new class code?',
+      message:
+        'The previous join code and QR code will stop working immediately. Already enrolled students will remain in the class.',
+      confirmLabel: 'Generate new code',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setGeneratingCode(true)
     setMessage('')
@@ -300,6 +303,7 @@ function ClassEnrollmentTools({ classSection, onChanged }) {
 
   return (
     <section className="class-enrollment-tools">
+      {confirmationDialog}
       <div className="class-join-code">
         <span>Student join code</span>
         <strong>{classSection.joinCode}</strong>
@@ -426,7 +430,9 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
             Review students who joined with a class code or QR code.
           </p>
         </div>
-        <span className="status-chip">{requests.length} pending</span>
+        {requests.length > 0 && (
+          <span className="status-chip">{requests.length} pending</span>
+        )}
       </div>
 
       {!requests.length ? (
@@ -624,6 +630,7 @@ export default function InstructorClassAssignments() {
     useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [message, setMessage] = useState('')
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const quizzesByCourse = useMemo(() => {
     const groups = new Map()
@@ -753,13 +760,13 @@ export default function InstructorClassAssignments() {
   }, [loadWorkspace])
 
   async function handleDelete(classSection) {
-    if (
-      !window.confirm(
-        `Delete "${classSection.name}"? Its quiz assignments will also be removed.`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: 'Delete class?',
+      message: `Delete “${classSection.name}”? Its memberships and quiz assignments will also be removed. Student attempt history will remain.`,
+      confirmLabel: 'Delete class',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setDeletingId(classSection.id)
     setMessage('')
@@ -801,15 +808,16 @@ export default function InstructorClassAssignments() {
   async function handleBulkDelete() {
     if (!selectedClassIds.length) return
 
-    if (
-      !window.confirm(
-        `Delete ${selectedClassIds.length} selected ${
-          selectedClassIds.length === 1 ? 'class' : 'classes'
-        }?\n\nTheir memberships and quiz assignments will also be removed. Student quiz attempt history will remain. This cannot be undone.`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `Delete ${selectedClassIds.length} selected ${
+        selectedClassIds.length === 1 ? 'class' : 'classes'
+      }?`,
+      message:
+        'Their memberships and quiz assignments will also be removed. Student quiz attempt history will remain. This action cannot be undone.',
+      confirmLabel: 'Delete selected',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setBulkDeleting(true)
     setMessage('')
@@ -837,6 +845,7 @@ export default function InstructorClassAssignments() {
 
   return (
     <div className="class-assignment-manager">
+      {confirmationDialog}
       <ClassEditor
         key={editingClass?.id ?? 'new-class'}
         students={workspace.students}

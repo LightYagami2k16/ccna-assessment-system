@@ -4,6 +4,7 @@ import {
   getInstructorModuleWorkspace,
   saveInstructorModule,
 } from '../services/moduleService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 const emptyForm = {
   id: null,
@@ -56,6 +57,7 @@ export default function InstructorModuleManager({ onChanged }) {
   const [deletingId, setDeletingId] = useState(null)
   const [message, setMessage] = useState('')
   const [messageIsError, setMessageIsError] = useState(false)
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadWorkspace = useCallback(async () => {
     try {
@@ -195,9 +197,12 @@ export default function InstructorModuleManager({ onChanged }) {
   }
 
   async function handleDelete(module) {
-    const confirmed = window.confirm(
-      `Delete module "${module.code} - ${module.title}"?`,
-    )
+    const confirmed = await confirm({
+      title: 'Delete course module?',
+      message: `Delete “${module.code} – ${module.title}”? Questions or assessments still using this module may prevent deletion.`,
+      confirmLabel: 'Delete module',
+      tone: 'danger',
+    })
 
     if (!confirmed) {
       return
@@ -230,6 +235,7 @@ export default function InstructorModuleManager({ onChanged }) {
 
   return (
     <section className="module-manager">
+      {confirmationDialog}
       <div className="section-heading">
         <div>
           <span className="eyebrow">COURSE STRUCTURE</span>
@@ -287,26 +293,28 @@ export default function InstructorModuleManager({ onChanged }) {
               >
                 <header>
                   <div className="module-course-group__identity">
-                    <span className="course-code">{course.code}</span>
-                    <h3>{course.title}</h3>
-                  </div>
+                    <div className="module-course-group__identity-header">
+                      <span className="course-code">{course.code}</span>
 
-                  <div className="module-course-group__controls">
-                    <div className="module-course-group__meta">
                       <span className="status-chip">
                         {course.modules.length}{' '}
                         {course.modules.length === 1
                           ? 'module'
                           : 'modules'}
                       </span>
+                    </div>
 
-                      <button
-                        className="module-collapse-button"
-                        type="button"
-                        aria-expanded={expanded}
-                        aria-controls={panelId}
-                        onClick={() => toggleCourse(course)}
-                      >
+                    <h3>{course.title}</h3>
+                  </div>
+
+                  <div className="module-course-group__controls">
+                    <button
+                      className="module-collapse-button"
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={panelId}
+                      onClick={() => toggleCourse(course)}
+                    >
                         <span
                           className={[
                             'module-collapse-button__icon',
@@ -321,9 +329,10 @@ export default function InstructorModuleManager({ onChanged }) {
                           ▾
                         </span>
 
-                        <span>{expanded ? 'Hide' : 'Show'}</span>
+                        <span>
+                          {expanded ? 'Hide modules' : 'Show modules'}
+                        </span>
                       </button>
-                    </div>
 
                     <button
                       className="primary module-add-button"

@@ -105,7 +105,11 @@ export default function StudentRecentResults({ onRestored }) {
         </button>
       </div>
 
-      {message && <p className="form-message form-message--error">{message}</p>}
+      {message && (
+        <p className="form-message form-message--error" role="alert">
+          {message}
+        </p>
+      )}
       {loading ? (
         <p>Loading quiz history...</p>
       ) : !resultsByQuiz.length ? (
@@ -158,7 +162,12 @@ export default function StudentRecentResults({ onRestored }) {
                 </div>
               </header>
 
-              <div className="recent-attempt-table-wrapper">
+              <div
+                className="recent-attempt-table-wrapper"
+                role="region"
+                aria-label={`${group.quizTitle} attempt history`}
+                tabIndex="0"
+              >
                 <table className="recent-attempt-table">
                   <thead>
                     <tr>
@@ -171,13 +180,13 @@ export default function StudentRecentResults({ onRestored }) {
                   <tbody>
                     {group.attempts.map((result, index) => (
                       <tr key={result.attemptId}>
-                        <td>
+                        <td data-label="Attempt">
                           <div className="recent-attempt-number">
                             <strong>Attempt #{result.attemptNumber}</strong>
                             {index === 0 && <span>Latest</span>}
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Score">
                           <div className="recent-attempt-score">
                             <strong>
                               {Number(result.percentage).toFixed(2)}%
@@ -188,7 +197,7 @@ export default function StudentRecentResults({ onRestored }) {
                             </small>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Result">
                           <span
                             className={
                               result.passed
@@ -199,7 +208,7 @@ export default function StudentRecentResults({ onRestored }) {
                             {result.passed ? 'Passed' : 'Not passed'}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Completed">
                           <time dateTime={result.submittedAt || result.startedAt}>
                             {formatDate(result.submittedAt || result.startedAt)}
                           </time>

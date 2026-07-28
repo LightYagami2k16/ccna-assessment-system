@@ -1,7 +1,10 @@
+import { lazy, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 
-import InstructorWorkspace from './InstructorWorkspace';
-import StudentQuizArea from './StudentQuizArea';
+import WorkspaceLoading from './WorkspaceLoading';
+
+const InstructorWorkspace = lazy(() => import('./InstructorWorkspace'));
+const StudentQuizArea = lazy(() => import('./StudentQuizArea'));
 
 const courses = [
   {
@@ -28,9 +31,14 @@ const courses = [
 
 export default function Dashboard({
   profile,
-  user
+  user,
+  previewMode = false
 }) {
   const role = profile?.role ?? 'student';
+  const displayName =
+    profile?.full_name ||
+    user?.email ||
+    'CCNA user';
 
   const isInstructor = [
     'instructor',
@@ -41,6 +49,13 @@ export default function Dashboard({
   const isStudent = role === 'student';
 
   async function handleSignOut() {
+    if (previewMode) {
+      window.location.assign(
+        `${window.location.pathname}${window.location.hash}`
+      );
+      return;
+    }
+
     const { error } =
       await supabase.auth.signOut();
 
@@ -52,35 +67,54 @@ export default function Dashboard({
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
-          <strong>CCNA Assessment</strong>
+        <div className="topbar__brand">
+          <span className="brand-mark" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
 
-          <span className="role-badge">
-            {role}
+          <span className="topbar__brand-copy">
+            <strong>CCNA Assessment System</strong>
+            <small>Networking learning and examinations</small>
           </span>
         </div>
 
-        <button
-          className="secondary"
-          type="button"
-          onClick={handleSignOut}
-        >
-          Sign out
-        </button>
+        <div className="topbar__actions">
+          <span className="topbar__user">
+            <span>
+              <strong>{displayName}</strong>
+              {profile?.full_name && (
+                <small>{user?.email}</small>
+              )}
+            </span>
+
+            <span className="role-badge">
+              {role}
+            </span>
+          </span>
+
+          <button
+            className="topbar__sign-out"
+            type="button"
+            onClick={handleSignOut}
+          >
+            {previewMode ? 'Exit preview' : 'Sign out'}
+          </button>
+        </div>
       </header>
 
       <main className="dashboard">
         <section className="welcome">
           <div>
             <span className="eyebrow">
-              PHASE 2
+              {isInstructor
+                ? 'INSTRUCTOR PORTAL'
+                : 'STUDENT PORTAL'}
             </span>
 
             <h1>
-              Welcome,{' '}
-              {profile?.full_name ||
-                user?.email ||
-                'User'}
+              Welcome back, {displayName}
             </h1>
 
             <p>
@@ -90,19 +124,38 @@ export default function Dashboard({
             </p>
           </div>
 
-          <div className="metric">
-            <strong>0</strong>
-
+          <div className="welcome__context">
             <span>
               {isInstructor
-                ? 'Published exams'
-                : 'Completed exams'}
+                ? 'Instructor workspace'
+                : 'Student workspace'}
             </span>
+
+            <strong>
+              {isInstructor
+                ? 'Manage learning and assessments'
+                : 'Continue your assigned learning'}
+            </strong>
           </div>
         </section>
 
-        <section>
-          <h2>CCNA courses</h2>
+        <section className="dashboard-section">
+          <div className="dashboard-section__heading">
+            <div>
+              <span className="eyebrow">
+                COURSE CATALOG
+              </span>
+              <h2>CCNA courses</h2>
+              <p>
+                Content and assessments are organized across
+                the three CCNA curriculum areas.
+              </p>
+            </div>
+
+            <span className="status-chip">
+              {courses.length} courses
+            </span>
+          </div>
 
           <div className="course-grid">
             {courses.map((course) => (
@@ -134,15 +187,25 @@ export default function Dashboard({
 
         {isInstructor && user && (
           <section className="dashboard-role-content">
-            <InstructorWorkspace
-              user={user}
-            />
+            <Suspense
+              fallback={
+                <WorkspaceLoading label="Loading instructor tools..." />
+              }
+            >
+              <InstructorWorkspace user={user} />
+            </Suspense>
           </section>
         )}
 
         {isStudent && (
           <section className="dashboard-role-content">
-            <StudentQuizArea user={user} />
+            <Suspense
+              fallback={
+                <WorkspaceLoading label="Loading student assessments..." />
+              }
+            >
+              <StudentQuizArea user={user} />
+            </Suspense>
           </section>
         )}
 

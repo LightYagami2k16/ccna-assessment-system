@@ -129,7 +129,11 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
         </button>
       </div>
 
-      {message && <p className="form-message form-message--error">{message}</p>}
+      {message && (
+        <p className="form-message form-message--error" role="alert">
+          {message}
+        </p>
+      )}
       {!availableQuizzes.length ? (
         <div className="empty-state">
           <h3>No quizzes available</h3>

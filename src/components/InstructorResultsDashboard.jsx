@@ -7,6 +7,7 @@ import {
 import InstructorAttemptReview from './InstructorAttemptReview'
 import BrowserEventReview from './BrowserEventReview'
 import ResultActionMenu from './ResultActionMenu'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import {
   getInstructorAttempts,
   resetInstructorAttempts,
@@ -159,6 +160,7 @@ export default function InstructorResultsDashboard() {
   const [expandedResultStudentIds, setExpandedResultStudentIds] =
     useState([])
   const [resetting, setResetting] = useState(false)
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadAttempts = useCallback(async () => {
     try {
@@ -456,9 +458,13 @@ export default function InstructorResultsDashboard() {
   async function handleReset(attemptIds, description) {
     if (!attemptIds.length) return
 
-    const confirmed = window.confirm(
-      `Reset ${description}?\n\nThis permanently removes the selected attempt history, saved answers, scores, and integrity events. The student will be able to take the quiz again. This cannot be undone.`,
-    )
+    const confirmed = await confirm({
+      title: `Reset ${description}?`,
+      message:
+        'This permanently removes the selected attempt history, saved answers, scores, and integrity events. The student will be able to take the quiz again. This action cannot be undone.',
+      confirmLabel: 'Reset attempts',
+      tone: 'danger',
+    })
 
     if (!confirmed) return
 
@@ -511,9 +517,10 @@ export default function InstructorResultsDashboard() {
 
   return (
     <section className="instructor-results">
+      {confirmationDialog}
       <div className="section-heading">
         <div>
-          <span className="eyebrow">PHASE 1.6</span>
+          <span className="eyebrow">ASSESSMENT REPORTING</span>
           <h2>Student results</h2>
           <p>
             Results are organized by class, student, quiz, and
@@ -956,7 +963,12 @@ export default function InstructorResultsDashboard() {
                                   </span>
                                 </header>
 
-                                <div className="results-table-wrapper">
+                                <div
+                                  className="results-table-wrapper"
+                                  role="region"
+                                  aria-label={`${student.studentName} ${quiz.quizTitle} attempt table`}
+                                  tabIndex="0"
+                                >
                                   <table className="results-table results-table--attempts">
                                     <thead>
                                       <tr>

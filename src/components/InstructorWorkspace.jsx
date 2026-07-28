@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react'
-import InstructorQuestionBank from './InstructorQuestionBank'
-import InstructorQuizBuilder from './InstructorQuizBuilder'
-import InstructorResultsDashboard from './InstructorResultsDashboard'
-import InstructorClassAssignments from './InstructorClassAssignments'
-import ExamControlsDashboard from './ExamControlsDashboard'
-import InstructorCliLabBuilder from './InstructorCliLabBuilder'
-import InstructorCliResults from './InstructorCliResults'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import WorkspaceLoading from './WorkspaceLoading'
+
+const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
+const InstructorQuizBuilder = lazy(() => import('./InstructorQuizBuilder'))
+const InstructorResultsDashboard = lazy(
+  () => import('./InstructorResultsDashboard'),
+)
+const InstructorClassAssignments = lazy(
+  () => import('./InstructorClassAssignments'),
+)
+const ExamControlsDashboard = lazy(() => import('./ExamControlsDashboard'))
+const InstructorCliLabBuilder = lazy(
+  () => import('./InstructorCliLabBuilder'),
+)
+const InstructorCliResults = lazy(() => import('./InstructorCliResults'))
 
 const instructorSections = new Set([
   'questions',
@@ -15,6 +23,39 @@ const instructorSections = new Set([
   'exam-controls',
   'results',
 ])
+
+const instructorNavigation = [
+  {
+    id: 'questions',
+    label: 'Question bank',
+    description: 'Modules and reusable questions',
+  },
+  {
+    id: 'quizzes',
+    label: 'Quizzes',
+    description: 'Build and publish assessments',
+  },
+  {
+    id: 'cli-practicals',
+    label: 'CLI practicals',
+    description: 'Create Cisco configuration exams',
+  },
+  {
+    id: 'assignments',
+    label: 'Classes & assignments',
+    description: 'Enrollment and quiz access',
+  },
+  {
+    id: 'exam-controls',
+    label: 'Exam controls',
+    description: 'Schedules and live monitoring',
+  },
+  {
+    id: 'results',
+    label: 'Student results',
+    description: 'Review attempts and browser events',
+  },
+]
 
 function getStoredSection(userId) {
   if (!userId) return 'questions'
@@ -36,6 +77,10 @@ export default function InstructorWorkspace({ user }) {
   const [activeSection, setActiveSection] = useState(() =>
     getStoredSection(user?.id),
   )
+  const [navigationOpen, setNavigationOpen] = useState(false)
+  const activeNavigationItem =
+    instructorNavigation.find((item) => item.id === activeSection) ??
+    instructorNavigation[0]
 
   useEffect(() => {
     if (!user?.id) return
@@ -50,64 +95,125 @@ export default function InstructorWorkspace({ user }) {
     }
   }, [activeSection, user?.id])
 
+  function selectSection(sectionId) {
+    setActiveSection(sectionId)
+    setNavigationOpen(false)
+  }
+
   return (
     <div className="instructor-workspace">
-      <nav className="workspace-tabs" aria-label="Instructor tools">
-        <button
-          className={activeSection === 'questions' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('questions')}
-        >
-          Question bank
-        </button>
-        <button
-          className={activeSection === 'quizzes' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('quizzes')}
-        >
-          Quizzes
-        </button>
-        <button
-          className={activeSection === 'cli-practicals' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('cli-practicals')}
-        >
-          CLI practicals
-        </button>
-        <button
-          className={activeSection === 'assignments' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('assignments')}
-        >
-          Classes & assignments
-        </button>
-        <button
-          className={activeSection === 'exam-controls' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('exam-controls')}
-        >
-          Exam controls
-        </button>
-        <button
-          className={activeSection === 'results' ? 'workspace-tab workspace-tab--active' : 'workspace-tab'}
-          type="button"
-          onClick={() => setActiveSection('results')}
-        >
-          Student results
-        </button>
-      </nav>
+      <header className="workspace-mobile-header">
+        <span>
+          <small>Instructor tools</small>
+          <strong>
+            {
+              instructorNavigation.find(
+                (item) => item.id === activeSection,
+              )?.label
+            }
+          </strong>
+        </span>
 
-      {activeSection === 'questions' && <InstructorQuestionBank user={user} />}
-      {activeSection === 'quizzes' && <InstructorQuizBuilder />}
-      {activeSection === 'cli-practicals' && <InstructorCliLabBuilder />}
-      {activeSection === 'assignments' && <InstructorClassAssignments />}
-      {activeSection === 'exam-controls' && <ExamControlsDashboard />}
-      {activeSection === 'results' && (
-        <div className="combined-results-workspace">
-          <InstructorResultsDashboard />
-          <InstructorCliResults />
-        </div>
-      )}
+        <button
+          className="workspace-menu-button"
+          type="button"
+          aria-expanded={navigationOpen}
+          aria-controls="instructor-navigation"
+          onClick={() => setNavigationOpen((current) => !current)}
+        >
+          {navigationOpen ? 'Close menu' : 'Open menu'}
+        </button>
+      </header>
+
+      <div className="instructor-workspace__layout">
+        <aside
+          id="instructor-navigation"
+          className={
+            navigationOpen
+              ? 'workspace-sidebar workspace-sidebar--open'
+              : 'workspace-sidebar'
+          }
+        >
+          <div className="workspace-sidebar__heading">
+            <span className="eyebrow">INSTRUCTOR TOOLS</span>
+            <h2>Assessment workspace</h2>
+            <p>
+              Create content, manage classes, monitor exams,
+              and review results.
+            </p>
+          </div>
+
+          <nav className="workspace-tabs" aria-label="Instructor tools">
+            {instructorNavigation.map((item) => {
+              const active = activeSection === item.id
+
+              return (
+                <button
+                  className={
+                    active
+                      ? 'workspace-tab workspace-tab--active'
+                      : 'workspace-tab'
+                  }
+                  type="button"
+                  key={item.id}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => selectSection(item.id)}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.description}</small>
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
+
+        <section className="workspace-content">
+          <header className="workspace-page-header">
+            <div>
+              <span className="eyebrow">INSTRUCTOR WORKSPACE</span>
+              <h1>{activeNavigationItem.label}</h1>
+              <p>{activeNavigationItem.description}</p>
+            </div>
+
+            <span className="workspace-page-header__position">
+              {String(
+                instructorNavigation.findIndex(
+                  (item) => item.id === activeSection,
+                ) + 1,
+              ).padStart(2, '0')}
+              <small>of {String(instructorNavigation.length).padStart(2, '0')}</small>
+            </span>
+          </header>
+
+          <Suspense
+            fallback={
+              <WorkspaceLoading
+                label={`Loading ${activeNavigationItem.label.toLowerCase()}...`}
+              />
+            }
+          >
+            {activeSection === 'questions' && (
+              <InstructorQuestionBank user={user} />
+            )}
+            {activeSection === 'quizzes' && <InstructorQuizBuilder />}
+            {activeSection === 'cli-practicals' && (
+              <InstructorCliLabBuilder />
+            )}
+            {activeSection === 'assignments' && (
+              <InstructorClassAssignments />
+            )}
+            {activeSection === 'exam-controls' && (
+              <ExamControlsDashboard />
+            )}
+            {activeSection === 'results' && (
+              <div className="combined-results-workspace">
+                <InstructorResultsDashboard />
+                <InstructorCliResults />
+              </div>
+            )}
+          </Suspense>
+        </section>
+      </div>
     </div>
   )
 }

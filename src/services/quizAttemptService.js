@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { reconcileExpiredAssessmentAttempts } from './assessmentAttemptService'
 
 function stableOrderValue(value) {
   let hash = 2166136261
@@ -10,6 +11,8 @@ function stableOrderValue(value) {
 }
 
 export async function getAvailableQuizzes() {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc(
     'get_available_quizzes_for_student',
   )
@@ -20,6 +23,8 @@ export async function getAvailableQuizzes() {
 }
 
 export async function getStudentAttempts() {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase
     .from('quiz_attempts')
     .select(`
@@ -33,6 +38,8 @@ export async function getStudentAttempts() {
 }
 
 export async function getStudentRecentResults(limit = 10) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc(
     'get_student_recent_quiz_results',
     {
@@ -64,6 +71,8 @@ export async function setStudentQuizArchived(quizId, archived) {
 }
 
 export async function startQuizAttempt(quizId) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('start_quiz_attempt', {
     p_quiz_id: quizId,
   })
@@ -72,6 +81,8 @@ export async function startQuizAttempt(quizId) {
 }
 
 export async function getQuizAttempt(attemptId) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('get_quiz_attempt_safe', {
     p_attempt_id: attemptId,
   })

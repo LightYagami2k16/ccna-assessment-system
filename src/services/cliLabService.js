@@ -1,14 +1,68 @@
 import { supabase } from '../lib/supabase'
+import { reconcileExpiredAssessmentAttempts } from './assessmentAttemptService'
+
+function defaultDevice(item = {}) {
+  return {
+    id: 'device-1',
+    label: item.initialHostname || 'Device 1',
+    hostname: item.initialHostname || 'Switch',
+    type: item.deviceType || 'switch',
+  }
+}
+
+async function attachTopologyData(items = []) {
+  if (!items.length) return items
+  const { data, error } = await supabase.rpc(
+    'get_cli_lab_topology_data',
+    { p_lab_ids: items.map((item) => item.id) },
+  )
+  if (error) {
+    if (['42883', 'PGRST202'].includes(error.code)) {
+      return items.map((item) => ({
+        ...item,
+        devices: [defaultDevice(item)],
+        topology: { links: [] },
+      }))
+    }
+    throw error
+  }
+  const topologyById = new Map(
+    (data ?? []).map((item) => [String(item.id), item]),
+  )
+  return items.map((item) => ({
+    ...item,
+    devices: topologyById.get(String(item.id))?.devices
+      ?? [defaultDevice(item)],
+    topology: topologyById.get(String(item.id))?.topology
+      ?? { links: [] },
+  }))
+}
 
 export async function getInstructorCliWorkspace() {
   const { data, error } = await supabase.rpc('get_instructor_cli_workspace')
   if (error) throw error
-  return data ?? { labs: [], classes: [] }
+  const workspace = data ?? { labs: [], classes: [] }
+  return {
+    ...workspace,
+    labs: await attachTopologyData(workspace.labs ?? []),
+  }
 }
 
 export async function saveCliLab(payload) {
   const { data, error } = await supabase.rpc('save_cli_lab', { p_payload: payload })
   if (error) throw error
+  const { error: topologyError } = await supabase.rpc(
+    'save_cli_lab_topology',
+    {
+      p_lab_id: data,
+      p_devices: payload.devices,
+      p_topology: payload.topology ?? { links: [] },
+    },
+  )
+  if (topologyError) {
+    topologyError.message = `${topologyError.message} Install migration 036 to save multi-device practicals.`
+    throw topologyError
+  }
   return data
 }
 
@@ -28,28 +82,54 @@ export async function bulkManageCliLabs(labIds, action) {
 }
 
 export async function getAvailableCliLabs() {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('get_available_cli_labs')
   if (error) throw error
-  return data ?? []
+  return attachTopologyData(data ?? [])
 }
 
 export async function startCliAttempt(labId) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('start_cli_attempt', { p_lab_id: labId })
   if (error) throw error
   return data
 }
 
 export async function getCliAttempt(attemptId) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('get_cli_attempt_safe', {
     p_attempt_id: attemptId,
   })
   if (error) throw error
-  return data
+  const [labWithTopology] = await attachTopologyData([data.lab])
+  const { data: commandDevices, error: commandDeviceError } = await supabase
+    .from('cli_commands')
+    .select('id, device_id')
+    .eq('attempt_id', attemptId)
+  if (commandDeviceError) throw commandDeviceError
+  const deviceByCommandId = new Map(
+    (commandDevices ?? []).map((item) => [
+      String(item.id),
+      item.device_id || 'device-1',
+    ]),
+  )
+  return {
+    ...data,
+    lab: labWithTopology,
+    commands: (data.commands ?? []).map((item) => ({
+      ...item,
+      deviceId: deviceByCommandId.get(String(item.id)) ?? 'device-1',
+    })),
+  }
 }
 
 export async function saveCliCommand(payload) {
-  const { data, error } = await supabase.rpc('save_cli_command', {
+  const { data, error } = await supabase.rpc('save_cli_device_command', {
     p_attempt_id: payload.attemptId,
+    p_device_id: payload.deviceId ?? 'device-1',
     p_command: payload.command,
     p_mode_before: payload.modeBefore,
     p_mode_after: payload.modeAfter,
@@ -70,6 +150,8 @@ export async function submitCliAttempt(attemptId) {
 }
 
 export async function getStudentCliHistory(limit = 50) {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc(
     'get_student_cli_history',
     { p_limit: limit },
@@ -79,6 +161,8 @@ export async function getStudentCliHistory(limit = 50) {
 }
 
 export async function getInstructorCliResults() {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc(
     'get_instructor_cli_results',
   )

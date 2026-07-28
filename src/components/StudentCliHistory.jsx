@@ -51,7 +51,12 @@ export default function StudentCliHistory() {
           <p>Submitted CLI practicals will appear here.</p>
         </div>
       ) : (
-        <div className="cli-history-table-wrapper">
+        <div
+          className="cli-history-table-wrapper"
+          role="region"
+          aria-label="CLI practical attempt history"
+          tabIndex="0"
+        >
           <table className="cli-history-table">
             <thead>
               <tr>
@@ -66,7 +71,7 @@ export default function StudentCliHistory() {
             <tbody>
               {attempts.map((attempt) => (
                 <tr key={attempt.attemptId}>
-                  <td>
+                  <td data-label="Practical">
                     <strong>{attempt.title}</strong>
                     <small>
                       {attempt.courseCode}
@@ -74,15 +79,15 @@ export default function StudentCliHistory() {
                       {' · '}{attempt.deviceType}
                     </small>
                   </td>
-                  <td>#{attempt.attemptNumber}</td>
-                  <td>
+                  <td data-label="Attempt">#{attempt.attemptNumber}</td>
+                  <td data-label="Raw score">
                     <strong>
                       {Number(attempt.scorePoints)} /{' '}
                       {Number(attempt.maximumPoints)}
                     </strong>
                     <small>({Number(attempt.percentage).toFixed(2)}%)</small>
                   </td>
-                  <td>
+                  <td data-label="Result">
                     <span className={[
                       'result-status',
                       attempt.passed
@@ -94,15 +99,19 @@ export default function StudentCliHistory() {
                         : attempt.passed ? 'Passed' : 'Failed'}
                     </span>
                   </td>
-                  <td>{attempt.commandCount}</td>
-                  <td>{formatDate(attempt.submittedAt)}</td>
+                  <td data-label="Commands">{attempt.commandCount}</td>
+                  <td data-label="Submitted">{formatDate(attempt.submittedAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-      {message && <p className="form-message form-message--error">{message}</p>}
+      {message && (
+        <p className="form-message form-message--error" role="alert">
+          {message}
+        </p>
+      )}
     </section>
   )
 }

@@ -6,6 +6,7 @@ import {
   saveQuizAssignmentSchedule,
   saveStudentQuizAccommodation,
 } from '../services/examControlService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 const courseTitles = {
   ITN: 'Introduction to Networks',
@@ -236,6 +237,7 @@ export default function ExamControlsDashboard() {
   const [expandedMonitorClassIds, setExpandedMonitorClassIds] =
     useState([])
   const [expandedMonitorStudents, setExpandedMonitorStudents] = useState([])
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadWorkspace = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -400,7 +402,13 @@ export default function ExamControlsDashboard() {
   }
 
   async function handleDelete(accommodation) {
-    if (!window.confirm(`Remove the accommodation for ${accommodation.studentName}?`)) return
+    const confirmed = await confirm({
+      title: 'Remove student accommodation?',
+      message: `Remove the accommodation for ${accommodation.studentName}? The student will return to the quiz’s standard time, availability, and attempt limits.`,
+      confirmLabel: 'Remove accommodation',
+      tone: 'danger',
+    })
+    if (!confirmed) return
     setBusyId(accommodation.id)
     try {
       await deleteStudentQuizAccommodation(accommodation.id)
@@ -431,6 +439,7 @@ export default function ExamControlsDashboard() {
 
   return (
     <div className="exam-controls">
+      {confirmationDialog}
       <section className="exam-control-panel">
         <div className="section-heading">
           <div>
@@ -568,7 +577,12 @@ export default function ExamControlsDashboard() {
         />
 
         {!!workspace.accommodations.length && (
-          <div className="accommodation-table-wrapper">
+          <div
+            className="accommodation-table-wrapper"
+            role="region"
+            aria-label="Student quiz accommodations table"
+            tabIndex="0"
+          >
             <table className="accommodation-table">
               <thead>
                 <tr>

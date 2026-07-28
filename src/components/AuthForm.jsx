@@ -54,10 +54,10 @@ export default function AuthForm() {
           )}
           <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
           <label>Password<input type="password" minLength="8" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
-          <button className="primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button>
+          <button className="primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button>
         </form>
-        {message && <p className="notice">{message}</p>}
-        <button className="link-button" onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
+        {message && <p className="notice" role="status" aria-live="polite">{message}</p>}
+        <button className="link-button" type="button" onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}>
           {mode === 'sign-in' ? 'Create an account' : 'Return to sign in'}
         </button>
       </section>

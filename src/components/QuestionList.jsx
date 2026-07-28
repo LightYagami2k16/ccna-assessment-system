@@ -5,6 +5,7 @@ import {
   setQuestionStatus,
   setQuestionsStatus,
 } from '../services/questionService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 export default function QuestionList({ questions, onEdit, onChanged }) {
   const [message, setMessage] = useState('')
@@ -13,6 +14,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   const [bulkAction, setBulkAction] = useState(null)
   const [rowActions, setRowActions] = useState({})
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const questionIds = useMemo(
     () => questions.map((question) => question.id),
@@ -101,7 +103,13 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   }
 
   async function handleDelete(question) {
-    if (!window.confirm(`Delete the draft question "${question.title}"?`)) return
+    const confirmed = await confirm({
+      title: 'Delete draft question?',
+      message: `Delete “${question.title}”? Questions with student attempt history cannot be deleted. This action cannot be undone.`,
+      confirmLabel: 'Delete question',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setBusyId(question.id)
     setMessage('')
@@ -118,7 +126,13 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   async function handleStatusChange(question) {
     const nextStatus = question.status === 'published' ? 'draft' : 'published'
     const verb = nextStatus === 'published' ? 'Publish' : 'Unpublish'
-    if (!window.confirm(`${verb} "${question.title}"?`)) return
+    const confirmed = await confirm({
+      title: `${verb} question?`,
+      message: `${verb} “${question.title}”?`,
+      confirmLabel: verb,
+      tone: 'default',
+    })
+    if (!confirmed) return
 
     setBusyId(question.id)
     setMessage('')
@@ -135,15 +149,16 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   async function handleBulkDelete() {
     if (!selectedIds.length) return
 
-    if (
-      !window.confirm(
-        `Delete ${selectedIds.length} selected draft ${
-          selectedIds.length === 1 ? 'question' : 'questions'
-        }?\n\nQuestions with student attempt history cannot be deleted. This cannot be undone.`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `Delete ${selectedIds.length} selected ${
+        selectedIds.length === 1 ? 'question' : 'questions'
+      }?`,
+      message:
+        'Questions with student attempt history cannot be deleted. This action cannot be undone.',
+      confirmLabel: 'Delete selected',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setBulkAction('delete')
     setMessage('')
@@ -162,15 +177,15 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
     if (!selectedIds.length) return
 
     const verb = status === 'published' ? 'Publish' : 'Unpublish'
-    if (
-      !window.confirm(
-        `${verb} ${selectedIds.length} selected ${
-          selectedIds.length === 1 ? 'question' : 'questions'
-        }?`,
-      )
-    ) {
-      return
-    }
+    const confirmed = await confirm({
+      title: `${verb} selected questions?`,
+      message: `${verb} ${selectedIds.length} selected ${
+        selectedIds.length === 1 ? 'question' : 'questions'
+      }?`,
+      confirmLabel: `${verb} selected`,
+      tone: 'default',
+    })
+    if (!confirmed) return
 
     setBulkAction(status)
     setMessage('')
@@ -207,6 +222,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
 
   return (
     <section className="question-list">
+      {confirmationDialog}
       <div className="section-heading">
         <div>
           <span className="eyebrow">CONTENT LIBRARY</span>
@@ -351,6 +367,9 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                   <div
                     className="question-table-wrapper"
                     id={panelId}
+                    role="region"
+                    aria-label={`${course.code} question bank table`}
+                    tabIndex="0"
                   >
                     <table>
                       <thead>

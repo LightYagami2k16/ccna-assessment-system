@@ -7,6 +7,7 @@ import {
 
 import QuizTimer from './QuizTimer';
 import QuizResult from './QuizResult';
+import ConfirmationDialog from './ConfirmationDialog';
 import useExamIntegrityMonitor from '../hooks/useExamIntegrityMonitor';
 import {
   cachePendingAnswer,
@@ -51,6 +52,7 @@ export default function QuizPlayer({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [integrityWarning, setIntegrityWarning] = useState('');
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
 
   const handleIntegrityIncident = useCallback((eventType) => {
     const messages = {
@@ -165,6 +167,11 @@ export default function QuizPlayer({
     );
   }, [answeredCount, questions.length]);
 
+  const unansweredCount = Math.max(
+    0,
+    questions.length - answeredCount
+  );
+
   const syncPendingAnswers = useCallback(async () => {
     const pendingAnswers = getPendingAnswers(attemptId);
     const pendingEntries = Object.entries(pendingAnswers);
@@ -231,27 +238,9 @@ export default function QuizPlayer({
   }, [attemptData?.attempt?.status, syncPendingAnswers]);
 
   const performSubmission = useCallback(
-    async ({ skipConfirmation = false } = {}) => {
+    async () => {
       if (submitting || result) {
         return;
-      }
-
-      if (!skipConfirmation) {
-        const unanswered =
-          questions.length - answeredCount;
-
-        const confirmationMessage =
-          unanswered > 0
-            ? `You have ${unanswered} unanswered question(s). Submit anyway?`
-            : 'Submit your quiz now? You cannot change your answers afterward.';
-
-        const confirmed = window.confirm(
-          confirmationMessage
-        );
-
-        if (!confirmed) {
-          return;
-        }
       }
 
       try {
@@ -295,10 +284,8 @@ export default function QuizPlayer({
       }
     },
     [
-      answeredCount,
       attemptId,
       loadAttempt,
-      questions.length,
       result,
       submitting,
       syncPendingAnswers
@@ -314,9 +301,8 @@ export default function QuizPlayer({
       'Time expired. Your quiz is being submitted.'
     );
 
-    void performSubmission({
-      skipConfirmation: true
-    });
+    setSubmitDialogOpen(false);
+    void performSubmission();
   }, [performSubmission, result, submitting]);
 
   async function handleSelectOption(optionId) {
@@ -550,6 +536,8 @@ export default function QuizPlayer({
                   }
                   type="button"
                   className={className}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-label={`Question ${index + 1}${isAnswered ? ', answered' : ', unanswered'}${isCurrent ? ', current' : ''}`}
                   onClick={() =>
                     goToQuestion(index)
                   }
@@ -644,7 +632,7 @@ export default function QuizPlayer({
             )}
           </div>
 
-          <div className="quiz-save-status">
+          <div className="quiz-save-status" role="status" aria-live="polite">
             {saveMessage}
           </div>
 
@@ -670,19 +658,9 @@ export default function QuizPlayer({
             ) : (
               <button
                 type="button"
-                className="button-primary"
-                onClick={() =>
-                  void performSubmission()
-                }
-                disabled={
-                  submitting ||
-                  !attemptIsActive ||
-                  savingQuestionId !== null
-                }
+                disabled
               >
-                {submitting
-                  ? 'Submitting...'
-                  : 'Submit quiz'}
+                Last question
               </button>
             )}
           </footer>
@@ -696,11 +674,15 @@ export default function QuizPlayer({
       )}
 
       <div className="quiz-player__bottom-actions">
+        <span>
+          <strong>{answeredCount}</strong> answered
+          <small>
+          {unansweredCount} unanswered
+          </small>
+        </span>
         <button
           type="button"
-          onClick={() =>
-            void performSubmission()
-          }
+          onClick={() => setSubmitDialogOpen(true)}
           disabled={
             submitting ||
             !attemptIsActive ||
@@ -712,6 +694,23 @@ export default function QuizPlayer({
             : 'Submit quiz'}
         </button>
       </div>
+
+      <ConfirmationDialog
+        open={submitDialogOpen}
+        title="Submit quiz?"
+        message={
+          unansweredCount > 0
+            ? `You have ${unansweredCount} unanswered question(s). Submit now? Answers cannot be changed afterward.`
+            : 'Your answers are ready. Submit this quiz for grading? Answers cannot be changed afterward.'
+        }
+        confirmLabel="Submit quiz"
+        tone="primary"
+        onCancel={() => setSubmitDialogOpen(false)}
+        onConfirm={() => {
+          setSubmitDialogOpen(false)
+          void performSubmission()
+        }}
+      />
     </main>
   );
 }

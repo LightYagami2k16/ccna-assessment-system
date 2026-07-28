@@ -216,7 +216,7 @@ export default function QuestionEditor({
           )}
         </div>
         <div className="question-editor__heading-controls">
-          <span className="status-chip">Phase 1.4</span>
+          <span className="status-chip">Draft editor</span>
 
           <button
             className="module-collapse-button"

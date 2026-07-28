@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import CliTerminal from './CliTerminal'
 import {
   getAvailableCliLabs,
@@ -17,7 +17,10 @@ function readStoredAttempt(userId) {
   }
 }
 
-export default function StudentCliArea({ userId }) {
+export default function StudentCliArea({
+  userId,
+  onCompletedAttempt,
+}) {
   const [labs, setLabs] = useState([])
   const [activeAttemptId, setActiveAttemptId] = useState(() =>
     readStoredAttempt(userId),
@@ -37,6 +40,16 @@ export default function StudentCliArea({ userId }) {
   }, [])
 
   useEffect(() => { void loadLabs() }, [loadLabs])
+
+  const availableLabs = useMemo(
+    () =>
+      labs.filter(
+        (lab) =>
+          Boolean(lab.activeAttemptId) ||
+          Number(lab.attemptsUsed) < Number(lab.maxAttempts),
+      ),
+    [labs],
+  )
 
   useEffect(() => {
     if (!userId) return
@@ -72,9 +85,10 @@ export default function StudentCliArea({ userId }) {
       <div className="quiz-focus-mode">
         <CliTerminal
           attemptId={activeAttemptId}
-          onExit={() => {
+          onExit={({ completed = false } = {}) => {
             setActiveAttemptId(null)
             void loadLabs()
+            if (completed) onCompletedAttempt?.()
           }}
         />
       </div>
@@ -91,11 +105,11 @@ export default function StudentCliArea({ userId }) {
         </div>
         <button className="secondary" type="button" onClick={() => void loadLabs()}>Refresh</button>
       </div>
-      {!labs.length ? (
-        <div className="empty-state"><h3>No CLI practicals assigned</h3><p>Published practicals assigned to your class will appear here.</p></div>
+      {!availableLabs.length ? (
+        <div className="empty-state"><h3>No CLI practicals available</h3><p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p></div>
       ) : (
         <div className="cli-lab-grid">
-          {labs.map((lab) => {
+          {availableLabs.map((lab) => {
             const canStart = Boolean(lab.activeAttemptId) || lab.attemptsUsed < lab.maxAttempts
             return (
               <article className="cli-lab-card" key={lab.id}>
@@ -106,7 +120,16 @@ export default function StudentCliArea({ userId }) {
                   <div><dt>Duration</dt><dd>{lab.durationMinutes} minutes</dd></div>
                   <div><dt>Passing</dt><dd>{lab.passingScore}%</dd></div>
                   <div><dt>Attempts</dt><dd>{lab.attemptsUsed} / {lab.maxAttempts}</dd></div>
-                  <div><dt>Device</dt><dd>{lab.deviceType}</dd></div>
+                  <div>
+                    <dt>Devices</dt>
+                    <dd>
+                      {lab.devices?.length ?? 1}
+                      {' · '}
+                      {(lab.devices?.length ?? 1) > 1
+                        ? 'Topology'
+                        : lab.deviceType}
+                    </dd>
+                  </div>
                 </dl>
                 <button className="primary" type="button" disabled={!canStart || startingId === lab.id}
                   onClick={() => void startLab(lab)}>

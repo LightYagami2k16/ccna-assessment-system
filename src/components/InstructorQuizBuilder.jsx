@@ -88,7 +88,7 @@ export default function InstructorQuizBuilder() {
     <section className="instructor-quiz-builder">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">PHASE 1.4</span>
+          <span className="eyebrow">ASSESSMENT CONTENT</span>
           <h2>Quiz builder</h2>
           <p>Create, configure, publish, and maintain CCNA assessments.</p>
         </div>

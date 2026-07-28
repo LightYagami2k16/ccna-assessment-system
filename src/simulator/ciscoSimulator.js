@@ -20,6 +20,17 @@ export function createDeviceState(hostname = 'Switch') {
     activeOspfProcess: null,
     accessLists: {},
     activeAccessList: null,
+    dhcpPools: {},
+    activeDhcpPool: null,
+    dhcpExcludedRanges: [],
+    natPools: {},
+    natRules: [],
+    spanningTree: {
+      mode: 'pvst',
+      vlanPriorities: {},
+    },
+    rsaKeyBits: 0,
+    sshVersion: 1,
     saved: false,
   }
 }
@@ -51,6 +62,19 @@ function ensureStateShape(state) {
     )
   })
   state.activeAccessList ??= null
+  state.dhcpPools ??= {}
+  Object.keys(state.dhcpPools).forEach((poolName) => {
+    ensureDhcpPool(state, poolName)
+  })
+  state.activeDhcpPool ??= null
+  state.dhcpExcludedRanges ??= []
+  state.natPools ??= {}
+  state.natRules ??= []
+  state.spanningTree ??= { mode: 'pvst', vlanPriorities: {} }
+  state.spanningTree.mode ??= 'pvst'
+  state.spanningTree.vlanPriorities ??= {}
+  state.rsaKeyBits ??= 0
+  state.sshVersion ??= 1
   state.activeLine ??= null
   state.saved ??= false
   return state
@@ -65,6 +89,9 @@ export function getDevicePrompt(state) {
         ? '(config-ext-nacl)#'
         : '(config-std-nacl)#'
     }`
+  }
+  if (state.mode === 'dhcp_pool_config') {
+    return `${hostname}(dhcp-config)#`
   }
   const suffix = {
     user_exec: '>',
@@ -148,6 +175,10 @@ function ensureInterface(state, name) {
       in: '',
       out: '',
     },
+    natRole: '',
+    channelGroup: null,
+    spanningTreePortfast: false,
+    spanningTreeBpduguard: false,
   }
   const item = state.interfaces[name]
   item.description ??= ''
@@ -164,6 +195,10 @@ function ensureInterface(state, name) {
   item.ipAccessGroups ??= { in: '', out: '' }
   item.ipAccessGroups.in ??= ''
   item.ipAccessGroups.out ??= ''
+  item.natRole ??= ''
+  item.channelGroup ??= null
+  item.spanningTreePortfast ??= false
+  item.spanningTreeBpduguard ??= false
   return item
 }
 
@@ -171,9 +206,15 @@ function ensureLine(state, name) {
   state.lines[name] ??= {
     password: '',
     login: false,
+    loginLocal: false,
     transportInput: '',
   }
-  return state.lines[name]
+  const line = state.lines[name]
+  line.password ??= ''
+  line.login ??= false
+  line.loginLocal ??= false
+  line.transportInput ??= ''
+  return line
 }
 
 function ensureOspfProcess(state, processId) {
@@ -193,6 +234,32 @@ function ensureOspfProcess(state, processId) {
   process.nonPassiveInterfaces ??= []
   process.defaultInformationOriginate ??= false
   return process
+}
+
+function canonicalDhcpPoolName(value) {
+  return String(value ?? '').trim().toUpperCase()
+}
+
+function ensureDhcpPool(state, name) {
+  const canonicalName = canonicalDhcpPoolName(name)
+  state.dhcpPools[canonicalName] ??= {
+    name: canonicalName,
+    network: '',
+    subnetMask: '',
+    defaultRouters: [],
+    dnsServers: [],
+    domainName: '',
+    lease: '',
+  }
+  const pool = state.dhcpPools[canonicalName]
+  pool.name ??= canonicalName
+  pool.network ??= ''
+  pool.subnetMask ??= ''
+  pool.defaultRouters ??= []
+  pool.dnsServers ??= []
+  pool.domainName ??= ''
+  pool.lease ??= ''
+  return pool
 }
 
 function canonicalAccessListId(value) {
@@ -413,12 +480,35 @@ function normalizeRouteNextHop(value) {
   return normalizeInterface(value)
 }
 
+function canonicalNatPoolName(value) {
+  return String(value ?? '').trim().toUpperCase()
+}
+
+function canonicalNatRule(rule) {
+  if (rule.type === 'static') {
+    return `static:${rule.localIp}:${rule.globalIp}`
+  }
+  return [
+    'dynamic',
+    canonicalAccessListId(rule.aclId),
+    rule.sourceType,
+    rule.sourceType === 'interface'
+      ? normalizeInterface(rule.source) ?? rule.source
+      : canonicalNatPoolName(rule.source),
+    rule.overload ? 'overload' : '',
+  ].join(':')
+}
+
 function runningConfig(state) {
   const lines = [`hostname ${state.hostname}`]
   if (state.enableSecret) lines.push(`enable secret ${state.enableSecret}`)
   if (state.servicePasswordEncryption) lines.push('service password-encryption')
   if (state.bannerMotd) lines.push(`banner motd #${state.bannerMotd}#`)
   if (state.domainName) lines.push(`ip domain-name ${state.domainName}`)
+  if (state.rsaKeyBits) {
+    lines.push(`crypto key generate rsa modulus ${state.rsaKeyBits}`)
+  }
+  if (state.sshVersion !== 1) lines.push(`ip ssh version ${state.sshVersion}`)
   if (state.ipRouting) lines.push('ip routing')
   if (state.defaultGateway) lines.push(`ip default-gateway ${state.defaultGateway}`)
   Object.entries(state.users).forEach(([username, user]) => {
@@ -459,6 +549,16 @@ function runningConfig(state) {
     }
     if (item.ipAccessGroups.out) {
       lines.push(` ip access-group ${item.ipAccessGroups.out} out`)
+    }
+    if (item.natRole) lines.push(` ip nat ${item.natRole}`)
+    if (item.channelGroup) {
+      lines.push(
+        ` channel-group ${item.channelGroup.id} mode ${item.channelGroup.mode}`,
+      )
+    }
+    if (item.spanningTreePortfast) lines.push(' spanning-tree portfast')
+    if (item.spanningTreeBpduguard) {
+      lines.push(' spanning-tree bpduguard enable')
     }
     lines.push(item.shutdown ? ' shutdown' : ' no shutdown')
   })
@@ -502,10 +602,54 @@ function runningConfig(state) {
       lines.push(`access-list ${id} ${entry.statement}`)
     })
   })
+  Object.values(state.natPools).forEach((pool) => {
+    lines.push(
+      `ip nat pool ${pool.name} ${pool.startIp} ${pool.endIp} netmask ${pool.netmask}`,
+    )
+  })
+  state.natRules.forEach((rule) => {
+    if (rule.type === 'static') {
+      lines.push(`ip nat inside source static ${rule.localIp} ${rule.globalIp}`)
+      return
+    }
+    lines.push(
+      `ip nat inside source list ${rule.aclId} ${rule.sourceType} ${
+        rule.source
+      }${rule.overload ? ' overload' : ''}`,
+    )
+  })
+  state.dhcpExcludedRanges.forEach((range) => {
+    lines.push(
+      `ip dhcp excluded-address ${range.startIp}${
+        range.endIp !== range.startIp ? ` ${range.endIp}` : ''
+      }`,
+    )
+  })
+  Object.values(state.dhcpPools).forEach((pool) => {
+    lines.push('!', `ip dhcp pool ${pool.name}`)
+    if (pool.network) lines.push(` network ${pool.network} ${pool.subnetMask}`)
+    if (pool.defaultRouters.length) {
+      lines.push(` default-router ${pool.defaultRouters.join(' ')}`)
+    }
+    if (pool.dnsServers.length) {
+      lines.push(` dns-server ${pool.dnsServers.join(' ')}`)
+    }
+    if (pool.domainName) lines.push(` domain-name ${pool.domainName}`)
+    if (pool.lease) lines.push(` lease ${pool.lease}`)
+  })
+  if (state.spanningTree.mode !== 'pvst') {
+    lines.push(`spanning-tree mode ${state.spanningTree.mode}`)
+  }
+  Object.entries(state.spanningTree.vlanPriorities).forEach(
+    ([vlanId, priority]) => {
+      lines.push(`spanning-tree vlan ${vlanId} priority ${priority}`)
+    },
+  )
   Object.entries(state.lines).forEach(([name, line]) => {
     lines.push('!', `line ${name === 'console' ? 'console 0' : 'vty 0 4'}`)
     if (line.password) lines.push(` password ${line.password}`)
     if (line.login) lines.push(' login')
+    if (line.loginLocal) lines.push(' login local')
     if (line.transportInput) lines.push(` transport input ${line.transportInput}`)
   })
   return lines.join('\n')
@@ -741,6 +885,131 @@ function accessListsOutput(state, requestedId = '') {
   ].join('\n')).join('\n')
 }
 
+function natTranslationsOutput(state) {
+  const staticRules = state.natRules.filter((rule) => rule.type === 'static')
+  if (!staticRules.length) return 'No NAT translations are currently active.'
+
+  return [
+    'Pro  Inside global       Inside local        Outside local       Outside global',
+    ...staticRules.map((rule) =>
+      `---  ${rule.globalIp.padEnd(20)}${rule.localIp.padEnd(20)}---                 ---`),
+  ].join('\n')
+}
+
+function natStatisticsOutput(state) {
+  const insideInterfaces = Object.entries(state.interfaces)
+    .filter(([, item]) => item.natRole === 'inside')
+    .map(([name]) => abbreviateInterface(name))
+  const outsideInterfaces = Object.entries(state.interfaces)
+    .filter(([, item]) => item.natRole === 'outside')
+    .map(([name]) => abbreviateInterface(name))
+  const staticCount = state.natRules.filter((rule) => rule.type === 'static').length
+  const dynamicCount = state.natRules.length - staticCount
+
+  return [
+    `Total active translations: ${staticCount} (0 static, 0 dynamic; ${staticCount} extended)`,
+    `Outside interfaces: ${outsideInterfaces.join(', ') || 'None'}`,
+    `Inside interfaces: ${insideInterfaces.join(', ') || 'None'}`,
+    `Static mappings configured: ${staticCount}`,
+    `Dynamic mappings configured: ${dynamicCount}`,
+    `NAT pools configured: ${Object.keys(state.natPools).length}`,
+  ].join('\n')
+}
+
+function dhcpPoolOutput(state) {
+  const pools = Object.values(state.dhcpPools)
+  if (!pools.length) return 'No DHCP pools are configured.'
+  return pools.map((pool) => [
+    `Pool ${pool.name} :`,
+    ` Utilization mark (high/low)    : 100 / 0`,
+    ` Subnet size (first/next)       : 0 / 0`,
+    ` Total addresses                : ${
+      pool.network ? 'calculated from configured network' : '0'
+    }`,
+    ` Leased addresses               : 0`,
+    ` Pending event                  : none`,
+    ` Network                        : ${
+      pool.network
+        ? `${pool.network} / ${pool.subnetMask}`
+        : 'not configured'
+    }`,
+    ` Default router                 : ${
+      pool.defaultRouters.join(', ') || 'not configured'
+    }`,
+    ` DNS server                     : ${
+      pool.dnsServers.join(', ') || 'not configured'
+    }`,
+  ].join('\n')).join('\n\n')
+}
+
+function etherchannelSummaryOutput(state) {
+  const groups = new Map()
+  Object.entries(state.interfaces).forEach(([name, item]) => {
+    if (!item.channelGroup) return
+    const key = String(item.channelGroup.id)
+    if (!groups.has(key)) {
+      groups.set(key, {
+        protocol: ['active', 'passive'].includes(item.channelGroup.mode)
+          ? 'LACP'
+          : ['desirable', 'auto'].includes(item.channelGroup.mode)
+            ? 'PAgP'
+            : '-',
+        ports: [],
+      })
+    }
+    groups.get(key).ports.push(`${abbreviateInterface(name)}(P)`)
+  })
+  if (!groups.size) return 'No EtherChannel groups are configured.'
+  return [
+    'Group  Port-channel  Protocol    Ports',
+    '------+-------------+-----------+--------------------------------',
+    ...[...groups.entries()].map(([id, group]) =>
+      `${id.padEnd(7)}Po${id}(SU)      ${group.protocol.padEnd(12)}${
+        group.ports.join(' ')
+      }`),
+  ].join('\n')
+}
+
+function spanningTreeOutput(state, requestedVlan = '') {
+  const vlanIds = requestedVlan
+    ? [requestedVlan]
+    : [...new Set([
+      ...Object.keys(state.vlans),
+      ...Object.keys(state.spanningTree.vlanPriorities),
+      '1',
+    ])].sort((left, right) => Number(left) - Number(right))
+  return vlanIds.map((vlanId) => {
+    const priority = state.spanningTree.vlanPriorities[vlanId] ?? 32768
+    const ports = Object.entries(state.interfaces)
+      .filter(([, item]) => !item.shutdown)
+      .map(([name, item]) =>
+        `${abbreviateInterface(name).padEnd(10)}Desg FWD 19        128.1    ${
+          item.spanningTreePortfast ? 'P2p Edge' : 'P2p'
+        }`)
+    return [
+      `VLAN${String(vlanId).padStart(4, '0')}`,
+      `  Spanning tree enabled protocol ${
+        state.spanningTree.mode === 'rapid-pvst' ? 'rstp' : 'ieee'
+      }`,
+      `  Root ID    Priority    ${priority + Number(vlanId)}`,
+      `  Bridge ID  Priority    ${priority + Number(vlanId)}`,
+      '',
+      'Interface Role Sts Cost      Prio.Nbr Type',
+      '--------- ---- --- --------- -------- --------------------------------',
+      ...(ports.length ? ports : ['No active interfaces']),
+    ].join('\n')
+  }).join('\n\n')
+}
+
+function sshStatusOutput(state) {
+  if (!state.rsaKeyBits) return 'SSH Disabled - version 1.99'
+  return [
+    `SSH Enabled - version ${state.sshVersion}`,
+    `Authentication timeout: 120 secs; Authentication retries: 3`,
+    `Minimum expected Diffie Hellman key size : ${state.rsaKeyBits} bits`,
+  ].join('\n')
+}
+
 function applyAllowedVlanCommand(item, lower) {
   const match = lower.match(
     /^switchport trunk allowed vlan(?: (add|remove))? (.+)$/,
@@ -803,6 +1072,7 @@ export function executeCiscoCommand(currentState, rawCommand) {
       'line_config',
       'router_config',
       'acl_config',
+      'dhcp_pool_config',
     ].includes(state.mode)
   ) {
     state.mode = 'privileged_exec'
@@ -811,6 +1081,7 @@ export function executeCiscoCommand(currentState, rawCommand) {
     state.activeLine = null
     state.activeOspfProcess = null
     state.activeAccessList = null
+    state.activeDhcpPool = null
   } else if (lower === 'exit') {
     if (
       [
@@ -819,6 +1090,7 @@ export function executeCiscoCommand(currentState, rawCommand) {
         'line_config',
         'router_config',
         'acl_config',
+        'dhcp_pool_config',
       ]
         .includes(state.mode)
     ) {
@@ -828,6 +1100,7 @@ export function executeCiscoCommand(currentState, rawCommand) {
       state.activeLine = null
       state.activeOspfProcess = null
       state.activeAccessList = null
+      state.activeDhcpPool = null
     } else if (state.mode === 'global_config') {
       state.mode = 'privileged_exec'
     } else {
@@ -866,6 +1139,34 @@ export function executeCiscoCommand(currentState, rawCommand) {
     configurationChanged = true
   } else if (lower === 'no ip domain-name' && state.mode === 'global_config') {
     state.domainName = ''
+    configurationChanged = true
+  } else if (
+    /^crypto key generate rsa( general-keys)? modulus \d+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const bits = Number(lower.split(' ').at(-1))
+    if (bits >= 512 && bits <= 4096) {
+      state.rsaKeyBits = bits
+      configurationChanged = true
+      output = `% Generating ${bits} bit RSA keys, keys will be non-exportable... [OK]`
+    } else accepted = false
+  } else if (
+    ['crypto key zeroize rsa', 'no crypto key generate rsa'].includes(lower)
+    && state.mode === 'global_config'
+  ) {
+    state.rsaKeyBits = 0
+    configurationChanged = true
+  } else if (
+    /^ip ssh version [12]$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    state.sshVersion = Number(lower.split(' ').at(-1))
+    configurationChanged = true
+  } else if (
+    lower === 'no ip ssh version'
+    && state.mode === 'global_config'
+  ) {
+    state.sshVersion = 1
     configurationChanged = true
   } else if (lower === 'ip routing' && state.mode === 'global_config') {
     state.ipRouting = true
@@ -936,6 +1237,242 @@ export function executeCiscoCommand(currentState, rawCommand) {
       )
       configurationChanged = true
     } else accepted = false
+  } else if (
+    /^ip nat pool \S+ \S+ \S+ netmask \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const match = command.match(
+      /^ip nat pool (\S+) (\S+) (\S+) netmask (\S+)$/i,
+    )
+    const name = canonicalNatPoolName(match[1])
+    const startIp = match[2]
+    const endIp = match[3]
+    const netmask = match[4]
+    const startNumber = ipv4ToNumber(startIp)
+    const endNumber = ipv4ToNumber(endIp)
+    if (
+      startNumber !== null
+      && endNumber !== null
+      && startNumber <= endNumber
+      && prefixLengthFromMask(netmask) !== null
+    ) {
+      state.natPools[name] = { name, startIp, endIp, netmask }
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^no ip nat pool \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const name = canonicalNatPoolName(command.split(' ').at(-1))
+    delete state.natPools[name]
+    state.natRules = state.natRules.filter(
+      (rule) => !(rule.sourceType === 'pool' && rule.source === name),
+    )
+    configurationChanged = true
+  } else if (
+    /^ip nat inside source static \S+ \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const [, , , , , localIp, globalIp] = command.split(' ')
+    if (ipv4ToNumber(localIp) !== null && ipv4ToNumber(globalIp) !== null) {
+      const rule = { type: 'static', localIp, globalIp }
+      state.natRules = state.natRules.filter(
+        (item) => canonicalNatRule(item) !== canonicalNatRule(rule),
+      )
+      state.natRules.push(rule)
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^no ip nat inside source static \S+ \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const [, , , , , , localIp, globalIp] = command.split(' ')
+    const rule = { type: 'static', localIp, globalIp }
+    state.natRules = state.natRules.filter(
+      (item) => canonicalNatRule(item) !== canonicalNatRule(rule),
+    )
+    configurationChanged = true
+  } else if (
+    /^ip dhcp excluded-address \S+( \S+)?$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const [, , , startIp, enteredEndIp] = command.split(' ')
+    const endIp = enteredEndIp ?? startIp
+    const startNumber = ipv4ToNumber(startIp)
+    const endNumber = ipv4ToNumber(endIp)
+    if (
+      startNumber !== null
+      && endNumber !== null
+      && startNumber <= endNumber
+    ) {
+      state.dhcpExcludedRanges = state.dhcpExcludedRanges.filter(
+        (range) => range.startIp !== startIp || range.endIp !== endIp,
+      )
+      state.dhcpExcludedRanges.push({ startIp, endIp })
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^no ip dhcp excluded-address \S+( \S+)?$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const [, , , , startIp, enteredEndIp] = command.split(' ')
+    const endIp = enteredEndIp ?? startIp
+    state.dhcpExcludedRanges = state.dhcpExcludedRanges.filter(
+      (range) => range.startIp !== startIp || range.endIp !== endIp,
+    )
+    configurationChanged = true
+  } else if (
+    /^ip dhcp pool \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const poolName = canonicalDhcpPoolName(command.split(' ').at(-1))
+    const existed = Boolean(state.dhcpPools[poolName])
+    ensureDhcpPool(state, poolName)
+    state.activeDhcpPool = poolName
+    state.mode = 'dhcp_pool_config'
+    configurationChanged = !existed
+  } else if (
+    /^no ip dhcp pool \S+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const poolName = canonicalDhcpPoolName(command.split(' ').at(-1))
+    delete state.dhcpPools[poolName]
+    configurationChanged = true
+  } else if (state.mode === 'dhcp_pool_config') {
+    const pool = ensureDhcpPool(state, state.activeDhcpPool)
+    if (/^network \S+ \S+$/.test(lower)) {
+      const [, enteredNetwork, mask] = command.split(' ')
+      const normalizedNetwork = networkAddress(enteredNetwork, mask)
+      if (normalizedNetwork !== null) {
+        pool.network = normalizedNetwork
+        pool.subnetMask = mask
+        configurationChanged = true
+      } else accepted = false
+    } else if (lower === 'no network') {
+      pool.network = ''
+      pool.subnetMask = ''
+      configurationChanged = true
+    } else if (/^default-router( \S+)+$/.test(lower)) {
+      const addresses = command.split(' ').slice(1)
+      if (addresses.every((address) => ipv4ToNumber(address) !== null)) {
+        pool.defaultRouters = addresses
+        configurationChanged = true
+      } else accepted = false
+    } else if (lower === 'no default-router') {
+      pool.defaultRouters = []
+      configurationChanged = true
+    } else if (/^dns-server( \S+)+$/.test(lower)) {
+      const addresses = command.split(' ').slice(1)
+      if (addresses.every((address) => ipv4ToNumber(address) !== null)) {
+        pool.dnsServers = addresses
+        configurationChanged = true
+      } else accepted = false
+    } else if (lower === 'no dns-server') {
+      pool.dnsServers = []
+      configurationChanged = true
+    } else if (/^domain-name \S+$/.test(lower)) {
+      pool.domainName = command.split(' ')[1]
+      configurationChanged = true
+    } else if (lower === 'no domain-name') {
+      pool.domainName = ''
+      configurationChanged = true
+    } else if (/^lease (infinite|\d+( \d+( \d+)?)?)$/.test(lower)) {
+      pool.lease = command.slice(6)
+      configurationChanged = true
+    } else if (lower === 'no lease') {
+      pool.lease = ''
+      configurationChanged = true
+    } else {
+      accepted = false
+    }
+  } else if (
+    /^spanning-tree mode (pvst|rapid-pvst|mst)$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    state.spanningTree.mode = lower.split(' ').at(-1)
+    configurationChanged = true
+  } else if (
+    /^spanning-tree vlan \d+ priority \d+$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const match = lower.match(/^spanning-tree vlan (\d+) priority (\d+)$/)
+    const vlanId = Number(match[1])
+    const priority = Number(match[2])
+    if (
+      vlanId >= 1
+      && vlanId <= 4094
+      && priority >= 0
+      && priority <= 61440
+      && priority % 4096 === 0
+    ) {
+      state.spanningTree.vlanPriorities[String(vlanId)] = priority
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^spanning-tree vlan \d+ root (primary|secondary)$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const match = lower.match(
+      /^spanning-tree vlan (\d+) root (primary|secondary)$/,
+    )
+    const vlanId = Number(match[1])
+    if (vlanId >= 1 && vlanId <= 4094) {
+      state.spanningTree.vlanPriorities[String(vlanId)] =
+        match[2] === 'primary' ? 24576 : 28672
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^no spanning-tree vlan \d+ priority$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const vlanId = lower.split(' ')[2]
+    delete state.spanningTree.vlanPriorities[vlanId]
+    configurationChanged = true
+  } else if (
+    /^ip nat inside source list \S+ (interface|pool) \S+( overload)?$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const match = command.match(
+      /^ip nat inside source list (\S+) (interface|pool) (\S+)( overload)?$/i,
+    )
+    const aclId = canonicalAccessListId(match[1])
+    const sourceType = match[2].toLowerCase()
+    const source = sourceType === 'interface'
+      ? normalizeInterface(match[3])
+      : canonicalNatPoolName(match[3])
+    const overload = Boolean(match[4])
+    const sourceExists = sourceType === 'interface'
+      ? Boolean(source)
+      : Boolean(state.natPools[source])
+    if (sourceExists) {
+      const rule = { type: 'dynamic', aclId, sourceType, source, overload }
+      state.natRules = state.natRules.filter(
+        (item) => canonicalNatRule(item) !== canonicalNatRule(rule),
+      )
+      state.natRules.push(rule)
+      configurationChanged = true
+    } else accepted = false
+  } else if (
+    /^no ip nat inside source list \S+ (interface|pool) \S+( overload)?$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    const match = command.match(
+      /^no ip nat inside source list (\S+) (interface|pool) (\S+)( overload)?$/i,
+    )
+    const sourceType = match[2].toLowerCase()
+    const rule = {
+      type: 'dynamic',
+      aclId: canonicalAccessListId(match[1]),
+      sourceType,
+      source: sourceType === 'interface'
+        ? normalizeInterface(match[3])
+        : canonicalNatPoolName(match[3]),
+      overload: Boolean(match[4]),
+    }
+    state.natRules = state.natRules.filter(
+      (item) => canonicalNatRule(item) !== canonicalNatRule(rule),
+    )
+    configurationChanged = true
   } else if (
     /^access-list \d+ (permit|deny) .+$/.test(lower)
     && state.mode === 'global_config'
@@ -1197,9 +1734,15 @@ export function executeCiscoCommand(currentState, rawCommand) {
       configurationChanged = true
     } else if (lower === 'login') {
       line.login = true
+      line.loginLocal = false
+      configurationChanged = true
+    } else if (lower === 'login local') {
+      line.loginLocal = true
+      line.login = false
       configurationChanged = true
     } else if (lower === 'no login') {
       line.login = false
+      line.loginLocal = false
       configurationChanged = true
     } else if (/^transport input (ssh|telnet|all|none|ssh telnet|telnet ssh)$/.test(lower)) {
       line.transportInput = lower.slice(16)
@@ -1289,6 +1832,43 @@ export function executeCiscoCommand(currentState, rawCommand) {
       const direction = lower.split(' ').at(-1)
       item.ipAccessGroups[direction] = ''
       configurationChanged = true
+    } else if (lower === 'ip nat inside' || lower === 'ip nat outside') {
+      item.natRole = lower.split(' ').at(-1)
+      configurationChanged = true
+    } else if (lower === 'no ip nat inside' || lower === 'no ip nat outside') {
+      const role = lower.split(' ').at(-1)
+      if (item.natRole === role) item.natRole = ''
+      configurationChanged = true
+    } else if (
+      /^channel-group \d+ mode (active|passive|desirable|auto|on)$/.test(lower)
+    ) {
+      const match = lower.match(
+        /^channel-group (\d+) mode (active|passive|desirable|auto|on)$/,
+      )
+      const groupId = Number(match[1])
+      if (groupId >= 1 && groupId <= 128) {
+        item.channelGroup = { id: groupId, mode: match[2] }
+        ensureInterface(state, `Port-channel${groupId}`)
+        configurationChanged = true
+      } else accepted = false
+    } else if (/^no channel-group( \d+)?$/.test(lower)) {
+      item.channelGroup = null
+      configurationChanged = true
+    } else if (lower === 'spanning-tree portfast') {
+      item.spanningTreePortfast = true
+      configurationChanged = true
+    } else if (lower === 'no spanning-tree portfast') {
+      item.spanningTreePortfast = false
+      configurationChanged = true
+    } else if (lower === 'spanning-tree bpduguard enable') {
+      item.spanningTreeBpduguard = true
+      configurationChanged = true
+    } else if (
+      lower === 'no spanning-tree bpduguard enable'
+      || lower === 'spanning-tree bpduguard disable'
+    ) {
+      item.spanningTreeBpduguard = false
+      configurationChanged = true
     } else if (/^ip address \S+ \S+$/.test(lower)) {
       const [, , address, mask] = command.split(' ')
       if (
@@ -1373,6 +1953,41 @@ export function executeCiscoCommand(currentState, rawCommand) {
     )
     output = accessListsOutput(state, hasRequestedId ? requestedId : '')
   } else if (
+    ['show ip nat translations', 'show ip nat translation'].includes(lower)
+    && state.mode === 'privileged_exec'
+  ) {
+    output = natTranslationsOutput(state)
+  } else if (
+    lower === 'show ip nat statistics'
+    && state.mode === 'privileged_exec'
+  ) {
+    output = natStatisticsOutput(state)
+  } else if (
+    ['show ip dhcp pool', 'show ip dhcp binding'].includes(lower)
+    && state.mode === 'privileged_exec'
+  ) {
+    output = lower.endsWith('binding')
+      ? 'Bindings from all pools not associated with VRF:\nNo bindings found.'
+      : dhcpPoolOutput(state)
+  } else if (
+    ['show etherchannel summary', 'show etherchannel'].includes(lower)
+    && state.mode === 'privileged_exec'
+  ) {
+    output = etherchannelSummaryOutput(state)
+  } else if (
+    /^(show spanning-tree|show spanning-tree vlan \d+)$/.test(lower)
+    && state.mode === 'privileged_exec'
+  ) {
+    const requestedVlan = lower.startsWith('show spanning-tree vlan ')
+      ? lower.split(' ').at(-1)
+      : ''
+    output = spanningTreeOutput(state, requestedVlan)
+  } else if (
+    lower === 'show ip ssh'
+    && state.mode === 'privileged_exec'
+  ) {
+    output = sshStatusOutput(state)
+  } else if (
     ['show ip route', 'show ip route static', 'show ip route connected'].includes(lower)
     && state.mode === 'privileged_exec'
   ) {
@@ -1404,4 +2019,107 @@ export function executeCiscoCommand(currentState, rawCommand) {
   if (!accepted) output = "% Invalid input detected at '^' marker."
   if (accepted && configurationChanged) state.saved = false
   return { state, accepted, output, modeBefore, modeAfter: state.mode }
+}
+
+export function executeTopologyCommand({
+  deviceStates,
+  activeDeviceId,
+  topology,
+  rawCommand,
+}) {
+  const command = String(rawCommand ?? '').trim().replace(/\s+/g, ' ')
+  const match = command.match(/^ping (\S+)$/i)
+  if (!match) return null
+
+  const currentState = deviceStates[activeDeviceId]
+  const modeBefore = currentState?.mode ?? 'user_exec'
+  if (!['user_exec', 'privileged_exec'].includes(modeBefore)) {
+    return {
+      state: structuredClone(currentState),
+      accepted: false,
+      output: "% Invalid input detected at '^' marker.",
+      modeBefore,
+      modeAfter: modeBefore,
+    }
+  }
+
+  const destinationIp = match[1]
+  if (ipv4ToNumber(destinationIp) === null) {
+    return {
+      state: structuredClone(currentState),
+      accepted: false,
+      output: '% Unrecognized host or address.',
+      modeBefore,
+      modeAfter: modeBefore,
+    }
+  }
+
+  const destinationEntry = Object.entries(deviceStates).find(
+    ([, state]) =>
+      Object.values(state.interfaces ?? {}).some(
+        (item) => item.ipAddress === destinationIp && !item.shutdown,
+      ),
+  )
+  const sourceHasAddress = Object.values(currentState.interfaces ?? {}).some(
+    (item) => item.ipAddress && !item.shutdown,
+  )
+  const destinationDeviceId = destinationEntry?.[0]
+
+  const adjacency = new Map(
+    Object.keys(deviceStates).map((deviceId) => [deviceId, new Set()]),
+  )
+  for (const link of topology?.links ?? []) {
+    const fromState = deviceStates[link.fromDeviceId]
+    const toState = deviceStates[link.toDeviceId]
+    const fromInterface = normalizeInterface(link.fromInterface)
+    const toInterface = normalizeInterface(link.toInterface)
+    const fromItem = fromInterface
+      ? fromState?.interfaces?.[fromInterface]
+      : null
+    const toItem = toInterface
+      ? toState?.interfaces?.[toInterface]
+      : null
+    if (!fromItem || !toItem || fromItem.shutdown || toItem.shutdown) continue
+    adjacency.get(link.fromDeviceId)?.add(link.toDeviceId)
+    adjacency.get(link.toDeviceId)?.add(link.fromDeviceId)
+  }
+
+  const visited = new Set([activeDeviceId])
+  const queue = [activeDeviceId]
+  while (queue.length) {
+    const deviceId = queue.shift()
+    for (const neighbor of adjacency.get(deviceId) ?? []) {
+      if (visited.has(neighbor)) continue
+      visited.add(neighbor)
+      queue.push(neighbor)
+    }
+  }
+
+  const successful = Boolean(
+    sourceHasAddress
+    && destinationDeviceId
+    && visited.has(destinationDeviceId),
+  )
+  const state = structuredClone(currentState)
+  state.successfulPings ??= []
+  if (successful) {
+    state.successfulPings = [
+      ...new Set([...state.successfulPings, destinationIp]),
+    ]
+  }
+
+  return {
+    state,
+    accepted: true,
+    output: [
+      `Type escape sequence to abort.`,
+      `Sending 5, 100-byte ICMP Echos to ${destinationIp}, timeout is 2 seconds:`,
+      successful ? '!!!!!' : '.....',
+      `Success rate is ${successful ? '100' : '0'} percent (5/5)${
+        successful ? ', round-trip min/avg/max = 1/2/4 ms' : ''
+      }`,
+    ].join('\n'),
+    modeBefore,
+    modeAfter: modeBefore,
+  }
 }

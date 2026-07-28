@@ -6,6 +6,7 @@ import {
 } from '../services/cliLabService'
 import BrowserEventReview from './BrowserEventReview'
 import ResultActionMenu from './ResultActionMenu'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 const criterionLabels = {
   hostname: 'Hostname',
@@ -152,6 +153,8 @@ export default function InstructorCliResults() {
   const [resetting, setResetting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [messageTone, setMessageTone] = useState('error')
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadResults = useCallback(async () => {
     try {
@@ -165,6 +168,7 @@ export default function InstructorCliResults() {
       )
       setMessage('')
     } catch (error) {
+      setMessageTone('error')
       setMessage(
         `${error.message} Run migration 022_cli_history_and_results.sql if needed.`,
       )
@@ -186,11 +190,14 @@ export default function InstructorCliResults() {
 
   async function handleReset(attemptIds, description) {
     if (!attemptIds.length) return
-    if (
-      !window.confirm(
-        `Reset ${description}?\n\nThis removes the CLI score, command log, integrity events, and student history. The student can take the practical again. This cannot be undone.`,
-      )
-    ) return
+    const confirmed = await confirm({
+      title: `Reset ${description}?`,
+      message:
+        'This removes the CLI score, command log, integrity events, and student history. The student can take the practical again. This action cannot be undone.',
+      confirmLabel: 'Reset attempts',
+      tone: 'danger',
+    })
+    if (!confirmed) return
 
     setResetting(true)
     setMessage('')
@@ -200,10 +207,12 @@ export default function InstructorCliResults() {
         current.filter((id) => !attemptIds.includes(id)),
       )
       await loadResults()
+      setMessageTone('success')
       setMessage(
         `${count} CLI ${Number(count) === 1 ? 'attempt was' : 'attempts were'} reset.`,
       )
     } catch (error) {
+      setMessageTone('error')
       setMessage(error.message)
     } finally {
       setResetting(false)
@@ -226,6 +235,7 @@ export default function InstructorCliResults() {
 
   return (
     <section className="cli-results-panel">
+      {confirmationDialog}
       <div className="section-heading">
         <div>
           <span className="eyebrow">CLI PRACTICAL RESULTS</span>
@@ -314,7 +324,12 @@ export default function InstructorCliResults() {
                             </div>
                           </header>
                           {expanded && (
-                            <div className="cli-results-table-wrapper">
+                            <div
+                              className="cli-results-table-wrapper"
+                              role="region"
+                              aria-label={`${student.name} CLI practical attempt table`}
+                              tabIndex="0"
+                            >
                               <table className="cli-results-table">
                                 <thead><tr><th>Select</th><th>Practical</th><th>Attempt</th><th>Score</th><th>Events</th><th>Commands</th><th>Submitted</th><th>Actions</th></tr></thead>
                                 <tbody>
@@ -394,7 +409,17 @@ export default function InstructorCliResults() {
           })}
         </div>
       )}
-      {message && <p className="form-message form-message--error">{message}</p>}
+      {message && (
+        <p
+          className={
+            messageTone === 'error'
+              ? 'form-message form-message--error'
+              : 'form-message form-message--success'
+          }
+        >
+          {message}
+        </p>
+      )}
     </section>
   )
 }

@@ -5,6 +5,17 @@ export default function QuizResult({ result, onReturn }) {
 
   return (
     <section className="quiz-result">
+      <div
+        className={[
+          'quiz-result__mark',
+          passed
+            ? 'quiz-result__mark--passed'
+            : 'quiz-result__mark--failed',
+        ].join(' ')}
+        aria-hidden="true"
+      >
+        {passed ? '✓' : '!'}
+      </div>
       <span
         className={
           passed
@@ -15,6 +26,11 @@ export default function QuizResult({ result, onReturn }) {
         {passed ? 'Passed' : 'Not passed'}
       </span>
       <h1>Quiz result</h1>
+      <p className="quiz-result__message">
+        {passed
+          ? 'You reached the required score for this assessment.'
+          : 'Review your result and use another attempt when one is available.'}
+      </p>
       <div className="quiz-result__score">
         <strong>{Number(result.percentage).toFixed(2)}%</strong>
         <span>

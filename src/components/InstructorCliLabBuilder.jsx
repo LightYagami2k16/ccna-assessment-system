@@ -6,6 +6,7 @@ import {
   getInstructorCliWorkspace,
   saveCliLab,
 } from '../services/cliLabService'
+import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
 const criterionTypes = [
   ['hostname', 'Hostname'],
@@ -41,6 +42,24 @@ const criterionTypes = [
   ['acl_exists', 'Access list exists'],
   ['acl_entry', 'Access list entry'],
   ['interface_acl', 'Interface access list'],
+  ['interface_nat_role', 'Interface NAT role'],
+  ['nat_pool', 'NAT address pool'],
+  ['nat_static_mapping', 'Static NAT mapping'],
+  ['nat_dynamic_rule', 'Dynamic NAT or PAT rule'],
+  ['dhcp_pool_exists', 'DHCP pool exists'],
+  ['dhcp_network', 'DHCP pool network'],
+  ['dhcp_default_router', 'DHCP default router'],
+  ['dhcp_dns_server', 'DHCP DNS servers'],
+  ['dhcp_excluded_range', 'DHCP excluded address range'],
+  ['etherchannel_member', 'EtherChannel member'],
+  ['stp_mode', 'Spanning Tree mode'],
+  ['stp_vlan_priority', 'Spanning Tree VLAN priority'],
+  ['interface_portfast', 'Interface PortFast enabled'],
+  ['interface_bpduguard', 'Interface BPDU Guard enabled'],
+  ['ssh_rsa_keys', 'RSA key size'],
+  ['ssh_version', 'SSH version'],
+  ['line_login_local', 'Line local login enabled'],
+  ['connectivity_ping', 'Successful topology ping'],
   ['config_saved', 'Configuration saved'],
 ]
 
@@ -60,6 +79,10 @@ const targetNotRequired = [
   'ip_routing_enabled',
   'default_gateway',
   'default_route',
+  'stp_mode',
+  'ssh_rsa_keys',
+  'ssh_version',
+  'connectivity_ping',
   'config_saved',
 ]
 
@@ -72,16 +95,27 @@ const expectedNotRequired = [
   'ospf_process',
   'ospf_default_information',
   'acl_exists',
+  'dhcp_pool_exists',
+  'interface_portfast',
+  'interface_bpduguard',
+  'line_login_local',
   'config_saved',
 ]
 
 function blankCriterion() {
-  return { type: 'hostname', target: '', expected: '', points: 10 }
+  return {
+    type: 'hostname',
+    deviceId: 'device-1',
+    target: '',
+    expected: '',
+    points: 10,
+  }
 }
 
 function presetCriteria(preset) {
   const criterion = (type, expected = '') => ({
     type,
+    deviceId: 'device-1',
     target: '',
     expected,
     points: 10,
@@ -134,6 +168,45 @@ function presetCriteria(preset) {
       criterion('acl_exists'),
       criterion('acl_entry'),
       criterion('interface_acl'),
+      criterion('config_saved'),
+    ],
+    nat_pat: [
+      criterion('acl_exists'),
+      criterion('acl_entry'),
+      criterion('interface_nat_role', 'inside'),
+      criterion('interface_nat_role', 'outside'),
+      criterion('nat_dynamic_rule'),
+      criterion('config_saved'),
+    ],
+    dhcp_server: [
+      criterion('dhcp_excluded_range'),
+      criterion('dhcp_pool_exists'),
+      criterion('dhcp_network'),
+      criterion('dhcp_default_router'),
+      criterion('dhcp_dns_server'),
+      criterion('config_saved'),
+    ],
+    etherchannel: [
+      criterion('interface_mode', 'trunk'),
+      criterion('etherchannel_member'),
+      criterion('etherchannel_member'),
+      criterion('config_saved'),
+    ],
+    spanning_tree: [
+      criterion('stp_mode', 'rapid-pvst'),
+      criterion('stp_vlan_priority'),
+      criterion('interface_portfast'),
+      criterion('interface_bpduguard'),
+      criterion('config_saved'),
+    ],
+    secure_ssh: [
+      criterion('hostname'),
+      criterion('domain_name'),
+      criterion('local_user'),
+      criterion('ssh_rsa_keys', '2048'),
+      criterion('ssh_version', '2'),
+      criterion('line_login_local'),
+      criterion('line_transport_input', 'ssh'),
       criterion('config_saved'),
     ],
   }
@@ -338,6 +411,68 @@ function criterionConfigurationCommands(criterion, allCriteria) {
       return aclConfigurationCommands(target, expected)
     case 'interface_acl':
       return interfaceCommands(`ip access-group ${expected}`)
+    case 'interface_nat_role':
+      return interfaceCommands(`ip nat ${expected}`)
+    case 'nat_pool':
+      return configurationCommands(`ip nat pool ${target} ${expected}`)
+    case 'nat_static_mapping':
+      return configurationCommands(
+        `ip nat inside source static ${target} ${expected}`,
+      )
+    case 'nat_dynamic_rule':
+      return configurationCommands(
+        `ip nat inside source list ${target} ${expected}`,
+      )
+    case 'dhcp_pool_exists':
+      return configurationCommands(`ip dhcp pool ${target}`, 'exit')
+    case 'dhcp_network':
+      return configurationCommands(
+        `ip dhcp pool ${target}`,
+        `network ${expected}`,
+        'exit',
+      )
+    case 'dhcp_default_router':
+      return configurationCommands(
+        `ip dhcp pool ${target}`,
+        `default-router ${expected}`,
+        'exit',
+      )
+    case 'dhcp_dns_server':
+      return configurationCommands(
+        `ip dhcp pool ${target}`,
+        `dns-server ${expected}`,
+        'exit',
+      )
+    case 'dhcp_excluded_range':
+      return configurationCommands(
+        `ip dhcp excluded-address ${target} ${expected}`,
+      )
+    case 'etherchannel_member':
+      return interfaceCommands(`channel-group ${expected}`)
+    case 'stp_mode':
+      return configurationCommands(`spanning-tree mode ${expected}`)
+    case 'stp_vlan_priority':
+      return configurationCommands(
+        `spanning-tree vlan ${target} priority ${expected}`,
+      )
+    case 'interface_portfast':
+      return interfaceCommands('spanning-tree portfast')
+    case 'interface_bpduguard':
+      return interfaceCommands('spanning-tree bpduguard enable')
+    case 'ssh_rsa_keys':
+      return configurationCommands(
+        `crypto key generate rsa modulus ${expected}`,
+      )
+    case 'ssh_version':
+      return configurationCommands(`ip ssh version ${expected}`)
+    case 'line_login_local':
+      return configurationCommands(
+        lineConfigurationTarget(target),
+        'login local',
+        'exit',
+      )
+    case 'connectivity_ping':
+      return [`ping ${expected}`]
     case 'config_saved':
       return ['enable', 'copy running-config startup-config']
     default:
@@ -357,6 +492,15 @@ function blankLab() {
     instructions: '',
     deviceType: 'switch',
     initialHostname: 'Switch',
+    devices: [
+      {
+        id: 'device-1',
+        label: 'Switch',
+        hostname: 'Switch',
+        type: 'switch',
+      },
+    ],
+    topology: { links: [] },
     durationMinutes: 30,
     maxAttempts: 1,
     passingScore: 70,
@@ -400,6 +544,24 @@ function criterionHelp(type) {
   if (type === 'acl_exists') return 'Target: ACL number or name, such as 10 or WEB-FILTER'
   if (type === 'acl_entry') return 'Target: ACL number or name; expected: complete permit or deny statement'
   if (type === 'interface_acl') return 'Target: interface; expected: ACL number or name followed by in or out'
+  if (type === 'interface_nat_role') return 'Target: interface; expected: inside or outside'
+  if (type === 'nat_pool') return 'Target: pool name; expected: start-IP end-IP netmask subnet-mask'
+  if (type === 'nat_static_mapping') return 'Target: inside-local IP; expected: inside-global IP'
+  if (type === 'nat_dynamic_rule') return 'Target: ACL number or name; expected: interface G0/1 overload or pool POOL-NAME overload'
+  if (type === 'dhcp_pool_exists') return 'Target: DHCP pool name'
+  if (type === 'dhcp_network') return 'Target: pool name; expected: network and subnet mask'
+  if (type === 'dhcp_default_router') return 'Target: pool name; expected: one or more router IP addresses'
+  if (type === 'dhcp_dns_server') return 'Target: pool name; expected: one or more DNS server IP addresses'
+  if (type === 'dhcp_excluded_range') return 'Target: first excluded IP; expected: last excluded IP'
+  if (type === 'etherchannel_member') return 'Target: physical interface; expected: channel number and mode, such as 1 active'
+  if (type === 'stp_mode') return 'Expected: pvst, rapid-pvst, or mst'
+  if (type === 'stp_vlan_priority') return 'Target: VLAN number; expected: priority such as 24576'
+  if (type === 'interface_portfast') return 'Target: access interface'
+  if (type === 'interface_bpduguard') return 'Target: access interface'
+  if (type === 'ssh_rsa_keys') return 'Expected: minimum RSA key size, such as 2048'
+  if (type === 'ssh_version') return 'Expected: 2'
+  if (type === 'line_login_local') return 'Target: vty'
+  if (type === 'connectivity_ping') return 'Expected: destination interface IP that this device must successfully ping'
   return 'No target or expected value is needed.'
 }
 
@@ -413,6 +575,10 @@ export default function InstructorCliLabBuilder() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [expandedCriterionIndex, setExpandedCriterionIndex] = useState(0)
+  const [
+    expandedCriterionDeviceIds,
+    setExpandedCriterionDeviceIds,
+  ] = useState(['device-1'])
   const [selectedPreset, setSelectedPreset] = useState('')
   const [selectedLabIds, setSelectedLabIds] = useState([])
   const [bulkLabAction, setBulkLabAction] = useState('')
@@ -420,6 +586,7 @@ export default function InstructorCliLabBuilder() {
   const [answerKeyLabId, setAnswerKeyLabId] = useState(null)
   const [expandedLabIds, setExpandedLabIds] = useState([])
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const practicalCourseGroups = useMemo(() => {
     const groups = new Map()
@@ -455,6 +622,25 @@ export default function InstructorCliLabBuilder() {
     (total, criterion) => total + (Number(criterion.points) || 0),
     0,
   )
+
+  const criterionDeviceGroups = useMemo(() => {
+    const primaryDeviceId = lab.devices[0]?.id ?? 'device-1'
+    return lab.devices.map((device) => {
+      const criteria = lab.criteria
+        .map((criterion, index) => ({ criterion, index }))
+        .filter(({ criterion }) =>
+          (criterion.deviceId ?? primaryDeviceId) === device.id)
+      return {
+        device,
+        criteria,
+        points: criteria.reduce(
+          (total, { criterion }) =>
+            total + (Number(criterion.points) || 0),
+          0,
+        ),
+      }
+    })
+  }, [lab.criteria, lab.devices])
 
   const loadData = useCallback(async () => {
     try {
@@ -503,6 +689,10 @@ export default function InstructorCliLabBuilder() {
         itemIndex === index ? { ...criterion, [field]: value } : criterion,
       ),
     }))
+    if (field === 'deviceId') {
+      setExpandedCriterionDeviceIds((current) =>
+        current.includes(value) ? current : [...current, value])
+    }
   }
 
   function changeCriterionType(index, type) {
@@ -516,13 +706,22 @@ export default function InstructorCliLabBuilder() {
     }))
   }
 
-  function addCriterion() {
+  function addCriterion(deviceId = lab.devices[0]?.id ?? 'device-1') {
     const newIndex = lab.criteria.length
     setLab((current) => ({
       ...current,
-      criteria: [...current.criteria, blankCriterion()],
+      criteria: [
+        ...current.criteria,
+        {
+          ...blankCriterion(),
+          deviceId,
+        },
+      ],
     }))
     setExpandedCriterionIndex(newIndex)
+    setExpandedCriterionDeviceIds((current) => {
+      return current.includes(deviceId) ? current : [...current, deviceId]
+    })
   }
 
   function duplicateCriterion(index) {
@@ -532,6 +731,11 @@ export default function InstructorCliLabBuilder() {
       return { ...current, criteria: nextCriteria }
     })
     setExpandedCriterionIndex(index + 1)
+    const deviceId = lab.criteria[index]?.deviceId
+      ?? lab.devices[0]?.id
+      ?? 'device-1'
+    setExpandedCriterionDeviceIds((current) =>
+      current.includes(deviceId) ? current : [...current, deviceId])
   }
 
   function removeCriterion(index) {
@@ -548,7 +752,10 @@ export default function InstructorCliLabBuilder() {
   }
 
   function addPreset() {
-    const additions = presetCriteria(selectedPreset)
+    const additions = presetCriteria(selectedPreset).map((criterion) => ({
+      ...criterion,
+      deviceId: lab.devices[0]?.id ?? 'device-1',
+    }))
     if (!additions.length) return
 
     const replaceBlankCriterion =
@@ -565,6 +772,9 @@ export default function InstructorCliLabBuilder() {
         : [...current.criteria, ...additions],
     }))
     setExpandedCriterionIndex(startIndex)
+    const deviceId = lab.devices[0]?.id ?? 'device-1'
+    setExpandedCriterionDeviceIds((current) =>
+      current.includes(deviceId) ? current : [...current, deviceId])
     setSelectedPreset('')
   }
 
@@ -577,10 +787,162 @@ export default function InstructorCliLabBuilder() {
     }))
   }
 
+  function toggleCriterionDevice(deviceId) {
+    setExpandedCriterionDeviceIds((current) =>
+      current.includes(deviceId)
+        ? current.filter((id) => id !== deviceId)
+        : [...current, deviceId])
+  }
+
+  function addDevice() {
+    setLab((current) => {
+      const nextNumber = current.devices.length + 1
+      const id = `device-${nextNumber}`
+      return {
+        ...current,
+        devices: [
+          ...current.devices,
+          {
+            id,
+            label: `Device ${nextNumber}`,
+            hostname: `Device${nextNumber}`,
+            type: 'switch',
+          },
+        ],
+      }
+    })
+  }
+
+  function updateDevice(index, field, value) {
+    setLab((current) => {
+      const previousId = current.devices[index].id
+      return {
+        ...current,
+        deviceType: index === 0 && field === 'type'
+          ? value
+          : current.deviceType,
+        initialHostname: index === 0 && field === 'hostname'
+          ? value
+          : current.initialHostname,
+        devices: current.devices.map((device, itemIndex) =>
+          itemIndex === index ? { ...device, [field]: value } : device),
+        criteria: field === 'id'
+          ? current.criteria.map((criterion) => ({
+            ...criterion,
+            deviceId: criterion.deviceId === previousId
+              ? value
+              : criterion.deviceId,
+          }))
+          : current.criteria,
+        topology: field === 'id'
+          ? {
+            ...current.topology,
+            links: (current.topology?.links ?? []).map((link) => ({
+              ...link,
+              fromDeviceId: link.fromDeviceId === previousId
+                ? value
+                : link.fromDeviceId,
+              toDeviceId: link.toDeviceId === previousId
+                ? value
+                : link.toDeviceId,
+            })),
+          }
+          : current.topology,
+      }
+    })
+  }
+
+  function removeDevice(index) {
+    setLab((current) => {
+      if (current.devices.length === 1) return current
+      const removedId = current.devices[index].id
+      const devices = current.devices.filter(
+        (_, itemIndex) => itemIndex !== index,
+      )
+      return {
+        ...current,
+        devices,
+        topology: {
+          ...current.topology,
+          links: (current.topology?.links ?? []).filter(
+            (link) =>
+              link.fromDeviceId !== removedId
+              && link.toDeviceId !== removedId,
+          ),
+        },
+        criteria: current.criteria.map((criterion) => ({
+          ...criterion,
+          deviceId: criterion.deviceId === removedId
+            ? devices[0].id
+            : criterion.deviceId,
+        })),
+      }
+    })
+  }
+
+  function addTopologyLink() {
+    if (lab.devices.length < 2) return
+    setLab((current) => ({
+      ...current,
+      topology: {
+        ...current.topology,
+        links: [
+          ...(current.topology?.links ?? []),
+          {
+            id: `link-${Date.now()}`,
+            fromDeviceId: current.devices[0].id,
+            fromInterface: 'GigabitEthernet0/1',
+            toDeviceId: current.devices[1].id,
+            toInterface: 'GigabitEthernet0/1',
+          },
+        ],
+      },
+    }))
+  }
+
+  function updateTopologyLink(index, field, value) {
+    setLab((current) => ({
+      ...current,
+      topology: {
+        ...current.topology,
+        links: (current.topology?.links ?? []).map((link, itemIndex) =>
+          itemIndex === index ? { ...link, [field]: value } : link),
+      },
+    }))
+  }
+
+  function removeTopologyLink(index) {
+    setLab((current) => ({
+      ...current,
+      topology: {
+        ...current.topology,
+        links: (current.topology?.links ?? []).filter(
+          (_, itemIndex) => itemIndex !== index,
+        ),
+      },
+    }))
+  }
+
   async function editLab(item) {
-    setLab({ ...blankLab(), ...item })
+    setLab({
+      ...blankLab(),
+      ...item,
+      devices: item.devices?.length
+        ? item.devices
+        : blankLab().devices,
+      topology: item.topology ?? { links: [] },
+      criteria: item.criteria.map((criterion) => ({
+        ...criterion,
+        deviceId: criterion.deviceId
+          ?? item.devices?.[0]?.id
+          ?? 'device-1',
+      })),
+    })
     await loadCourseModules(String(item.courseId))
     setExpandedCriterionIndex(0)
+    setExpandedCriterionDeviceIds([
+      item.devices?.[0]?.id ?? 'device-1',
+    ])
     setShowEditor(true)
   }
 
@@ -602,6 +964,7 @@ export default function InstructorCliLabBuilder() {
       setLab(blankLab())
       setModules([])
       setExpandedCriterionIndex(0)
+      setExpandedCriterionDeviceIds(['device-1'])
       setSelectedPreset('')
       setShowEditor(false)
       await loadData()
@@ -613,7 +976,13 @@ export default function InstructorCliLabBuilder() {
   }
 
   async function handleDelete(item) {
-    if (!window.confirm(`Delete "${item.title}" and its practical attempts?`)) return
+    const confirmed = await confirm({
+      title: 'Delete CLI practical?',
+      message: `Delete “${item.title}” and all of its practical attempts, command logs, scores, and integrity events? This action cannot be undone.`,
+      confirmLabel: 'Delete practical',
+      tone: 'danger',
+    })
+    if (!confirmed) return
     try {
       await deleteCliLab(item.id)
       await loadData()
@@ -670,13 +1039,15 @@ export default function InstructorCliLabBuilder() {
       return
     }
 
-    if (
-      bulkLabAction === 'delete'
-      && !window.confirm(
-        `Delete ${selectedLabIds.length} selected practical(s) and their attempts? This cannot be undone.`,
-      )
-    ) {
-      return
+    if (bulkLabAction === 'delete') {
+      const confirmed = await confirm({
+        title: `Delete ${selectedLabIds.length} selected practicals?`,
+        message:
+          'All related attempts, command logs, scores, and integrity events will also be removed. This action cannot be undone.',
+        confirmLabel: 'Delete selected',
+        tone: 'danger',
+      })
+      if (!confirmed) return
     }
 
     try {
@@ -704,12 +1075,13 @@ export default function InstructorCliLabBuilder() {
 
   return (
     <div className="cli-lab-builder">
+      {confirmationDialog}
       <section className="cli-lab-panel">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">PHASE 2</span>
+            <span className="eyebrow">CLI CONTENT</span>
             <h2>CLI practical builder</h2>
-            <p>Create single-device Cisco IOS exams and grade final configuration state.</p>
+            <p>Create single-device or topology-based Cisco IOS exams and grade final configuration state.</p>
           </div>
           <button
             className="primary"
@@ -718,6 +1090,7 @@ export default function InstructorCliLabBuilder() {
               setLab(blankLab())
               setModules([])
               setExpandedCriterionIndex(0)
+              setExpandedCriterionDeviceIds(['device-1'])
               setSelectedPreset('')
               setShowEditor((current) => !current)
             }}
@@ -728,7 +1101,7 @@ export default function InstructorCliLabBuilder() {
 
         {showEditor && (
           <form className="cli-lab-editor" onSubmit={handleSave}>
-            <div className="form-grid form-grid--three">
+            <div className="form-grid form-grid--two">
               <label>
                 Course
                 <select
@@ -760,31 +1133,13 @@ export default function InstructorCliLabBuilder() {
                   ))}
                 </select>
               </label>
-              <label>
-                Device
-                <select
-                  value={lab.deviceType}
-                  onChange={(event) =>
-                    setLab((current) => ({ ...current, deviceType: event.target.value }))
-                  }
-                >
-                  <option value="switch">Cisco switch</option>
-                  <option value="router">Cisco router</option>
-                </select>
-              </label>
             </div>
 
-            <div className="form-grid form-grid--three">
+            <div className="form-grid form-grid--two">
               <label>
                 Practical title
                 <input required value={lab.title} onChange={(event) =>
                   setLab((current) => ({ ...current, title: event.target.value }))
-                } />
-              </label>
-              <label>
-                Starting hostname
-                <input required value={lab.initialHostname} onChange={(event) =>
-                  setLab((current) => ({ ...current, initialHostname: event.target.value }))
                 } />
               </label>
               <label>
@@ -797,6 +1152,168 @@ export default function InstructorCliLabBuilder() {
                 </select>
               </label>
             </div>
+
+            <fieldset className="cli-topology-builder">
+              <legend>Devices and topology</legend>
+              <div className="cli-topology-builder__heading">
+                <div>
+                  <strong>{lab.devices.length} devices</strong>
+                  <span>
+                    Add up to 12 routers or switches, then define their links.
+                  </span>
+                </div>
+                <button
+                  className="secondary"
+                  type="button"
+                  disabled={lab.devices.length >= 12}
+                  onClick={addDevice}
+                >
+                  Add device
+                </button>
+              </div>
+
+              <div className="cli-device-editor-grid">
+                {lab.devices.map((device, index) => (
+                  <article className="cli-device-editor-card" key={`${device.id}-${index}`}>
+                    <header>
+                      <strong>{index === 0 ? 'Primary device' : `Device ${index + 1}`}</strong>
+                      <button
+                        className="danger-button"
+                        type="button"
+                        disabled={lab.devices.length === 1}
+                        onClick={() => removeDevice(index)}
+                      >
+                        Remove
+                      </button>
+                    </header>
+                    <label>
+                      Device ID
+                      <input
+                        required
+                        value={device.id}
+                        onChange={(event) =>
+                          updateDevice(index, 'id', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Display label
+                      <input
+                        required
+                        value={device.label}
+                        onChange={(event) =>
+                          updateDevice(index, 'label', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Starting hostname
+                      <input
+                        required
+                        value={device.hostname}
+                        onChange={(event) =>
+                          updateDevice(index, 'hostname', event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Device type
+                      <select
+                        value={device.type}
+                        onChange={(event) =>
+                          updateDevice(index, 'type', event.target.value)}
+                      >
+                        <option value="switch">Cisco switch</option>
+                        <option value="router">Cisco router</option>
+                      </select>
+                    </label>
+                  </article>
+                ))}
+              </div>
+
+              <div className="cli-topology-links">
+                <div className="cli-topology-builder__heading">
+                  <div>
+                    <strong>Physical links</strong>
+                    <span>
+                      Links document how device interfaces are connected.
+                    </span>
+                  </div>
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={lab.devices.length < 2}
+                    onClick={addTopologyLink}
+                  >
+                    Add link
+                  </button>
+                </div>
+                {(lab.topology?.links ?? []).map((link, index) => (
+                  <div className="cli-topology-link-row" key={link.id ?? index}>
+                    <select
+                      value={link.fromDeviceId}
+                      onChange={(event) =>
+                        updateTopologyLink(
+                          index,
+                          'fromDeviceId',
+                          event.target.value,
+                        )}
+                    >
+                      {lab.devices.map((device) => (
+                        <option key={device.id} value={device.id}>
+                          {device.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="First interface"
+                      value={link.fromInterface}
+                      onChange={(event) =>
+                        updateTopologyLink(
+                          index,
+                          'fromInterface',
+                          event.target.value,
+                        )}
+                    />
+                    <span aria-hidden="true">↔</span>
+                    <select
+                      value={link.toDeviceId}
+                      onChange={(event) =>
+                        updateTopologyLink(
+                          index,
+                          'toDeviceId',
+                          event.target.value,
+                        )}
+                    >
+                      {lab.devices.map((device) => (
+                        <option key={device.id} value={device.id}>
+                          {device.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="Second interface"
+                      value={link.toInterface}
+                      onChange={(event) =>
+                        updateTopologyLink(
+                          index,
+                          'toInterface',
+                          event.target.value,
+                        )}
+                    />
+                    <button
+                      className="danger-button"
+                      type="button"
+                      onClick={() => removeTopologyLink(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {!(lab.topology?.links ?? []).length && (
+                  <p className="empty-state cli-topology-empty">
+                    No physical links defined yet.
+                  </p>
+                )}
+              </div>
+            </fieldset>
 
             <label>
               Description
@@ -870,6 +1387,21 @@ export default function InstructorCliLabBuilder() {
                       <option value="extended_acl">
                         Extended ACL
                       </option>
+                      <option value="nat_pat">
+                        NAT and PAT
+                      </option>
+                      <option value="dhcp_server">
+                        DHCP server
+                      </option>
+                      <option value="etherchannel">
+                        EtherChannel
+                      </option>
+                      <option value="spanning_tree">
+                        Spanning Tree
+                      </option>
+                      <option value="secure_ssh">
+                        Secure SSH management
+                      </option>
                     </select>
                     <button
                       className="secondary"
@@ -886,14 +1418,17 @@ export default function InstructorCliLabBuilder() {
                   <button
                     className="secondary cli-answer-key-toggle"
                     type="button"
-                    onClick={() => setExpandedCriterionIndex(null)}
+                    onClick={() => {
+                      setExpandedCriterionIndex(null)
+                      setExpandedCriterionDeviceIds([])
+                    }}
                   >
                     Collapse all
                   </button>
                   <button
                     className="primary"
                     type="button"
-                    onClick={addCriterion}
+                    onClick={() => addCriterion()}
                   >
                     Add criterion
                   </button>
@@ -901,7 +1436,88 @@ export default function InstructorCliLabBuilder() {
               </div>
 
               <div className="cli-criterion-list">
-                {lab.criteria.map((criterion, index) => {
+                {criterionDeviceGroups.map((group) => {
+                  const deviceExpanded =
+                    expandedCriterionDeviceIds.includes(group.device.id)
+                  const devicePanelId =
+                    `cli-device-criteria-${group.device.id}`
+
+                  return (
+                    <section
+                      className={[
+                        'cli-criterion-device-group',
+                        deviceExpanded
+                          ? 'cli-criterion-device-group--expanded'
+                          : '',
+                      ].filter(Boolean).join(' ')}
+                      key={group.device.id}
+                    >
+                      <button
+                        className="cli-criterion-device-header"
+                        type="button"
+                        aria-expanded={deviceExpanded}
+                        aria-controls={devicePanelId}
+                        onClick={() =>
+                          toggleCriterionDevice(group.device.id)}
+                      >
+                        <span className="cli-criterion-device-icon">
+                          {group.device.type === 'router' ? 'R' : 'S'}
+                        </span>
+                        <span className="cli-criterion-device-identity">
+                          <strong>{group.device.label}</strong>
+                          <small>
+                            {group.device.hostname}
+                            {' · '}
+                            {group.device.type}
+                          </small>
+                        </span>
+                        <span className="cli-criterion-device-metric">
+                          <strong>{group.criteria.length}</strong>
+                          <small>
+                            {group.criteria.length === 1
+                              ? 'criterion'
+                              : 'criteria'}
+                          </small>
+                        </span>
+                        <span className="cli-criterion-device-metric">
+                          <strong>{group.points}</strong>
+                          <small>points</small>
+                        </span>
+                        <span
+                          className="cli-criterion-device-toggle"
+                          aria-hidden="true"
+                        >
+                          {deviceExpanded ? '−' : '+'}
+                        </span>
+                      </button>
+
+                      {deviceExpanded && (
+                        <div
+                          className="cli-criterion-device-body"
+                          id={devicePanelId}
+                        >
+                          <div className="cli-criterion-device-actions">
+                            <span>
+                              Requirements graded on {group.device.label}
+                            </span>
+                            <button
+                              className="secondary"
+                              type="button"
+                              onClick={() =>
+                                addCriterion(group.device.id)}
+                            >
+                              Add criterion
+                            </button>
+                          </div>
+                          {!group.criteria.length ? (
+                            <div className="cli-criterion-device-empty">
+                              <strong>No criteria for this device</strong>
+                              <span>
+                                Add a criterion, then select this device.
+                              </span>
+                            </div>
+                          ) : group.criteria.map(
+                            ({ criterion, index }, deviceIndex) => {
                   const expanded = expandedCriterionIndex === index
                   const panelId = `cli-criterion-panel-${index}`
 
@@ -925,7 +1541,7 @@ export default function InstructorCliLabBuilder() {
                         }
                       >
                         <span className="cli-criterion-summary__number">
-                          {index + 1}
+                          {deviceIndex + 1}
                         </span>
                         <span className="cli-criterion-summary__content">
                           <strong>
@@ -951,6 +1567,29 @@ export default function InstructorCliLabBuilder() {
                           id={panelId}
                         >
                           <div className="cli-criterion-fields">
+                            <label>
+                              Device
+                              <select
+                                value={
+                                  criterion.deviceId
+                                  ?? lab.devices[0]?.id
+                                  ?? 'device-1'
+                                }
+                                onChange={(event) =>
+                                  updateCriterion(
+                                    index,
+                                    'deviceId',
+                                    event.target.value,
+                                  )
+                                }
+                              >
+                                {lab.devices.map((device) => (
+                                  <option key={device.id} value={device.id}>
+                                    {device.label} ({device.hostname})
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
                             <label>
                               Requirement
                               <select
@@ -1041,6 +1680,12 @@ export default function InstructorCliLabBuilder() {
                         </div>
                       )}
                     </article>
+                  )
+                            },
+                          )}
+                        </div>
+                      )}
+                    </section>
                   )
                 })}
               </div>

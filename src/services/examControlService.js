@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase'
+import { reconcileExpiredAssessmentAttempts } from './assessmentAttemptService'
 
 export async function getExamControlsWorkspace() {
+  await reconcileExpiredAssessmentAttempts()
+
   const [
     { data, error },
     { data: cliAttempts, error: cliError },
@@ -38,7 +41,11 @@ export async function getExamControlsWorkspace() {
         assessmentTitle: attempt.quizTitle,
       })),
       ...(cliAttempts ?? []),
-    ].map(withClassContext).sort(
+    ].filter(
+      (attempt) =>
+        !attempt.expiresAt ||
+        new Date(attempt.expiresAt).getTime() > Date.now(),
+    ).map(withClassContext).sort(
       (left, right) =>
         new Date(right.startedAt).getTime() -
         new Date(left.startedAt).getTime(),

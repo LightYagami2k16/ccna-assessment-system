@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase'
+import { reconcileExpiredAssessmentAttempts } from './assessmentAttemptService'
 
 export async function getInstructorAttempts() {
+  await reconcileExpiredAssessmentAttempts()
+
   const { data, error } = await supabase.rpc('get_instructor_attempts')
   if (error) throw error
   return data ?? []
