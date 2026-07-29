@@ -552,7 +552,7 @@ export default function InstructorResultsDashboard() {
               disabled={!exportAttempts.length}
               onClick={handleExportCsv}
             >
-              Export CSV
+              Export Quiz CSV
             </button>
           </div>
           <button
