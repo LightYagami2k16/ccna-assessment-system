@@ -4,6 +4,7 @@ import { getAdminAuditEvents } from '../services/adminService'
 const eventLabels = {
   role_changed: 'Role changes',
   invite_sent: 'Invitations',
+  password_reset_sent: 'Password resets',
   account_suspended: 'Suspensions',
   account_reactivated: 'Reactivations',
   account_deleted: 'Deleted accounts',
@@ -35,6 +36,17 @@ const previewEvents = [
     details: { role: 'student' },
     occurredAt: new Date(Date.now() - 3600000).toISOString(),
   },
+  {
+    id: 'preview-password-reset',
+    type: 'password_reset_sent',
+    targetUserId: 'uat-instructor',
+    targetName: 'CCNA Instructor',
+    targetEmail: 'instructor@example.test',
+    actorName: 'UAT Administrator',
+    actorEmail: 'admin@example.test',
+    details: {},
+    occurredAt: new Date(Date.now() - 7200000).toISOString(),
+  },
 ]
 
 function formatDate(value) {
@@ -51,6 +63,10 @@ function eventDescription(event) {
 
   if (event.type === 'invite_sent') {
     return `Invitation sent as ${event.details.role ?? 'student'}`
+  }
+
+  if (event.type === 'password_reset_sent') {
+    return 'Password reset instructions sent'
   }
 
   if (event.type === 'account_suspended') {
@@ -110,9 +126,9 @@ export default function AdminAuditHistory({
           <span className="eyebrow">SECURITY AUDIT</span>
           <h2>Administrator history</h2>
           <p>
-            Review role changes, invitations, suspensions,
-            reactivations, and permanent account deletions with their
-            exact timestamps.
+            Review role changes, invitations, password resets,
+            suspensions, reactivations, and permanent account
+            deletions with their exact timestamps.
           </p>
         </div>
 

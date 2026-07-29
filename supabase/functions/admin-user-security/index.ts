@@ -85,13 +85,13 @@ Deno.serve(async (request) => {
 
     const body = await request.json()
     const action = String(body?.action ?? '').trim().toLowerCase()
+    const configuredSiteUrl = String(
+      Deno.env.get('PUBLIC_SITE_URL') ?? '',
+    ).trim()
 
     if (action === 'invite') {
       const email = String(body?.email ?? '').trim().toLowerCase()
       const fullName = String(body?.fullName ?? '').trim()
-      const configuredSiteUrl = String(
-        Deno.env.get('PUBLIC_SITE_URL') ?? '',
-      ).trim()
       const requestedRole = String(body?.role ?? 'student')
         .trim()
         .toLowerCase()
@@ -173,6 +173,70 @@ Deno.serve(async (request) => {
       return jsonResponse({
         success: true,
         message: `Invitation sent to ${email}.`,
+      })
+    }
+
+    if (action === 'send_password_reset') {
+      const targetUserId = String(body?.userId ?? '').trim()
+
+      if (!targetUserId) {
+        return jsonResponse(
+          { error: 'Select a valid user account.' },
+          400,
+        )
+      }
+
+      const { data: targetResult, error: targetError } =
+        await serviceClient.auth.admin.getUserById(targetUserId)
+
+      if (
+        targetError ||
+        !targetResult.user ||
+        !targetResult.user.email
+      ) {
+        return jsonResponse(
+          {
+            error:
+              targetError?.message ??
+              'The selected account has no recovery email.',
+          },
+          404,
+        )
+      }
+
+      const { error: resetError } =
+        await serviceClient.auth.resetPasswordForEmail(
+          targetResult.user.email,
+          configuredSiteUrl
+            ? {
+                redirectTo:
+                  `${configuredSiteUrl.replace(/\/+$/, '')}/`,
+              }
+            : undefined,
+        )
+
+      if (resetError) {
+        return jsonResponse({ error: resetError.message }, 400)
+      }
+
+      const { error: auditError } = await serviceClient
+        .from('admin_account_events')
+        .insert({
+          event_type: 'password_reset_sent',
+          target_user_id: targetUserId,
+          target_email: targetResult.user.email,
+          performed_by: user.id,
+          details: {},
+        })
+
+      if (auditError) {
+        return jsonResponse({ error: auditError.message }, 500)
+      }
+
+      return jsonResponse({
+        success: true,
+        message:
+          `Password reset instructions were sent to ${targetResult.user.email}.`,
       })
     }
 

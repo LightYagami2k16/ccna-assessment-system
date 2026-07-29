@@ -92,6 +92,28 @@ export async function setUserSuspension({
   return data
 }
 
+export async function sendUserPasswordReset(userId) {
+  const { data, error } = await supabase.functions.invoke(
+    'admin-user-security',
+    {
+      body: {
+        action: 'send_password_reset',
+        userId,
+      },
+    },
+  )
+
+  if (error) {
+    await throwFunctionError(
+      error,
+      'Unable to send password reset instructions.',
+    )
+  }
+  if (data?.error) throw new Error(data.error)
+
+  return data
+}
+
 export async function deleteUserAccount(userId) {
   const { data, error } = await supabase.functions.invoke(
     'admin-user-security',

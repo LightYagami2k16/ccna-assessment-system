@@ -3,12 +3,14 @@ import { supabase } from '../lib/supabase'
 
 export default function InvitationPasswordSetup({
   user,
+  mode = 'invitation',
   onComplete,
 }) {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const recoveringPassword = mode === 'recovery'
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -40,7 +42,10 @@ export default function InvitationPasswordSetup({
       onComplete(data.user)
     } catch (error) {
       setMessage(
-        error?.message ?? 'Unable to create your password.',
+        error?.message ??
+          (recoveringPassword
+            ? 'Unable to reset your password.'
+            : 'Unable to create your password.'),
       )
     } finally {
       setBusy(false)
@@ -58,15 +63,26 @@ export default function InvitationPasswordSetup({
   return (
     <main className="invitation-setup-shell">
       <section className="invitation-setup-card">
-        <span className="eyebrow">ACCOUNT INVITATION</span>
-        <h1>Create your password</h1>
+        <span className="eyebrow">
+          {recoveringPassword
+            ? 'PASSWORD RECOVERY'
+            : 'ACCOUNT INVITATION'}
+        </span>
+        <h1>
+          {recoveringPassword
+            ? 'Reset your password'
+            : 'Create your password'}
+        </h1>
         <p>
-          Your CCNA Assessment account is ready. Create a secure
-          password before opening your workspace.
+          {recoveringPassword
+            ? 'Create a new secure password to regain access to your CCNA Assessment account.'
+            : 'Your CCNA Assessment account is ready. Create a secure password before opening your workspace.'}
         </p>
 
         <div className="invitation-account">
-          <span>Invited email</span>
+          <span>
+            {recoveringPassword ? 'Account email' : 'Invited email'}
+          </span>
           <strong>{user?.email}</strong>
         </div>
 
@@ -109,7 +125,13 @@ export default function InvitationPasswordSetup({
           )}
 
           <button className="primary" type="submit" disabled={busy}>
-            {busy ? 'Creating password...' : 'Create password'}
+            {busy
+              ? recoveringPassword
+                ? 'Resetting password...'
+                : 'Creating password...'
+              : recoveringPassword
+                ? 'Reset password'
+                : 'Create password'}
           </button>
         </form>
 

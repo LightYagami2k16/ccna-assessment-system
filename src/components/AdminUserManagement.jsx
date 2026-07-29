@@ -9,6 +9,7 @@ import {
   deleteUserAccount,
   getUserAccounts,
   inviteUserAccount,
+  sendUserPasswordReset,
   setUserSuspension,
   setUserAccountRole,
 } from '../services/adminService'
@@ -235,19 +236,27 @@ export default function AdminUserManagement({
 
     const deleting = action === 'delete'
     const suspending = action === 'suspend'
+    const sendingPasswordReset =
+      action === 'send_password_reset'
     const confirmed = await confirm({
       title: deleting
         ? 'Permanently delete this account?'
+        : sendingPasswordReset
+          ? 'Send password reset instructions?'
         : suspending
           ? 'Suspend this account?'
           : 'Reactivate this account?',
       message: deleting
         ? `${account.fullName || account.email} will lose access permanently. Their profile, enrollments, attempts, and other account-linked records may also be deleted. This action cannot be undone.`
+        : sendingPasswordReset
+          ? `Supabase will email a secure password recovery link to ${account.email}. The existing password remains valid until the user completes the reset.`
         : suspending
           ? `${account.fullName || account.email} will be unable to sign in until an administrator reactivates the account.`
           : `${account.fullName || account.email} will be able to sign in again.`,
       confirmLabel: deleting
         ? 'Delete account'
+        : sendingPasswordReset
+          ? 'Send reset email'
         : suspending
           ? 'Suspend account'
           : 'Reactivate account',
@@ -263,6 +272,8 @@ export default function AdminUserManagement({
       if (!previewMode) {
         if (deleting) {
           await deleteUserAccount(account.id)
+        } else if (sendingPasswordReset) {
+          await sendUserPasswordReset(account.id)
         } else {
           await setUserSuspension({
             userId: account.id,
@@ -276,6 +287,8 @@ export default function AdminUserManagement({
           ? currentAccounts.filter(
               (currentAccount) => currentAccount.id !== account.id,
             )
+          : sendingPasswordReset
+            ? currentAccounts
           : currentAccounts.map((currentAccount) =>
               currentAccount.id === account.id
                 ? { ...currentAccount, isSuspended: suspending }
@@ -295,6 +308,8 @@ export default function AdminUserManagement({
       setMessage(
         deleting
           ? `${account.fullName || account.email} was permanently deleted.`
+          : sendingPasswordReset
+            ? `Password reset instructions were sent to ${account.email}.`
           : suspending
             ? `${account.fullName || account.email} was suspended.`
             : `${account.fullName || account.email} was reactivated.`,
@@ -601,6 +616,9 @@ export default function AdminUserManagement({
                         }
                       >
                         <option value="">Select an action</option>
+                        <option value="send_password_reset">
+                          Send password reset
+                        </option>
                         {account.isSuspended ? (
                           <option value="reactivate">Reactivate</option>
                         ) : (

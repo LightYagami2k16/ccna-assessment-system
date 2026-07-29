@@ -37,6 +37,35 @@ function userNeedsInvitationPassword(user) {
   )
 }
 
+function getStoredPasswordRecoveryState() {
+  try {
+    return (
+      window.sessionStorage.getItem(
+        'ccna-password-recovery-active',
+      ) === 'true'
+    )
+  } catch {
+    return false
+  }
+}
+
+function storePasswordRecoveryState(active) {
+  try {
+    if (active) {
+      window.sessionStorage.setItem(
+        'ccna-password-recovery-active',
+        'true',
+      )
+    } else {
+      window.sessionStorage.removeItem(
+        'ccna-password-recovery-active',
+      )
+    }
+  } catch {
+    // Recovery remains available for the current render.
+  }
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -46,6 +75,8 @@ export default function App() {
   const [authenticationLinkError] = useState(
     getAuthenticationLinkError,
   )
+  const [passwordRecoveryActive, setPasswordRecoveryActive] =
+    useState(getStoredPasswordRecoveryState)
   const userId = session?.user?.id ?? null
   const requiresInvitationPassword = userNeedsInvitationPassword(
     session?.user,
@@ -65,10 +96,17 @@ export default function App() {
 
     void loadSession()
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
+      (event, nextSession) => {
         setSession(nextSession)
 
+        if (event === 'PASSWORD_RECOVERY' && nextSession) {
+          setPasswordRecoveryActive(true)
+          storePasswordRecoveryState(true)
+        }
+
         if (!nextSession) {
+          setPasswordRecoveryActive(false)
+          storePasswordRecoveryState(false)
           setProfile(null)
           setProfileError('')
           setLoading(false)
@@ -119,6 +157,8 @@ export default function App() {
   }, [profileLoadVersion, userId])
 
   async function handleRecoverySignOut() {
+    setPasswordRecoveryActive(false)
+    storePasswordRecoveryState(false)
     const { error } = await supabase.auth.signOut()
 
     if (error) {
@@ -126,7 +166,9 @@ export default function App() {
     }
   }
 
-  function handleInvitationPasswordComplete(updatedUser) {
+  function handlePasswordSetupComplete(updatedUser) {
+    setPasswordRecoveryActive(false)
+    storePasswordRecoveryState(false)
     setSession((currentSession) =>
       currentSession
         ? { ...currentSession, user: updatedUser }
@@ -183,11 +225,14 @@ export default function App() {
   if (!session) {
     return <AuthForm initialMessage={authenticationLinkError} />
   }
-  if (requiresInvitationPassword) {
+  if (requiresInvitationPassword || passwordRecoveryActive) {
     return (
       <InvitationPasswordSetup
         user={session.user}
-        onComplete={handleInvitationPasswordComplete}
+        mode={
+          passwordRecoveryActive ? 'recovery' : 'invitation'
+        }
+        onComplete={handlePasswordSetupComplete}
       />
     )
   }
