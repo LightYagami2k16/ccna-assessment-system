@@ -45,7 +45,7 @@ export function getAttemptSnapshot(attemptId) {
 export function updateSnapshotAnswer(
   attemptId,
   attemptQuestionId,
-  selectedOptionId,
+  answer,
 ) {
   const cache = readCache(attemptId)
   if (!cache.snapshot) return false
@@ -56,7 +56,7 @@ export function updateSnapshotAnswer(
       ...cache.snapshot,
       questions: (cache.snapshot.questions ?? []).map((question) =>
         question.attemptQuestionId === attemptQuestionId
-          ? { ...question, selectedOptionId }
+          ? { ...question, ...answer }
           : question,
       ),
     },
@@ -66,7 +66,7 @@ export function updateSnapshotAnswer(
 export function cachePendingAnswer(
   attemptId,
   attemptQuestionId,
-  selectedOptionId,
+  answer,
 ) {
   const cache = readCache(attemptId)
   return writeCache(attemptId, {
@@ -74,7 +74,7 @@ export function cachePendingAnswer(
     pendingAnswers: {
       ...cache.pendingAnswers,
       [attemptQuestionId]: {
-        selectedOptionId,
+        ...answer,
         savedAt: new Date().toISOString(),
       },
     },

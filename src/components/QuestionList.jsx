@@ -7,6 +7,13 @@ import {
 } from '../services/questionService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 
+const QUESTION_TYPE_LABELS = {
+  multiple_choice: 'Multiple choice',
+  multiple_answer: 'Multiple answers',
+  true_false: 'True or false',
+  identification: 'Identification',
+}
+
 export default function QuestionList({ questions, onEdit, onChanged }) {
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
@@ -416,10 +423,9 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                               <small>{question.question_text}</small>
                             </td>
                             <td>
-                              {question.question_type ===
-                              'multiple_choice'
-                                ? 'Multiple choice'
-                                : 'True or false'}
+                              {QUESTION_TYPE_LABELS[
+                                question.question_type
+                              ] ?? question.question_type}
                             </td>
                             <td>{Number(question.points)}</td>
                             <td>

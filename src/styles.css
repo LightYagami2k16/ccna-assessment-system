@@ -430,8 +430,72 @@ input[type="radio"] {
 .question-editor input:focus, .question-editor select:focus, .question-editor textarea:focus { border-color: #1771b9; box-shadow: 0 0 0 3px rgba(23,113,185,.12); }
 .question-editor fieldset { margin: 0; padding: 1rem; border: 1px solid #d9e2eb; border-radius: 12px; }
 .question-editor legend { padding: 0 .35rem; font-weight: 800; }
-.question-option-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .75rem; margin: .65rem 0; }
-.question-option-row input[type="radio"] { width: auto; }
+.question-option-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .75rem; margin: .65rem 0; }
+.question-option-row input[type="radio"],
+.question-option-row input[type="checkbox"] { width: auto; }
+.question-option-row--identification {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.question-option-row--required input {
+  grid-column: 1 / -1;
+}
+.question-option-row__remove {
+  width: auto;
+  min-width: 104px;
+  align-self: stretch;
+  padding-inline: 1rem;
+}
+.identification-answer-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: .85rem;
+  padding-top: .85rem;
+  border-top: 1px solid #d7e4ed;
+}
+.identification-answer-tools p {
+  max-width: 680px;
+  margin: 0;
+  color: #587086;
+  line-height: 1.5;
+}
+.quiz-identification-answer {
+  display: grid;
+  gap: .55rem;
+}
+.quiz-identification-answer input {
+  min-height: 52px;
+  font-size: 1rem;
+}
+.quiz-identification-answer small {
+  color: #64748b;
+}
+.quiz-answer-instruction {
+  margin: 0;
+  color: #475569;
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .question-option-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .question-option-row__remove {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .question-option-row--identification {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .question-option-row--identification .question-option-row__remove {
+    grid-column: auto;
+    justify-self: stretch;
+  }
+  .identification-answer-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
 .form-submit { width: auto; justify-self: start; }
 .form-message { margin: 0; padding: .8rem 1rem; border-radius: 10px; background: #e8f4fc; color: #0d507f; }
 .form-message--error { background: #fee2e2; color: #991b1b; }

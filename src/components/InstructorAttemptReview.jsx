@@ -93,7 +93,18 @@ export default function InstructorAttemptReview({ attemptId, onBack }) {
 
       <div className="attempt-review__questions">
         {questions.map((question, index) => {
-          const answered = Boolean(question.selectedOptionId)
+          const studentAnswer =
+            question.questionType === 'identification'
+              ? question.answerText
+              : question.selectedOptionTexts?.length
+                ? question.selectedOptionTexts.join(', ')
+                : question.selectedOptionText
+          const answered = Boolean(
+            question.questionType === 'identification'
+              ? question.answerText?.trim()
+              : question.selectedOptionIds?.length ||
+                  question.selectedOptionId,
+          )
           const stateClass = !answered
             ? 'attempt-question--unanswered'
             : question.isCorrect
@@ -118,7 +129,7 @@ export default function InstructorAttemptReview({ attemptId, onBack }) {
               <dl>
                 <div>
                   <dt>Student answer</dt>
-                  <dd>{question.selectedOptionText || 'No answer'}</dd>
+                  <dd>{studentAnswer || 'No answer'}</dd>
                 </div>
                 <div>
                   <dt>Correct answer</dt>

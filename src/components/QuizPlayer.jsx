@@ -25,6 +25,67 @@ import {
   submitQuizAttempt
 } from '../services/quizAttemptService';
 
+function answerFromQuestion(question) {
+  if (question.type === 'identification') {
+    return question.answerText ?? '';
+  }
+
+  if (question.type === 'multiple_answer') {
+    return question.selectedOptionIds ?? [];
+  }
+
+  return question.selectedOptionId ?? null;
+}
+
+function answerFromPending(question, pendingAnswer) {
+  if (question.type === 'identification') {
+    return pendingAnswer.answerText ?? '';
+  }
+
+  if (question.type === 'multiple_answer') {
+    return pendingAnswer.selectedOptionIds ?? [];
+  }
+
+  return pendingAnswer.selectedOptionId ?? null;
+}
+
+function answerIsComplete(question, answer) {
+  if (question.type === 'identification') {
+    return Boolean(String(answer ?? '').trim());
+  }
+
+  if (question.type === 'multiple_answer') {
+    return Array.isArray(answer) && answer.length > 0;
+  }
+
+  return Boolean(answer);
+}
+
+function answerFields(question, answer) {
+  if (question.type === 'identification') {
+    return {
+      selectedOptionId: null,
+      selectedOptionIds: [],
+      answerText: String(answer ?? ''),
+    };
+  }
+
+  if (question.type === 'multiple_answer') {
+    const optionIds = Array.isArray(answer) ? answer : [];
+    return {
+      selectedOptionId: null,
+      selectedOptionIds: optionIds,
+      answerText: null,
+    };
+  }
+
+  return {
+    selectedOptionId: answer || null,
+    selectedOptionIds: answer ? [answer] : [],
+    answerText: null,
+  };
+}
+
 export default function QuizPlayer({
   attemptId,
   onExit
@@ -104,10 +165,12 @@ export default function QuizPlayer({
       const restoredAnswers = {};
 
       for (const question of data.questions ?? []) {
-        if (question.selectedOptionId) {
+        const restoredAnswer = answerFromQuestion(question);
+
+        if (answerIsComplete(question, restoredAnswer)) {
           restoredAnswers[
             question.attemptQuestionId
-          ] = question.selectedOptionId;
+          ] = restoredAnswer;
         }
       }
 
@@ -117,12 +180,24 @@ export default function QuizPlayer({
         attemptQuestionId,
         pendingAnswer
       ] of Object.entries(pendingAnswers)) {
-        restoredAnswers[attemptQuestionId] =
-          pendingAnswer.selectedOptionId;
+        const question = (data.questions ?? []).find(
+          (item) => item.attemptQuestionId === attemptQuestionId
+        );
+
+        if (!question) {
+          continue;
+        }
+
+        const pendingValue = answerFromPending(
+          question,
+          pendingAnswer
+        );
+
+        restoredAnswers[attemptQuestionId] = pendingValue;
         updateSnapshotAnswer(
           attemptId,
           attemptQuestionId,
-          pendingAnswer.selectedOptionId
+          answerFields(question, pendingValue)
         );
       }
 
@@ -146,16 +221,22 @@ export default function QuizPlayer({
     void loadAttempt();
   }, [loadAttempt]);
 
-  const questions = attemptData?.questions ?? [];
+  const questions = useMemo(
+    () => attemptData?.questions ?? [],
+    [attemptData?.questions]
+  );
 
   const currentQuestion =
     questions[currentQuestionIndex] ?? null;
 
   const answeredCount = useMemo(() => {
-    return Object.values(selectedAnswers).filter(
-      Boolean
+    return questions.filter((question) =>
+      answerIsComplete(
+        question,
+        selectedAnswers[question.attemptQuestionId]
+      )
     ).length;
-  }, [selectedAnswers]);
+  }, [questions, selectedAnswers]);
 
   const progressPercentage = useMemo(() => {
     if (!questions.length) {
@@ -195,12 +276,23 @@ export default function QuizPlayer({
       attemptQuestionId,
       pendingAnswer
     ] of pendingEntries) {
+      const question = (attemptData?.questions ?? []).find(
+        (item) => item.attemptQuestionId === attemptQuestionId
+      );
+
+      if (!question) {
+        markPendingAnswerSynced(attemptId, attemptQuestionId);
+        continue;
+      }
+
       try {
         await saveQuizAnswer({
           attemptId,
           attemptQuestionId,
-          selectedOptionId:
-            pendingAnswer.selectedOptionId
+          ...answerFields(
+            question,
+            answerFromPending(question, pendingAnswer)
+          )
         });
         markPendingAnswerSynced(
           attemptId,
@@ -216,7 +308,7 @@ export default function QuizPlayer({
 
     setSaveMessage('All saved answers are synchronized.');
     return true;
-  }, [attemptId]);
+  }, [attemptData?.questions, attemptId]);
 
   useEffect(() => {
     function handleOnline() {
@@ -305,29 +397,34 @@ export default function QuizPlayer({
     void performSubmission();
   }, [performSubmission, result, submitting]);
 
-  async function handleSelectOption(optionId) {
-    if (!currentQuestion || submitting) {
-      return;
-    }
-
-    const attemptQuestionId =
-      currentQuestion.attemptQuestionId;
+  function cacheAnswer(question, answer) {
+    const attemptQuestionId = question.attemptQuestionId;
+    const fields = answerFields(question, answer);
 
     cachePendingAnswer(
       attemptId,
       attemptQuestionId,
-      optionId
+      fields
     );
     updateSnapshotAnswer(
       attemptId,
       attemptQuestionId,
-      optionId
+      fields
     );
 
     setSelectedAnswers((currentAnswers) => ({
       ...currentAnswers,
-      [attemptQuestionId]: optionId
+      [attemptQuestionId]: answer
     }));
+  }
+
+  async function persistAnswer(question, answer) {
+    if (!question || submitting) {
+      return;
+    }
+
+    const attemptQuestionId =
+      question.attemptQuestionId;
 
     setSavingQuestionId(attemptQuestionId);
     setSaveMessage('Saving answer...');
@@ -336,7 +433,7 @@ export default function QuizPlayer({
       await saveQuizAnswer({
         attemptId,
         attemptQuestionId,
-        selectedOptionId: optionId
+        ...answerFields(question, answer)
       });
 
       markPendingAnswerSynced(
@@ -391,6 +488,48 @@ export default function QuizPlayer({
     }
   }
 
+  function handleSelectOption(optionId) {
+    if (!currentQuestion || submitting) return;
+
+    cacheAnswer(currentQuestion, optionId);
+    void persistAnswer(currentQuestion, optionId);
+  }
+
+  function handleToggleOption(optionId) {
+    if (!currentQuestion || submitting) return;
+
+    const attemptQuestionId =
+      currentQuestion.attemptQuestionId;
+    const currentSelection = Array.isArray(
+      selectedAnswers[attemptQuestionId]
+    )
+      ? selectedAnswers[attemptQuestionId]
+      : [];
+    const nextSelection = currentSelection.includes(optionId)
+      ? currentSelection.filter((id) => id !== optionId)
+      : [...currentSelection, optionId];
+
+    cacheAnswer(currentQuestion, nextSelection);
+    void persistAnswer(currentQuestion, nextSelection);
+  }
+
+  function handleIdentificationChange(answerText) {
+    if (!currentQuestion || submitting) return;
+
+    cacheAnswer(currentQuestion, answerText);
+    setSaveMessage(
+      'Answer saved on this device. It will synchronize automatically.'
+    );
+  }
+
+  function handleIdentificationBlur() {
+    if (!currentQuestion || submitting) return;
+
+    const answerText =
+      selectedAnswers[currentQuestion.attemptQuestionId] ?? '';
+    void persistAnswer(currentQuestion, answerText);
+  }
+
   if (loading) {
     return (
       <main className="quiz-player">
@@ -426,10 +565,15 @@ export default function QuizPlayer({
     );
   }
 
-  const selectedOptionId =
+  const currentAnswer =
     selectedAnswers[
       currentQuestion.attemptQuestionId
-    ] ?? null;
+    ] ?? answerFromQuestion(currentQuestion);
+  const selectedOptionIds =
+    currentQuestion.type === 'multiple_answer' &&
+    Array.isArray(currentAnswer)
+      ? currentAnswer
+      : [];
 
   const attemptIsActive =
     attemptData.attempt.status === 'in_progress';
@@ -508,10 +652,9 @@ export default function QuizPlayer({
 
           <div className="quiz-navigation__grid">
             {questions.map((question, index) => {
-              const isAnswered = Boolean(
-                selectedAnswers[
-                  question.attemptQuestionId
-                ]
+              const isAnswered = answerIsComplete(
+                question,
+                selectedAnswers[question.attemptQuestionId]
               );
 
               const isCurrent =
@@ -589,11 +732,43 @@ export default function QuizPlayer({
             {currentQuestion.questionText}
           </p>
 
+          {currentQuestion.type === 'identification' ? (
+            <label className="quiz-identification-answer">
+              Your answer
+              <input
+                type="text"
+                value={String(currentAnswer ?? '')}
+                disabled={
+                  !attemptIsActive ||
+                  submitting ||
+                  savingQuestionId ===
+                    currentQuestion.attemptQuestionId
+                }
+                autoComplete="off"
+                placeholder="Type your answer"
+                onChange={(event) =>
+                  handleIdentificationChange(event.target.value)
+                }
+                onBlur={handleIdentificationBlur}
+              />
+              <small>
+                Capitalization and extra spacing do not affect grading.
+              </small>
+            </label>
+          ) : (
+          <>
+          {currentQuestion.type === 'multiple_answer' && (
+            <p className="quiz-answer-instruction">
+              Select all answers that apply.
+            </p>
+          )}
           <div className="quiz-options">
             {(currentQuestion.options ?? []).map(
               (option) => {
                 const isSelected =
-                  selectedOptionId === option.id;
+                  currentQuestion.type === 'multiple_answer'
+                    ? selectedOptionIds.includes(option.id)
+                    : currentAnswer === option.id;
 
                 return (
                   <label
@@ -608,7 +783,11 @@ export default function QuizPlayer({
                       .join(' ')}
                   >
                     <input
-                      type="radio"
+                      type={
+                        currentQuestion.type === 'multiple_answer'
+                          ? 'checkbox'
+                          : 'radio'
+                      }
                       name={`question-${currentQuestion.attemptQuestionId}`}
                       value={option.id}
                       checked={isSelected}
@@ -619,9 +798,9 @@ export default function QuizPlayer({
                           currentQuestion.attemptQuestionId
                       }
                       onChange={() =>
-                        void handleSelectOption(
-                          option.id
-                        )
+                        currentQuestion.type === 'multiple_answer'
+                          ? handleToggleOption(option.id)
+                          : handleSelectOption(option.id)
                       }
                     />
 
@@ -631,6 +810,8 @@ export default function QuizPlayer({
               }
             )}
           </div>
+          </>
+          )}
 
           <div className="quiz-save-status" role="status" aria-live="polite">
             {saveMessage}

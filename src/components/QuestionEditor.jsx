@@ -22,6 +22,16 @@ function trueFalseOptions() {
   ]
 }
 
+function identificationOptions() {
+  return [{ optionText: '', isCorrect: true }]
+}
+
+function optionsForType(questionType) {
+  if (questionType === 'true_false') return trueFalseOptions()
+  if (questionType === 'identification') return identificationOptions()
+  return newMultipleChoiceOptions()
+}
+
 function optionsForQuestion(question) {
   if (!question) return newMultipleChoiceOptions()
   return (question.question_options ?? []).map((option) => ({
@@ -96,11 +106,7 @@ export default function QuestionEditor({
   function handleQuestionTypeChange(event) {
     const nextType = event.target.value
     setQuestionType(nextType)
-    setOptions(
-      nextType === 'multiple_choice'
-        ? newMultipleChoiceOptions()
-        : trueFalseOptions(),
-    )
+    setOptions(optionsForType(nextType))
   }
 
   function resetNewQuestionForm() {
@@ -143,6 +149,31 @@ export default function QuestionEditor({
     )
   }
 
+  function toggleCorrectOption(index) {
+    setOptions((current) =>
+      current.map((option, optionIndex) =>
+        optionIndex === index
+          ? { ...option, isCorrect: !option.isCorrect }
+          : option,
+      ),
+    )
+  }
+
+  function addAcceptedAnswer() {
+    setOptions((current) => [
+      ...current,
+      { optionText: '', isCorrect: true },
+    ])
+  }
+
+  function removeAcceptedAnswer(index) {
+    setOptions((current) =>
+      current.length > 1
+        ? current.filter((_, optionIndex) => optionIndex !== index)
+        : current,
+    )
+  }
+
   function validate() {
     if (!courseId) return 'Select a CCNA course.'
     if (!title.trim()) return 'Enter an internal title.'
@@ -150,6 +181,12 @@ export default function QuestionEditor({
     if (Number(points) <= 0) return 'Points must be greater than zero.'
     if (options.some((option) => !option.optionText.trim())) {
       return 'Complete every answer option.'
+    }
+    if (
+      questionType === 'multiple_answer' &&
+      options.filter((option) => option.isCorrect).length < 2
+    ) {
+      return 'Select at least two correct answers.'
     }
     if (!options.some((option) => option.isCorrect)) {
       return 'Select the correct answer.'
@@ -276,7 +313,11 @@ export default function QuestionEditor({
               disabled={isEditing}
             >
               <option value="multiple_choice">Multiple choice</option>
+              <option value="multiple_answer">
+                Multiple choice — multiple answers
+              </option>
               <option value="true_false">True or false</option>
+              <option value="identification">Identification</option>
             </select>
           </label>
           <label>
@@ -301,30 +342,90 @@ export default function QuestionEditor({
 
         <fieldset>
           <legend>
-            {questionType === 'multiple_choice'
-              ? 'Answer options'
-              : 'Correct answer'}
+            {questionType === 'identification'
+              ? 'Accepted answer'
+              : questionType === 'multiple_answer'
+                ? 'Answer options — select every correct answer'
+                : questionType === 'multiple_choice'
+                  ? 'Answer options'
+                  : 'Correct answer'}
           </legend>
           {options.map((option, index) => (
-            <div className="question-option-row" key={`${questionType}-${index}`}>
-              <input
-                type="radio"
-                name="correct-option"
-                checked={option.isCorrect}
-                onChange={() => selectCorrectOption(index)}
-                aria-label={`Mark ${option.optionText || `option ${index + 1}`} as correct`}
-              />
-              {questionType === 'multiple_choice' ? (
+            <div
+              className={[
+                'question-option-row',
+                questionType === 'identification'
+                  ? 'question-option-row--identification'
+                  : '',
+                questionType === 'identification' && index === 0
+                  ? 'question-option-row--required'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              key={`${questionType}-${index}`}
+            >
+              {questionType !== 'identification' && (
+                <input
+                  type={
+                    questionType === 'multiple_answer'
+                      ? 'checkbox'
+                      : 'radio'
+                  }
+                  name="correct-option"
+                  checked={option.isCorrect}
+                  onChange={() =>
+                    questionType === 'multiple_answer'
+                      ? toggleCorrectOption(index)
+                      : selectCorrectOption(index)
+                  }
+                  aria-label={`Mark ${option.optionText || `option ${index + 1}`} as correct`}
+                />
+              )}
+              {questionType === 'multiple_choice' ||
+              questionType === 'multiple_answer' ||
+              questionType === 'identification' ? (
                 <input
                   value={option.optionText}
                   onChange={(event) => updateOptionText(index, event.target.value)}
-                  placeholder={`Option ${index + 1}`}
+                  placeholder={
+                    questionType === 'identification'
+                      ? index === 0
+                        ? 'Required correct answer'
+                        : `Accepted variation ${index + 1}`
+                      : `Option ${index + 1}`
+                  }
                 />
               ) : (
                 <span>{option.optionText}</span>
               )}
+              {questionType === 'identification' && index > 0 && (
+                <button
+                  className="secondary question-option-row__remove"
+                  type="button"
+                  onClick={() => removeAcceptedAnswer(index)}
+                >
+                  Remove
+                </button>
+              )}
             </div>
           ))}
+          {questionType === 'identification' && (
+            <div className="identification-answer-tools">
+              <p>
+                Answers are matched without case sensitivity and extra spacing
+                is ignored. Add variations only when more than one response
+                should be accepted.
+              </p>
+              <button
+                className="secondary"
+                type="button"
+                onClick={addAcceptedAnswer}
+              >
+                Add accepted variation
+              </button>
+            </div>
+          )}
         </fieldset>
 
         <label>

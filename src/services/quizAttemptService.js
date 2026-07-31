@@ -115,12 +115,21 @@ export async function getQuizAttempt(attemptId) {
 export async function saveQuizAnswer({
   attemptId,
   attemptQuestionId,
-  selectedOptionId,
+  selectedOptionId = null,
+  selectedOptionIds = [],
+  answerText = null,
 }) {
-  const { data, error } = await supabase.rpc('save_quiz_answer', {
+  const optionIds = selectedOptionIds.length
+    ? selectedOptionIds
+    : selectedOptionId
+      ? [selectedOptionId]
+      : []
+
+  const { data, error } = await supabase.rpc('save_quiz_answer_v2', {
     p_attempt_id: attemptId,
     p_attempt_question_id: attemptQuestionId,
-    p_selected_option_id: selectedOptionId,
+    p_selected_option_ids: optionIds,
+    p_answer_text: answerText,
   })
   if (error) throw error
   return data
