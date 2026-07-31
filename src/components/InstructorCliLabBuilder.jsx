@@ -102,10 +102,10 @@ const expectedNotRequired = [
   'config_saved',
 ]
 
-function blankCriterion() {
+function blankCriterion(deviceId = 'device-1') {
   return {
     type: 'hostname',
-    deviceId: 'device-1',
+    deviceId,
     target: '',
     expected: '',
     points: 10,
@@ -482,7 +482,25 @@ function criterionConfigurationCommands(criterion, allCriteria) {
   }
 }
 
+function generateDeviceId(devices = []) {
+  const existingIds = new Set(
+    devices.map((device) => String(device.id).trim().toLowerCase()),
+  )
+  let id = ''
+
+  do {
+    const token = globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID().replaceAll('-', '').slice(0, 10)
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+    id = `dev_${token}`
+  } while (existingIds.has(id.toLowerCase()))
+
+  return id
+}
+
 function blankLab() {
+  const primaryDeviceId = generateDeviceId()
+
   return {
     id: '',
     courseId: '',
@@ -491,12 +509,12 @@ function blankLab() {
     description: '',
     instructions: '',
     deviceType: 'switch',
-    initialHostname: 'Switch',
+    initialHostname: '',
     devices: [
       {
-        id: 'device-1',
-        label: 'Switch',
-        hostname: 'Switch',
+        id: primaryDeviceId,
+        label: '',
+        hostname: '',
         type: 'switch',
       },
     ],
@@ -506,7 +524,7 @@ function blankLab() {
     passingScore: 70,
     status: 'draft',
     classIds: [],
-    criteria: [blankCriterion()],
+    criteria: [blankCriterion(primaryDeviceId)],
   }
 }
 
@@ -796,16 +814,15 @@ export default function InstructorCliLabBuilder() {
 
   function addDevice() {
     setLab((current) => {
-      const nextNumber = current.devices.length + 1
-      const id = `device-${nextNumber}`
+      const id = generateDeviceId(current.devices)
       return {
         ...current,
         devices: [
           ...current.devices,
           {
             id,
-            label: `Device ${nextNumber}`,
-            hostname: `Device${nextNumber}`,
+            label: '',
+            hostname: '',
             type: 'switch',
           },
         ],
@@ -861,6 +878,8 @@ export default function InstructorCliLabBuilder() {
       )
       return {
         ...current,
+        deviceType: devices[0].type,
+        initialHostname: devices[0].hostname,
         devices,
         topology: {
           ...current.topology,
@@ -924,30 +943,42 @@ export default function InstructorCliLabBuilder() {
   }
 
   async function editLab(item) {
+    const emptyLab = blankLab()
+    const devices = item.devices?.length
+      ? item.devices
+      : emptyLab.devices
+    const primaryDeviceId = devices[0].id
+
     setLab({
-      ...blankLab(),
+      ...emptyLab,
       ...item,
-      devices: item.devices?.length
-        ? item.devices
-        : blankLab().devices,
+      devices,
       topology: item.topology ?? { links: [] },
       criteria: item.criteria.map((criterion) => ({
         ...criterion,
         deviceId: criterion.deviceId
           ?? item.devices?.[0]?.id
-          ?? 'device-1',
+          ?? primaryDeviceId,
       })),
     })
     await loadCourseModules(String(item.courseId))
     setExpandedCriterionIndex(0)
-    setExpandedCriterionDeviceIds([
-      item.devices?.[0]?.id ?? 'device-1',
-    ])
+    setExpandedCriterionDeviceIds([primaryDeviceId])
     setShowEditor(true)
   }
 
   async function handleSave(event) {
     event.preventDefault()
+    const incompleteDevice = lab.devices.find(
+      (device) => !device.label.trim() || !device.hostname.trim(),
+    )
+    if (lab.status === 'published' && incompleteDevice) {
+      setMessage(
+        'Enter a display label and starting hostname for every device before publishing.',
+      )
+      return
+    }
+
     setSaving(true)
     setMessage('')
     try {
@@ -961,10 +992,11 @@ export default function InstructorCliLabBuilder() {
           points: Number(criterion.points),
         })),
       })
-      setLab(blankLab())
+      const emptyLab = blankLab()
+      setLab(emptyLab)
       setModules([])
       setExpandedCriterionIndex(0)
-      setExpandedCriterionDeviceIds(['device-1'])
+      setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
       setSelectedPreset('')
       setShowEditor(false)
       await loadData()
@@ -1087,10 +1119,11 @@ export default function InstructorCliLabBuilder() {
             className="primary"
             type="button"
             onClick={() => {
-              setLab(blankLab())
+              const emptyLab = blankLab()
+              setLab(emptyLab)
               setModules([])
               setExpandedCriterionIndex(0)
-              setExpandedCriterionDeviceIds(['device-1'])
+              setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
               setSelectedPreset('')
               setShowEditor((current) => !current)
             }}
@@ -1176,7 +1209,11 @@ export default function InstructorCliLabBuilder() {
                 {lab.devices.map((device, index) => (
                   <article className="cli-device-editor-card" key={`${device.id}-${index}`}>
                     <header>
-                      <strong>{index === 0 ? 'Primary device' : `Device ${index + 1}`}</strong>
+                      <strong>
+                        {index === 0
+                          ? `Primary device — ${device.label.trim() || 'Unnamed device'}`
+                          : device.label.trim() || 'Unnamed device'}
+                      </strong>
                       <button
                         className="danger-button"
                         type="button"
@@ -1187,27 +1224,26 @@ export default function InstructorCliLabBuilder() {
                       </button>
                     </header>
                     <label>
-                      Device ID
+                      <span>
+                        Display label <span className="required-mark">*</span>
+                      </span>
                       <input
-                        required
-                        value={device.id}
-                        onChange={(event) =>
-                          updateDevice(index, 'id', event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Display label
-                      <input
-                        required
+                        required={lab.status === 'published'}
+                        aria-required="true"
+                        placeholder="Example: Access Switch"
                         value={device.label}
                         onChange={(event) =>
                           updateDevice(index, 'label', event.target.value)}
                       />
                     </label>
                     <label>
-                      Starting hostname
+                      <span>
+                        Starting hostname <span className="required-mark">*</span>
+                      </span>
                       <input
-                        required
+                        required={lab.status === 'published'}
+                        aria-required="true"
+                        placeholder="Example: SW1"
                         value={device.hostname}
                         onChange={(event) =>
                           updateDevice(index, 'hostname', event.target.value)}
@@ -1224,6 +1260,13 @@ export default function InstructorCliLabBuilder() {
                         <option value="router">Cisco router</option>
                       </select>
                     </label>
+                    <details className="cli-device-technical">
+                      <summary>Technical details</summary>
+                      <div>
+                        <span>Internal device ID</span>
+                        <code>{device.id}</code>
+                      </div>
+                    </details>
                   </article>
                 ))}
               </div>

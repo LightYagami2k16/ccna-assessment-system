@@ -81,6 +81,9 @@ export default function App() {
   const requiresInvitationPassword = userNeedsInvitationPassword(
     session?.user,
   )
+  const requiresPasswordChange =
+    session?.user?.user_metadata?.password_change_required === true ||
+    profile?.password_change_required === true
 
   useEffect(() => {
     if (activeUatRole) return undefined
@@ -132,11 +135,28 @@ export default function App() {
       setProfile(null)
       setProfileError('')
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role')
+        .select(
+          'id, full_name, role, password_change_required',
+        )
         .eq('id', userId)
         .single()
+
+      if (['42703', 'PGRST204'].includes(error?.code)) {
+        const fallback = await supabase
+          .from('profiles')
+          .select('id, full_name, role')
+          .eq('id', userId)
+          .single()
+        data = fallback.data
+          ? {
+              ...fallback.data,
+              password_change_required: false,
+            }
+          : null
+        error = fallback.error
+      }
 
       if (active) {
         if (error) {
@@ -173,6 +193,14 @@ export default function App() {
       currentSession
         ? { ...currentSession, user: updatedUser }
         : currentSession,
+    )
+    setProfile((currentProfile) =>
+      currentProfile
+        ? {
+            ...currentProfile,
+            password_change_required: false,
+          }
+        : currentProfile,
     )
   }
 
@@ -225,12 +253,20 @@ export default function App() {
   if (!session) {
     return <AuthForm initialMessage={authenticationLinkError} />
   }
-  if (requiresInvitationPassword || passwordRecoveryActive) {
+  if (
+    requiresInvitationPassword ||
+    passwordRecoveryActive ||
+    requiresPasswordChange
+  ) {
     return (
       <InvitationPasswordSetup
         user={session.user}
         mode={
-          passwordRecoveryActive ? 'recovery' : 'invitation'
+          passwordRecoveryActive
+            ? 'recovery'
+            : requiresPasswordChange
+              ? 'required'
+              : 'invitation'
         }
         onComplete={handlePasswordSetupComplete}
       />

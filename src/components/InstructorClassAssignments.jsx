@@ -11,6 +11,7 @@ import {
   deleteClassSections,
   generateClassJoinCode,
   getAssignmentWorkspace,
+  resetClassStudentPassword,
   reviewClassJoinRequest,
   saveClassSection,
   saveQuizAccess,
@@ -626,9 +627,17 @@ export default function InstructorClassAssignments() {
   const [deletingId, setDeletingId] = useState(null)
   const [selectedClassIds, setSelectedClassIds] = useState([])
   const [expandedClassIds, setExpandedClassIds] = useState([])
+  const [expandedStudentClassIds, setExpandedStudentClassIds] =
+    useState([])
   const [expandedQuizCourseCodes, setExpandedQuizCourseCodes] =
     useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [resettingStudentId, setResettingStudentId] =
+    useState(null)
+  const [temporaryPassword, setTemporaryPassword] =
+    useState(null)
+  const [copiedPasswordStudentId, setCopiedPasswordStudentId] =
+    useState(null)
   const [message, setMessage] = useState('')
   const { confirm, confirmationDialog } = useConfirmationDialog()
 
@@ -748,6 +757,13 @@ export default function InstructorClassAssignments() {
           ),
         ),
       )
+      setExpandedStudentClassIds((current) =>
+        current.filter((classId) =>
+          data.classes.some(
+            (classSection) => classSection.id === classId,
+          ),
+        ),
+      )
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -797,12 +813,62 @@ export default function InstructorClassAssignments() {
     )
   }
 
+  function toggleClassStudents(classId) {
+    setExpandedStudentClassIds((current) =>
+      current.includes(classId)
+        ? current.filter((id) => id !== classId)
+        : [...current, classId],
+    )
+  }
+
   function toggleQuizCourse(courseCode) {
     setExpandedQuizCourseCodes((current) =>
       current.includes(courseCode)
         ? current.filter((code) => code !== courseCode)
         : [...current, courseCode],
     )
+  }
+
+  async function handleResetStudentPassword(classSection, student) {
+    const confirmed = await confirm({
+      title: 'Reset student password?',
+      message:
+        `Create a temporary password for ${student.fullName || student.email}? Their current password will stop working immediately, and they must create a new password before opening their workspace.`,
+      confirmLabel: 'Reset password',
+      tone: 'danger',
+    })
+    if (!confirmed) return
+
+    setResettingStudentId(student.id)
+    setTemporaryPassword(null)
+    setCopiedPasswordStudentId(null)
+    setMessage('')
+    try {
+      const result = await resetClassStudentPassword({
+        classId: classSection.id,
+        studentId: student.id,
+      })
+      setTemporaryPassword({
+        classId: classSection.id,
+        studentId: student.id,
+        value: result.temporaryPassword,
+      })
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setResettingStudentId(null)
+    }
+  }
+
+  async function copyTemporaryPassword(studentId, password) {
+    try {
+      await navigator.clipboard.writeText(password)
+      setCopiedPasswordStudentId(studentId)
+    } catch {
+      setMessage(
+        'Unable to copy automatically. Select and copy the temporary password.',
+      )
+    }
   }
 
   async function handleBulkDelete() {
@@ -910,7 +976,17 @@ export default function InstructorClassAssignments() {
                 const expanded = expandedClassIds.includes(
                   classSection.id,
                 )
+                const studentsExpanded =
+                  expandedStudentClassIds.includes(classSection.id)
                 const detailsId = `class-details-${classSection.id}`
+                const studentsId = `class-students-${classSection.id}`
+                const enrolledStudents = classSection.studentIds
+                  .map((studentId) =>
+                    workspace.students.find(
+                      (student) => student.id === studentId,
+                    ),
+                  )
+                  .filter(Boolean)
 
                 return (
                   <article className="class-card" key={classSection.id}>
@@ -961,9 +1037,103 @@ export default function InstructorClassAssignments() {
                     <p>
                       {classSection.academicTerm || 'No academic term'}
                     </p>
-                    <strong>
-                      {classSection.studentIds.length} students
-                    </strong>
+                    <div className="class-card__student-summary">
+                      <strong>
+                        {enrolledStudents.length}{' '}
+                        {enrolledStudents.length === 1
+                          ? 'student'
+                          : 'students'}
+                      </strong>
+                      <button
+                        className="module-collapse-button"
+                        type="button"
+                        aria-expanded={studentsExpanded}
+                        aria-controls={studentsId}
+                        onClick={() =>
+                          toggleClassStudents(classSection.id)
+                        }
+                      >
+                        {studentsExpanded
+                          ? 'Hide students'
+                          : 'Show students'}
+                      </button>
+                    </div>
+                    {studentsExpanded && (
+                      <div
+                        className="class-card__students"
+                        id={studentsId}
+                      >
+                        {!enrolledStudents.length ? (
+                          <p className="class-card__students-empty">
+                            No students are currently enrolled.
+                          </p>
+                        ) : (
+                          <ul className="class-card__student-list">
+                            {enrolledStudents.map((student) => (
+                              <li key={student.id}>
+                                <div className="class-card__student-identity">
+                                  <strong>
+                                    {student.fullName ||
+                                      'Unnamed student'}
+                                  </strong>
+                                  <small>
+                                    {student.email || student.id}
+                                  </small>
+                                </div>
+                                <button
+                                  className="secondary"
+                                  type="button"
+                                  disabled={
+                                    resettingStudentId === student.id
+                                  }
+                                  onClick={() =>
+                                    void handleResetStudentPassword(
+                                      classSection,
+                                      student,
+                                    )
+                                  }
+                                >
+                                  {resettingStudentId === student.id
+                                    ? 'Resetting...'
+                                    : 'Reset password'}
+                                </button>
+                                {temporaryPassword?.classId ===
+                                  classSection.id &&
+                                  temporaryPassword.studentId ===
+                                    student.id && (
+                                    <div className="temporary-password">
+                                      <span>Temporary password</span>
+                                      <code>
+                                        {temporaryPassword.value}
+                                      </code>
+                                      <button
+                                        className="secondary"
+                                        type="button"
+                                        onClick={() =>
+                                          void copyTemporaryPassword(
+                                            student.id,
+                                            temporaryPassword.value,
+                                          )
+                                        }
+                                      >
+                                        {copiedPasswordStudentId ===
+                                        student.id
+                                          ? 'Copied'
+                                          : 'Copy'}
+                                      </button>
+                                      <small>
+                                        Give this password directly to
+                                        the student. It will not be shown
+                                        again after this page is closed.
+                                      </small>
+                                    </div>
+                                  )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                     {expanded && (
                       <div className="class-card__details" id={detailsId}>
                         <ClassEnrollmentTools

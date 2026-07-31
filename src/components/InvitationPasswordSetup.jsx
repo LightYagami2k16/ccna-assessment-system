@@ -11,6 +11,7 @@ export default function InvitationPasswordSetup({
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const recoveringPassword = mode === 'recovery'
+  const requiredPasswordChange = mode === 'required'
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -35,15 +36,24 @@ export default function InvitationPasswordSetup({
           ...(user?.user_metadata ?? {}),
           password_initialized: true,
           invitation_pending: false,
+          password_change_required: false,
         },
       })
 
       if (error) throw error
+
+      if (requiredPasswordChange) {
+        const { error: completionError } = await supabase.rpc(
+          'complete_required_password_change',
+        )
+        if (completionError) throw completionError
+      }
+
       onComplete(data.user)
     } catch (error) {
       setMessage(
-        error?.message ??
-          (recoveringPassword
+          error?.message ??
+          (recoveringPassword || requiredPasswordChange
             ? 'Unable to reset your password.'
             : 'Unable to create your password.'),
       )
@@ -66,22 +76,30 @@ export default function InvitationPasswordSetup({
         <span className="eyebrow">
           {recoveringPassword
             ? 'PASSWORD RECOVERY'
+            : requiredPasswordChange
+              ? 'PASSWORD CHANGE REQUIRED'
             : 'ACCOUNT INVITATION'}
         </span>
         <h1>
           {recoveringPassword
             ? 'Reset your password'
+            : requiredPasswordChange
+              ? 'Replace your temporary password'
             : 'Create your password'}
         </h1>
         <p>
           {recoveringPassword
             ? 'Create a new secure password to regain access to your CCNA Assessment account.'
+            : requiredPasswordChange
+              ? 'Your instructor issued a temporary password. Create a private password before opening your student workspace.'
             : 'Your CCNA Assessment account is ready. Create a secure password before opening your workspace.'}
         </p>
 
         <div className="invitation-account">
           <span>
-            {recoveringPassword ? 'Account email' : 'Invited email'}
+            {recoveringPassword || requiredPasswordChange
+              ? 'Account email'
+              : 'Invited email'}
           </span>
           <strong>{user?.email}</strong>
         </div>
@@ -128,9 +146,13 @@ export default function InvitationPasswordSetup({
             {busy
               ? recoveringPassword
                 ? 'Resetting password...'
+                : requiredPasswordChange
+                  ? 'Saving new password...'
                 : 'Creating password...'
               : recoveringPassword
                 ? 'Reset password'
+                : requiredPasswordChange
+                  ? 'Change password'
                 : 'Create password'}
           </button>
         </form>

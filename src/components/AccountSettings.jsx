@@ -19,6 +19,11 @@ export default function AccountSettings({
     useState('success')
   const [savingName, setSavingName] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const passwordEmailRequired = [
+    'instructor',
+    'administrator',
+    'admin',
+  ].includes(profile?.role)
 
   useEffect(() => {
     setFullName(profile?.full_name ?? '')
@@ -118,6 +123,41 @@ export default function AccountSettings({
     }
   }
 
+  async function handlePasswordVerificationEmail() {
+    setPasswordMessage('')
+
+    try {
+      setSavingPassword(true)
+
+      if (!previewMode) {
+        const redirectTo = new URL(
+          import.meta.env.BASE_URL,
+          window.location.origin,
+        ).toString()
+        const { error } =
+          await supabase.auth.resetPasswordForEmail(
+            user.email,
+            { redirectTo },
+          )
+
+        if (error) throw error
+      }
+
+      setPasswordMessageTone('success')
+      setPasswordMessage(
+        `A verification link was sent to ${user.email}. Open that email to change your password.`,
+      )
+    } catch (error) {
+      setPasswordMessageTone('error')
+      setPasswordMessage(
+        error?.message ??
+          'Unable to send the password verification email.',
+      )
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
   return (
     <section className="account-settings-panel">
       <header className="section-heading account-settings-heading">
@@ -183,10 +223,58 @@ export default function AccountSettings({
           </button>
         </form>
 
-        <form
-          className="account-settings-card"
-          onSubmit={(event) => void handlePasswordSubmit(event)}
-        >
+        {passwordEmailRequired ? (
+          <section className="account-settings-card">
+            <div>
+              <span className="eyebrow">SECURITY</span>
+              <h3>Change your password</h3>
+              <p>
+                Instructor and administrator password changes require
+                email verification.
+              </p>
+            </div>
+
+            <div className="account-security-verification">
+              <strong>Verify your account first</strong>
+              <p>
+                We will send a secure verification link to
+                {' '}
+                {user?.email}. Your password cannot be changed from
+                this page.
+              </p>
+            </div>
+
+            {passwordMessage && (
+              <p
+                className={
+                  passwordMessageTone === 'error'
+                    ? 'form-message form-message--error'
+                    : 'form-message form-message--success'
+                }
+                role="status"
+              >
+                {passwordMessage}
+              </p>
+            )}
+
+            <button
+              className="primary"
+              type="button"
+              disabled={savingPassword}
+              onClick={() =>
+                void handlePasswordVerificationEmail()
+              }
+            >
+              {savingPassword
+                ? 'Sending verification email...'
+                : 'Send verification email'}
+            </button>
+          </section>
+        ) : (
+          <form
+            className="account-settings-card"
+            onSubmit={(event) => void handlePasswordSubmit(event)}
+          >
           <div>
             <span className="eyebrow">SECURITY</span>
             <h3>Change your password</h3>
@@ -243,7 +331,8 @@ export default function AccountSettings({
               ? 'Changing password...'
               : 'Change password'}
           </button>
-        </form>
+          </form>
+        )}
       </div>
     </section>
   )

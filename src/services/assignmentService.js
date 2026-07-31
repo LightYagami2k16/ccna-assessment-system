@@ -1,5 +1,25 @@
 import { supabase } from '../lib/supabase'
 
+async function throwFunctionError(error, fallbackMessage) {
+  const response = error?.context
+
+  if (response && typeof response.json === 'function') {
+    let payload = null
+
+    try {
+      payload = await response.json()
+    } catch {
+      // Use the normal function error when no JSON body is available.
+    }
+
+    if (payload?.error || payload?.message) {
+      throw new Error(payload.error || payload.message)
+    }
+  }
+
+  throw new Error(error?.message || fallbackMessage)
+}
+
 export async function getAssignmentWorkspace() {
   const [
     { data, error },
@@ -78,6 +98,32 @@ export async function addStudentToClassByEmail({ classId, email }) {
     },
   )
   if (error) throw error
+  return data
+}
+
+export async function resetClassStudentPassword({
+  classId,
+  studentId,
+}) {
+  const { data, error } = await supabase.functions.invoke(
+    'admin-user-security',
+    {
+      body: {
+        action: 'reset_class_student_password',
+        classId,
+        studentId,
+      },
+    },
+  )
+
+  if (error) {
+    await throwFunctionError(
+      error,
+      'Unable to reset the student password.',
+    )
+  }
+  if (data?.error) throw new Error(data.error)
+
   return data
 }
 

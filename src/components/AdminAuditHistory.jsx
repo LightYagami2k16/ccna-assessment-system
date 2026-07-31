@@ -5,6 +5,7 @@ const eventLabels = {
   role_changed: 'Role changes',
   invite_sent: 'Invitations',
   password_reset_sent: 'Password resets',
+  instructor_password_reset: 'Instructor password resets',
   account_suspended: 'Suspensions',
   account_reactivated: 'Reactivations',
   account_deleted: 'Deleted accounts',
@@ -67,6 +68,10 @@ function eventDescription(event) {
 
   if (event.type === 'password_reset_sent') {
     return 'Password reset instructions sent'
+  }
+
+  if (event.type === 'instructor_password_reset') {
+    return 'Temporary password created by the class instructor'
   }
 
   if (event.type === 'account_suspended') {

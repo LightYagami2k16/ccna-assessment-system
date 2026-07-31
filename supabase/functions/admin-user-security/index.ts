@@ -19,6 +19,17 @@ function jsonResponse(
   })
 }
 
+function generateTemporaryPassword() {
+  const alphabet =
+    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const values = crypto.getRandomValues(new Uint32Array(8))
+
+  return Array.from(
+    values,
+    (value) => alphabet[value % alphabet.length],
+  ).join('')
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -72,22 +83,159 @@ Deno.serve(async (request) => {
         .eq('id', user.id)
         .single()
 
-    if (
-      roleError ||
-      !actorProfile ||
-      actorProfile.role !== 'admin'
-    ) {
+    if (roleError || !actorProfile) {
       return jsonResponse(
-        { error: 'Administrator access is required.' },
+        { error: 'Your account role could not be verified.' },
         403,
       )
     }
 
     const body = await request.json()
     const action = String(body?.action ?? '').trim().toLowerCase()
+    const actorRole = String(actorProfile.role).toLowerCase()
     const configuredSiteUrl = String(
       Deno.env.get('PUBLIC_SITE_URL') ?? '',
     ).trim()
+
+    if (action === 'reset_class_student_password') {
+      const classId = String(body?.classId ?? '').trim()
+      const targetUserId = String(body?.studentId ?? '').trim()
+
+      if (!['instructor', 'admin'].includes(actorRole)) {
+        return jsonResponse(
+          { error: 'Instructor access is required.' },
+          403,
+        )
+      }
+
+      if (!classId || !targetUserId) {
+        return jsonResponse(
+          { error: 'Select a valid class and student account.' },
+          400,
+        )
+      }
+
+      const { data: classSection, error: classError } =
+        await serviceClient
+          .from('class_sections')
+          .select('id, created_by')
+          .eq('id', classId)
+          .single()
+
+      if (
+        classError ||
+        !classSection ||
+        (
+          actorRole === 'instructor' &&
+          classSection.created_by !== user.id
+        )
+      ) {
+        return jsonResponse(
+          { error: 'You do not manage the selected class.' },
+          403,
+        )
+      }
+
+      const { data: membership, error: membershipError } =
+        await serviceClient
+          .from('class_memberships')
+          .select('student_id')
+          .eq('class_id', classId)
+          .eq('student_id', targetUserId)
+          .maybeSingle()
+
+      if (membershipError || !membership) {
+        return jsonResponse(
+          { error: 'The student is not enrolled in this class.' },
+          404,
+        )
+      }
+
+      const { data: targetProfile, error: profileError } =
+        await serviceClient
+          .from('profiles')
+          .select('role')
+          .eq('id', targetUserId)
+          .single()
+
+      if (
+        profileError ||
+        !targetProfile ||
+        targetProfile.role !== 'student'
+      ) {
+        return jsonResponse(
+          { error: 'Only student accounts can be reset here.' },
+          400,
+        )
+      }
+
+      const { data: targetResult, error: targetError } =
+        await serviceClient.auth.admin.getUserById(targetUserId)
+
+      if (targetError || !targetResult.user) {
+        return jsonResponse(
+          { error: targetError?.message ?? 'Student account not found.' },
+          404,
+        )
+      }
+
+      const temporaryPassword = generateTemporaryPassword()
+      const { error: flagError } = await serviceClient
+        .from('profiles')
+        .update({
+          password_change_required: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', targetUserId)
+
+      if (flagError) {
+        return jsonResponse({ error: flagError.message }, 500)
+      }
+
+      const { error: passwordError } =
+        await serviceClient.auth.admin.updateUserById(targetUserId, {
+          password: temporaryPassword,
+          user_metadata: {
+            ...(targetResult.user.user_metadata ?? {}),
+            password_change_required: true,
+          },
+        })
+
+      if (passwordError) {
+        await serviceClient
+          .from('profiles')
+          .update({ password_change_required: false })
+          .eq('id', targetUserId)
+
+        return jsonResponse({ error: passwordError.message }, 400)
+      }
+
+      const { error: auditError } = await serviceClient
+        .from('admin_account_events')
+        .insert({
+          event_type: 'instructor_password_reset',
+          target_user_id: targetUserId,
+          target_email: targetResult.user.email ?? '',
+          performed_by: user.id,
+          details: { classId },
+        })
+
+      return jsonResponse({
+        success: true,
+        studentId: targetUserId,
+        temporaryPassword,
+        message:
+          'Temporary password created. The student must replace it after signing in.',
+        auditWarning: auditError?.message ?? '',
+      })
+    }
+
+    if (actorRole !== 'admin') {
+      return jsonResponse(
+        { error: 'Administrator access is required.' },
+        403,
+      )
+    }
 
     if (action === 'invite') {
       const email = String(body?.email ?? '').trim().toLowerCase()
