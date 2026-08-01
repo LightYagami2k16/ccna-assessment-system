@@ -8,13 +8,19 @@ export async function getExamControlsWorkspace() {
     { data, error },
     { data: cliAttempts, error: cliError },
     { data: classContexts },
+    { data: clientSessions, error: clientSessionError },
   ] = await Promise.all([
     supabase.rpc('get_exam_controls_workspace'),
     supabase.rpc('get_cli_live_monitoring_attempts'),
     supabase.rpc('get_live_attempt_class_context'),
+    supabase.rpc('get_instructor_assessment_client_sessions'),
   ])
   if (error) throw error
   if (cliError) throw cliError
+  if (
+    clientSessionError
+    && !['42883', 'PGRST202'].includes(clientSessionError.code)
+  ) throw clientSessionError
   const classContextByAttempt = new Map(
     (classContexts ?? []).map((context) => [
       `${context.assessmentType}:${context.attemptId}`,
@@ -28,6 +34,22 @@ export async function getExamControlsWorkspace() {
         `${attempt.assessmentType}:${attempt.attemptId}`,
       ) ?? {}
     ),
+  })
+  const clientSessionByAttempt = new Map(
+    (clientSessions ?? []).map((session) => [
+      `${session.assessmentType}:${session.attemptId}`,
+      session,
+    ]),
+  )
+  const withClientSession = (attempt) => ({
+    ...attempt,
+    clientSession: clientSessionByAttempt.get(
+      `${attempt.assessmentType}:${attempt.attemptId}`,
+    ) ?? {
+      status: 'not_connected',
+      clientLabel: null,
+      heartbeatAt: null,
+    },
   })
   return {
     students: data?.students ?? [],
@@ -45,7 +67,7 @@ export async function getExamControlsWorkspace() {
       (attempt) =>
         !attempt.expiresAt ||
         new Date(attempt.expiresAt).getTime() > Date.now(),
-    ).map(withClassContext).sort(
+    ).map(withClassContext).map(withClientSession).sort(
       (left, right) =>
         new Date(right.startedAt).getTime() -
         new Date(left.startedAt).getTime(),

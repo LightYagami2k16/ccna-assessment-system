@@ -7,6 +7,13 @@ import {
   saveCliLab,
 } from '../services/cliLabService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import {
+  criterionTypesForDevice,
+  defaultCriterionTarget,
+  firstCriterionTypeForDevice,
+  isCriterionApplicable,
+  isPresetApplicable,
+} from '../services/cliCriterionApplicability'
 
 const criterionTypes = [
   ['hostname', 'Hostname'],
@@ -31,7 +38,7 @@ const criterionTypes = [
   ['interface_enabled', 'Interface enabled'],
   ['interface_ip', 'Interface IP address'],
   ['ip_routing_enabled', 'Layer 3 IP routing enabled'],
-  ['default_gateway', 'Switch default gateway'],
+  ['default_gateway', 'Device default gateway'],
   ['static_route', 'Static route'],
   ['default_route', 'Default route'],
   ['ospf_process', 'OSPF process exists'],
@@ -60,10 +67,26 @@ const criterionTypes = [
   ['ssh_version', 'SSH version'],
   ['line_login_local', 'Line local login enabled'],
   ['connectivity_ping', 'Successful topology ping'],
+  ['connectivity_traceroute', 'Successful topology traceroute'],
+  ['pc_dns_servers', 'PC DNS servers'],
   ['config_saved', 'Configuration saved'],
 ]
 
 const criterionTypeLabels = Object.fromEntries(criterionTypes)
+const presetOptions = [
+  ['basic_device', 'Basic device configuration'],
+  ['vlan_access', 'VLAN and access ports'],
+  ['router_on_stick', 'Router-on-a-stick'],
+  ['static_routing', 'Static routing'],
+  ['single_area_ospf', 'Single-area OSPF'],
+  ['standard_acl', 'Standard ACL'],
+  ['extended_acl', 'Extended ACL'],
+  ['nat_pat', 'NAT and PAT'],
+  ['dhcp_server', 'DHCP server'],
+  ['etherchannel', 'EtherChannel'],
+  ['spanning_tree', 'Spanning Tree'],
+  ['secure_ssh', 'Secure SSH management'],
+]
 const sensitiveCriterionTypes = new Set([
   'enable_secret',
   'local_user',
@@ -83,6 +106,8 @@ const targetNotRequired = [
   'ssh_rsa_keys',
   'ssh_version',
   'connectivity_ping',
+  'connectivity_traceroute',
+  'pc_dns_servers',
   'config_saved',
 ]
 
@@ -102,13 +127,28 @@ const expectedNotRequired = [
   'config_saved',
 ]
 
-function blankCriterion(deviceId = 'device-1') {
+function blankCriterion(deviceId = 'device-1', deviceType = 'switch') {
+  const type = firstCriterionTypeForDevice(deviceType)
   return {
-    type: 'hostname',
+    type,
     deviceId,
-    target: '',
+    target: defaultCriterionTarget(deviceType, type),
     expected: '',
     points: 10,
+  }
+}
+
+function normalizeCriterionForDevice(criterion, deviceType, deviceId) {
+  if (isCriterionApplicable(deviceType, criterion.type)) {
+    return { ...criterion, deviceId }
+  }
+  const type = firstCriterionTypeForDevice(deviceType)
+  return {
+    ...criterion,
+    type,
+    deviceId,
+    target: defaultCriterionTarget(deviceType, type),
+    expected: '',
   }
 }
 
@@ -307,7 +347,7 @@ function aclConfigurationCommands(target, statement = '') {
   )
 }
 
-function criterionConfigurationCommands(criterion, allCriteria) {
+function criterionConfigurationCommands(criterion, allCriteria, deviceType) {
   const target = String(criterion.target ?? '').trim()
   const expected = String(criterion.expected ?? '').trim()
   const interfaceCommands = (...commands) =>
@@ -377,10 +417,16 @@ function criterionConfigurationCommands(criterion, allCriteria) {
     case 'interface_enabled':
       return interfaceCommands('no shutdown')
     case 'interface_ip':
+      if (deviceType === 'pc') {
+        return [`IP Configuration > IP address and subnet mask: ${expected}`]
+      }
       return interfaceCommands(`ip address ${expected}`)
     case 'ip_routing_enabled':
       return configurationCommands('ip routing')
     case 'default_gateway':
+      if (deviceType === 'pc') {
+        return [`IP Configuration > Default gateway: ${expected}`]
+      }
       return configurationCommands(`ip default-gateway ${expected}`)
     case 'static_route':
       return configurationCommands(`ip route ${target} ${expected}`)
@@ -473,6 +519,10 @@ function criterionConfigurationCommands(criterion, allCriteria) {
       )
     case 'connectivity_ping':
       return [`ping ${expected}`]
+    case 'connectivity_traceroute':
+      return [`traceroute ${expected}`]
+    case 'pc_dns_servers':
+      return [`IP Configuration > DNS servers: ${expected}`]
     case 'config_saved':
       return ['enable', 'copy running-config startup-config']
     default:
@@ -551,7 +601,7 @@ function criterionHelp(type) {
   if (type === 'interface_enabled') return 'Target: GigabitEthernet0/1'
   if (type === 'interface_ip') return 'Target: GigabitEthernet0/1; expected: 192.168.1.1 255.255.255.0'
   if (type === 'ip_routing_enabled') return 'Checks whether the multilayer switch has ip routing enabled'
-  if (type === 'default_gateway') return 'Expected value: the Layer 2 switch default gateway'
+  if (type === 'default_gateway') return 'Expected value: the switch or PC default gateway'
   if (type === 'static_route') return 'Target: destination and mask; expected: next-hop IP or exit interface'
   if (type === 'default_route') return 'Expected value: next-hop IP or exit interface'
   if (type === 'ospf_process') return 'Target: OSPF process ID, such as 10'
@@ -580,6 +630,8 @@ function criterionHelp(type) {
   if (type === 'ssh_version') return 'Expected: 2'
   if (type === 'line_login_local') return 'Target: vty'
   if (type === 'connectivity_ping') return 'Expected: destination interface IP that this device must successfully ping'
+  if (type === 'pc_dns_servers') return 'Expected: preferred DNS followed by optional alternate DNS, such as 8.8.8.8 1.1.1.1'
+  if (type === 'connectivity_traceroute') return 'Expected: destination interface IP that this device must successfully trace'
   return 'No target or expected value is needed.'
 }
 
@@ -640,6 +692,10 @@ export default function InstructorCliLabBuilder() {
     (total, criterion) => total + (Number(criterion.points) || 0),
     0,
   )
+  const primaryDeviceType = lab.devices[0]?.type ?? 'switch'
+  const availablePresetOptions = presetOptions.filter(([value]) =>
+    isPresetApplicable(primaryDeviceType, value),
+  )
 
   const criterionDeviceGroups = useMemo(() => {
     const primaryDeviceId = lab.devices[0]?.id ?? 'device-1'
@@ -678,7 +734,7 @@ export default function InstructorCliLabBuilder() {
       )
     } catch (error) {
       setMessage(
-        `${error.message} Run migration 020_phase2_single_device_cli_practicals.sql if it has not been applied.`,
+        `${error.message} Run database migration 020 if it has not been applied.`,
       )
     } finally {
       setLoading(false)
@@ -714,26 +770,37 @@ export default function InstructorCliLabBuilder() {
   }
 
   function changeCriterionType(index, type) {
-    setLab((current) => ({
-      ...current,
-      criteria: current.criteria.map((criterion, itemIndex) =>
-        itemIndex === index
-          ? { ...criterion, type, target: '', expected: '' }
-          : criterion,
-      ),
-    }))
+    setLab((current) => {
+      const currentCriterion = current.criteria[index]
+      const deviceType = current.devices.find(
+        (device) => device.id === currentCriterion.deviceId,
+      )?.type ?? current.devices[0]?.type ?? 'switch'
+      return {
+        ...current,
+        criteria: current.criteria.map((criterion, itemIndex) =>
+          itemIndex === index
+            ? {
+                ...criterion,
+                type,
+                target: defaultCriterionTarget(deviceType, type),
+                expected: '',
+              }
+            : criterion,
+        ),
+      }
+    })
   }
 
   function addCriterion(deviceId = lab.devices[0]?.id ?? 'device-1') {
     const newIndex = lab.criteria.length
+    const deviceType = lab.devices.find(
+      (device) => device.id === deviceId,
+    )?.type ?? 'switch'
     setLab((current) => ({
       ...current,
       criteria: [
         ...current.criteria,
-        {
-          ...blankCriterion(),
-          deviceId,
-        },
+        blankCriterion(deviceId, deviceType),
       ],
     }))
     setExpandedCriterionIndex(newIndex)
@@ -770,10 +837,15 @@ export default function InstructorCliLabBuilder() {
   }
 
   function addPreset() {
-    const additions = presetCriteria(selectedPreset).map((criterion) => ({
-      ...criterion,
-      deviceId: lab.devices[0]?.id ?? 'device-1',
-    }))
+    const primaryDevice = lab.devices[0]
+    const additions = presetCriteria(selectedPreset)
+      .filter((criterion) =>
+        isCriterionApplicable(primaryDevice?.type ?? 'switch', criterion.type),
+      )
+      .map((criterion) => ({
+        ...criterion,
+        deviceId: primaryDevice?.id ?? 'device-1',
+      }))
     if (!additions.length) return
 
     const replaceBlankCriterion =
@@ -831,8 +903,12 @@ export default function InstructorCliLabBuilder() {
   }
 
   function updateDevice(index, field, value) {
+    if (index === 0 && field === 'type') setSelectedPreset('')
     setLab((current) => {
       const previousId = current.devices[index].id
+      const nextDeviceType = field === 'type'
+        ? value
+        : current.devices[index].type
       return {
         ...current,
         deviceType: index === 0 && field === 'type'
@@ -843,14 +919,19 @@ export default function InstructorCliLabBuilder() {
           : current.initialHostname,
         devices: current.devices.map((device, itemIndex) =>
           itemIndex === index ? { ...device, [field]: value } : device),
-        criteria: field === 'id'
-          ? current.criteria.map((criterion) => ({
-            ...criterion,
-            deviceId: criterion.deviceId === previousId
-              ? value
-              : criterion.deviceId,
-          }))
-          : current.criteria,
+        criteria: current.criteria.map((criterion) => {
+          if (criterion.deviceId !== previousId) return criterion
+          if (field === 'type') {
+            return normalizeCriterionForDevice(
+              criterion,
+              nextDeviceType,
+              previousId,
+            )
+          }
+          return field === 'id'
+            ? { ...criterion, deviceId: value }
+            : criterion
+        }),
         topology: field === 'id'
           ? {
             ...current.topology,
@@ -889,12 +970,15 @@ export default function InstructorCliLabBuilder() {
               && link.toDeviceId !== removedId,
           ),
         },
-        criteria: current.criteria.map((criterion) => ({
-          ...criterion,
-          deviceId: criterion.deviceId === removedId
-            ? devices[0].id
-            : criterion.deviceId,
-        })),
+        criteria: current.criteria.map((criterion) =>
+          criterion.deviceId === removedId
+            ? normalizeCriterionForDevice(
+                criterion,
+                devices[0].type,
+                devices[0].id,
+              )
+            : criterion,
+        ),
       }
     })
   }
@@ -954,12 +1038,19 @@ export default function InstructorCliLabBuilder() {
       ...item,
       devices,
       topology: item.topology ?? { links: [] },
-      criteria: item.criteria.map((criterion) => ({
-        ...criterion,
-        deviceId: criterion.deviceId
+      criteria: item.criteria.map((criterion) => {
+        const deviceId = criterion.deviceId
           ?? item.devices?.[0]?.id
-          ?? primaryDeviceId,
-      })),
+          ?? primaryDeviceId
+        const deviceType = devices.find(
+          (device) => device.id === deviceId,
+        )?.type ?? devices[0]?.type ?? 'switch'
+        return normalizeCriterionForDevice(
+          criterion,
+          deviceType,
+          deviceId,
+        )
+      }),
     })
     await loadCourseModules(String(item.courseId))
     setExpandedCriterionIndex(0)
@@ -1192,7 +1283,7 @@ export default function InstructorCliLabBuilder() {
                 <div>
                   <strong>{lab.devices.length} devices</strong>
                   <span>
-                    Add up to 12 routers or switches, then define their links.
+                    Add up to 12 routers, switches, or PCs, then define their links.
                   </span>
                 </div>
                 <button
@@ -1258,6 +1349,7 @@ export default function InstructorCliLabBuilder() {
                       >
                         <option value="switch">Cisco switch</option>
                         <option value="router">Cisco router</option>
+                        <option value="pc">PC / end device</option>
                       </select>
                     </label>
                     <details className="cli-device-technical">
@@ -1409,42 +1501,11 @@ export default function InstructorCliLabBuilder() {
                       }
                     >
                       <option value="">Select a preset</option>
-                      <option value="basic_device">
-                        Basic device configuration
-                      </option>
-                      <option value="vlan_access">
-                        VLAN and access ports
-                      </option>
-                      <option value="router_on_stick">
-                        Router-on-a-stick
-                      </option>
-                      <option value="static_routing">
-                        Static routing
-                      </option>
-                      <option value="single_area_ospf">
-                        Single-area OSPF
-                      </option>
-                      <option value="standard_acl">
-                        Standard ACL
-                      </option>
-                      <option value="extended_acl">
-                        Extended ACL
-                      </option>
-                      <option value="nat_pat">
-                        NAT and PAT
-                      </option>
-                      <option value="dhcp_server">
-                        DHCP server
-                      </option>
-                      <option value="etherchannel">
-                        EtherChannel
-                      </option>
-                      <option value="spanning_tree">
-                        Spanning Tree
-                      </option>
-                      <option value="secure_ssh">
-                        Secure SSH management
-                      </option>
+                      {availablePresetOptions.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                     <button
                       className="secondary"
@@ -1504,7 +1565,9 @@ export default function InstructorCliLabBuilder() {
                           toggleCriterionDevice(group.device.id)}
                       >
                         <span className="cli-criterion-device-icon">
-                          {group.device.type === 'router' ? 'R' : 'S'}
+                          {group.device.type === 'router'
+                            ? 'R'
+                            : group.device.type === 'pc' ? 'P' : 'S'}
                         </span>
                         <span className="cli-criterion-device-identity">
                           <strong>{group.device.label}</strong>
@@ -1621,7 +1684,10 @@ export default function InstructorCliLabBuilder() {
                                   )
                                 }
                               >
-                                {criterionTypes.map(([value, label]) => (
+                                {criterionTypesForDevice(
+                                  group.device.type,
+                                  criterionTypes,
+                                ).map(([value, label]) => (
                                   <option key={value} value={value}>
                                     {label}
                                   </option>
@@ -1952,11 +2018,14 @@ export default function InstructorCliLabBuilder() {
                             </div>
                           </dl>
                           <div className="cli-answer-key__commands">
-                            <span>Configuration commands</span>
+                            <span>Required configuration</span>
                             <pre>
                               <code>{criterionConfigurationCommands(
                                   criterion,
                                   item.criteria ?? [],
+                                  (item.devices ?? []).find(
+                                    (device) => device.id === criterion.deviceId,
+                                  )?.type ?? item.deviceType,
                                 ).join('\n')}</code>
                             </pre>
                           </div>

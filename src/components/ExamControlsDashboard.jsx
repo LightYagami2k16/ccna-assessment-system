@@ -49,6 +49,16 @@ function eventLabel(eventType) {
   return labels[eventType] ?? eventType ?? 'No events'
 }
 
+function clientSessionLabel(status) {
+  const labels = {
+    connected: 'Connected',
+    delayed: 'Connection delayed',
+    stale: 'Session reclaimable',
+    not_connected: 'Not connected',
+  }
+  return labels[status] ?? 'Unknown'
+}
+
 function AssignmentScheduleCard({ assignment, onSaved }) {
   const [availableFrom, setAvailableFrom] = useState(
     toLocalDateTime(assignment.availableFrom),
@@ -766,6 +776,33 @@ export default function ExamControlsDashboard() {
                                 <dt>Latest event</dt>
                                 <dd>{eventLabel(attempt.latestEvent?.type)}</dd>
                               </div>
+                              <div>
+                                <dt>Browser session</dt>
+                                <dd>
+                                  <span
+                                    className={`monitor-session-status monitor-session-status--${attempt.clientSession?.status ?? 'not_connected'}`}
+                                  >
+                                    {clientSessionLabel(
+                                      attempt.clientSession?.status,
+                                    )}
+                                  </span>
+                                  {attempt.clientSession?.clientLabel && (
+                                    <small>
+                                      {attempt.clientSession.clientLabel}
+                                    </small>
+                                  )}
+                                </dd>
+                              </div>
+                              {attempt.clientSession?.heartbeatAt && (
+                                <div>
+                                  <dt>Last session contact</dt>
+                                  <dd>
+                                    {formatDate(
+                                      attempt.clientSession.heartbeatAt,
+                                    )}
+                                  </dd>
+                                </div>
+                              )}
                               {attempt.assessmentType === 'cli' && (
                                 <div>
                                   <dt>Commands entered</dt>

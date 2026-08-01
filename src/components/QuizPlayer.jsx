@@ -656,6 +656,14 @@ export default function QuizPlayer({
 
   return (
     <main className="quiz-player">
+      {clientSession.message && (
+        <div
+          className={`assessment-connection-notice assessment-connection-notice--${clientSession.connectionStatus}`}
+          role="status"
+        >
+          {clientSession.message}
+        </div>
+      )}
       {integrityWarning && (
         <div className="integrity-warning" role="alert">
           <span>{integrityWarning}</span>

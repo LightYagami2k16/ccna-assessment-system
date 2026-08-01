@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --test src/simulator/ciscoSimulator.test.js"
+    "test": "node --test src/simulator/ciscoSimulator.test.js src/services/assessmentTabLock.test.js src/services/cliCriterionApplicability.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

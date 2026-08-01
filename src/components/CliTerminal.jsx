@@ -11,8 +11,10 @@ import {
   submitCliAttempt,
 } from '../services/cliLabService'
 import {
+  configurePcState,
   createDeviceState,
   executeCiscoCommand,
+  executePcCommand,
   executeTopologyCommand,
   getDevicePrompt,
 } from '../simulator/ciscoSimulator'
@@ -26,6 +28,15 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
   const [activeDeviceId, setActiveDeviceId] = useState('')
   const [linesByDevice, setLinesByDevice] = useState({})
   const [command, setCommand] = useState('')
+  const [pcView, setPcView] = useState('configuration')
+  const [pcSettings, setPcSettings] = useState({
+    ipAddress: '',
+    subnetMask: '',
+    defaultGateway: '',
+    preferredDns: '',
+    alternateDns: '',
+  })
+  const [pcSettingsMessage, setPcSettingsMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [integrityWarning, setIntegrityWarning] = useState('')
@@ -113,7 +124,7 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
           persistedDeviceStates?.[device.id]
             ?? (index === 0 && legacyPrimaryState.hostname
               ? legacyPrimaryState
-              : createDeviceState(device.hostname)),
+              : createDeviceState(device.hostname, device.type)),
         ]),
       )
       const restoredActiveDeviceId =
@@ -168,17 +179,42 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
     }
   }, [focusCommandInput])
 
+  useEffect(() => {
+    if (state?.deviceType !== 'pc') return
+    setPcSettings({
+      ipAddress: state.interfaces?.Ethernet0?.ipAddress ?? '',
+      subnetMask: state.interfaces?.Ethernet0?.subnetMask ?? '',
+      defaultGateway: state.defaultGateway ?? '',
+      preferredDns: state.dnsServers?.[0] ?? '',
+      alternateDns: state.dnsServers?.[1] ?? '',
+    })
+  }, [activeDeviceId, state])
+
   async function handleCommand(event) {
     event.preventDefault()
     if (!command.trim() || busy || !state) return
     const entered = command
     const prompt = getDevicePrompt(state)
-    const outcome = executeTopologyCommand({
+    const topologyOutcome = executeTopologyCommand({
       deviceStates,
       activeDeviceId,
+      devices: data.lab.devices,
       topology: data.lab.topology,
       rawCommand: entered,
-    }) ?? executeCiscoCommand(state, entered)
+    })
+    const pcCommandAllowed = /^(?:ping|tracert|traceroute)\s+\S+$|^ipconfig(?:\s+\/all)?$|^(?:help|\?)$/i
+      .test(entered.trim())
+    const outcome = topologyOutcome ?? (activeDevice?.type === 'pc'
+      ? pcCommandAllowed
+        ? executePcCommand(state, entered)
+        : {
+            state: structuredClone(state),
+            accepted: false,
+            output: 'Use the IP Configuration tab to change this PC. CMD accepts ping, tracert, ipconfig, and help.',
+            modeBefore: state.mode,
+            modeAfter: state.mode,
+          }
+      : executeCiscoCommand(state, entered))
     const nextDeviceStates = {
       ...deviceStates,
       [activeDeviceId]: outcome.state,
@@ -214,6 +250,56 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
     } catch (error) {
       setMessage(error.message)
       setCommand(entered)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handlePcConfiguration(event) {
+    event.preventDefault()
+    if (busy || state?.deviceType !== 'pc') return
+
+    const outcome = configurePcState(state, pcSettings)
+    if (!outcome.accepted) {
+      setPcSettingsMessage(outcome.error)
+      return
+    }
+
+    const nextDeviceStates = {
+      ...deviceStates,
+      [activeDeviceId]: outcome.state,
+    }
+    const primaryDeviceId = data.lab.devices[0].id
+    const persistedState = {
+      ...nextDeviceStates[primaryDeviceId],
+      deviceStates: nextDeviceStates,
+      activeDeviceId,
+    }
+
+    setBusy(true)
+    setMessage('')
+    setPcSettingsMessage('')
+    try {
+      await saveCliCommand({
+        attemptId,
+        clientId: clientSession.clientId,
+        deviceId: activeDeviceId,
+        command: 'Applied IPv4 settings',
+        ...outcome,
+        state: persistedState,
+      })
+      setDeviceStates(nextDeviceStates)
+      setState(outcome.state)
+      setPcSettingsMessage('IPv4 settings saved successfully.')
+      setLinesByDevice((current) => ({
+        ...current,
+        [activeDeviceId]: [
+          ...(current[activeDeviceId] ?? []),
+          '[IPv4 settings updated through IP Configuration]',
+        ],
+      }))
+    } catch (error) {
+      setPcSettingsMessage(error.message)
     } finally {
       setBusy(false)
     }
@@ -282,6 +368,14 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
 
   return (
     <main className="cli-focus-shell">
+      {clientSession.message && (
+        <div
+          className={`assessment-connection-notice assessment-connection-notice--${clientSession.connectionStatus}`}
+          role="status"
+        >
+          {clientSession.message}
+        </div>
+      )}
       <header className="cli-practical-header">
         <div>
           <span className="eyebrow">CLI PRACTICAL · ATTEMPT {data.attempt.attemptNumber}</span>
@@ -318,8 +412,19 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
           <div className="cli-device-summary">
             <span>Device</span><strong>{activeDevice.label}</strong>
             <span>Type</span><strong>{activeDevice.type}</strong>
-            <span>Current mode</span><strong>{state.mode.replaceAll('_', ' ')}</strong>
-            <span>Saved</span><strong>{state.saved ? 'Yes' : 'No'}</strong>
+            {activeDevice.type === 'pc' ? (
+              <>
+                <span>IPv4 address</span>
+                <strong>{state.interfaces?.Ethernet0?.ipAddress || 'Not configured'}</strong>
+                <span>Default gateway</span>
+                <strong>{state.defaultGateway || 'Not configured'}</strong>
+              </>
+            ) : (
+              <>
+                <span>Current mode</span><strong>{state.mode.replaceAll('_', ' ')}</strong>
+                <span>Saved</span><strong>{state.saved ? 'Yes' : 'No'}</strong>
+              </>
+            )}
           </div>
           {data.lab.topology?.links?.length > 0 && (
             <div className="cli-topology-summary">
@@ -351,7 +456,10 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
 
         <section className="cisco-terminal" aria-label="Cisco CLI terminal">
           <div className="cisco-terminal__titlebar">
-            <span>{activeDevice.label} · {state.hostname} — Cisco IOS</span>
+            <span>
+              {activeDevice.label} · {state.hostname} —{' '}
+              {activeDevice.type === 'pc' ? 'PC Command Prompt' : 'Cisco IOS'}
+            </span>
             <button type="button" onClick={() => void handleExit()}>Exit</button>
           </div>
           {devices.length > 1 && (
@@ -370,7 +478,11 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
                     setActiveDeviceId(device.id)
                     setState(deviceStates[device.id])
                     setCommand('')
-                    window.requestAnimationFrame(focusCommandInput)
+                    setPcView(device.type === 'pc' ? 'configuration' : 'command')
+                    setPcSettingsMessage('')
+                    if (device.type !== 'pc') {
+                      window.requestAnimationFrame(focusCommandInput)
+                    }
                   }}
                 >
                   {device.label}
@@ -378,44 +490,189 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
               ))}
             </div>
           )}
-          <div
-            className="cisco-terminal__screen"
-            onMouseDown={(event) => {
-              if (!event.target.closest('button, input, a')) {
-                event.preventDefault()
-                focusCommandInput()
-              }
-            }}
-          >
-            <pre>
-              {`Cisco IOS Software, CCNA Assessment Simulator\nType commands at the prompt.\n\n`}
-              {activeLines.join('\n')}
-              {activeLines.length ? '\n' : ''}
-            </pre>
-            <form onSubmit={handleCommand}>
-              <label htmlFor="cli-command">{getDevicePrompt(state)}</label>
-              <input
-                id="cli-command"
-                ref={commandInputRef}
-                autoFocus
-                autoComplete="off"
-                spellCheck="false"
-                disabled={busy}
-                value={command}
-                onChange={(event) => setCommand(event.target.value)}
-                onBlur={(event) => {
-                  const nextTarget = event.relatedTarget
-                  const movedToControl = nextTarget instanceof HTMLElement
-                    && nextTarget.closest('button, a, select, textarea')
-
-                  if (!movedToControl) {
-                    window.requestAnimationFrame(focusCommandInput)
-                  }
+          {activeDevice.type === 'pc' && (
+            <div className="pc-workspace-tabs" role="tablist" aria-label="PC tools">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pcView === 'configuration'}
+                onClick={() => setPcView('configuration')}
+              >
+                IP Configuration
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pcView === 'command'}
+                onClick={() => {
+                  setPcView('command')
+                  window.requestAnimationFrame(focusCommandInput)
                 }}
-              />
+              >
+                Command Prompt
+              </button>
+            </div>
+          )}
+
+          {activeDevice.type === 'pc' && pcView === 'configuration' ? (
+            <form className="pc-ipv4-panel" onSubmit={handlePcConfiguration}>
+              <div className="pc-ipv4-panel__heading">
+                <div>
+                  <span className="eyebrow">PC NETWORK ADAPTER</span>
+                  <h2>Internet Protocol Version 4 (TCP/IPv4)</h2>
+                  <p>Enter the static network settings required by the practical.</p>
+                </div>
+                <span className="pc-ipv4-panel__adapter">Ethernet0</span>
+              </div>
+
+              <fieldset>
+                <legend>IP address settings</legend>
+                <p className="pc-setting-choice">
+                  <span aria-hidden="true" /> Use the following IP address
+                </p>
+                <div className="pc-ipv4-fields">
+                  <label>
+                    IP address <span className="required-mark">*</span>
+                    <input
+                      required
+                      inputMode="decimal"
+                      placeholder="192.168.10.10"
+                      value={pcSettings.ipAddress}
+                      onChange={(event) => setPcSettings((current) => ({
+                        ...current,
+                        ipAddress: event.target.value,
+                      }))}
+                    />
+                  </label>
+                  <label>
+                    Subnet mask <span className="required-mark">*</span>
+                    <input
+                      required
+                      inputMode="decimal"
+                      placeholder="255.255.255.0"
+                      value={pcSettings.subnetMask}
+                      onChange={(event) => setPcSettings((current) => ({
+                        ...current,
+                        subnetMask: event.target.value,
+                      }))}
+                    />
+                  </label>
+                  <label>
+                    Default gateway
+                    <input
+                      inputMode="decimal"
+                      placeholder="192.168.10.1"
+                      value={pcSettings.defaultGateway}
+                      onChange={(event) => setPcSettings((current) => ({
+                        ...current,
+                        defaultGateway: event.target.value,
+                      }))}
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>DNS server settings</legend>
+                <p className="pc-setting-choice">
+                  <span aria-hidden="true" /> Use the following DNS server addresses
+                </p>
+                <div className="pc-ipv4-fields">
+                  <label>
+                    Preferred DNS server
+                    <input
+                      inputMode="decimal"
+                      placeholder="8.8.8.8"
+                      value={pcSettings.preferredDns}
+                      onChange={(event) => setPcSettings((current) => ({
+                        ...current,
+                        preferredDns: event.target.value,
+                      }))}
+                    />
+                  </label>
+                  <label>
+                    Alternate DNS server
+                    <input
+                      inputMode="decimal"
+                      placeholder="1.1.1.1"
+                      value={pcSettings.alternateDns}
+                      onChange={(event) => setPcSettings((current) => ({
+                        ...current,
+                        alternateDns: event.target.value,
+                      }))}
+                    />
+                  </label>
+                </div>
+              </fieldset>
+
+              {pcSettingsMessage && (
+                <p
+                  className={`form-message ${
+                    pcSettingsMessage.includes('successfully')
+                      ? 'form-message--success'
+                      : 'form-message--error'
+                  }`}
+                  role="status"
+                >
+                  {pcSettingsMessage}
+                </p>
+              )}
+
+              <div className="pc-ipv4-panel__actions">
+                <button type="submit" disabled={busy}>
+                  {busy ? 'Saving...' : 'Apply IPv4 settings'}
+                </button>
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={() => setPcView('command')}
+                >
+                  Open Command Prompt
+                </button>
+              </div>
             </form>
-            <div ref={endRef} />
-          </div>
+          ) : (
+            <div
+              className="cisco-terminal__screen"
+              onMouseDown={(event) => {
+                if (!event.target.closest('button, input, a')) {
+                  event.preventDefault()
+                  focusCommandInput()
+                }
+              }}
+            >
+              <pre>
+                {activeDevice.type === 'pc'
+                  ? `CCNA Assessment PC Command Prompt\nUse IP Configuration to change network settings.\nType help to view CMD commands.\n\n`
+                  : `Cisco IOS Software, CCNA Assessment Simulator\nType commands at the prompt.\n\n`}
+                {activeLines.join('\n')}
+                {activeLines.length ? '\n' : ''}
+              </pre>
+              <form onSubmit={handleCommand}>
+                <label htmlFor="cli-command">{getDevicePrompt(state)}</label>
+                <input
+                  id="cli-command"
+                  ref={commandInputRef}
+                  autoFocus
+                  autoComplete="off"
+                  spellCheck="false"
+                  disabled={busy}
+                  value={command}
+                  onChange={(event) => setCommand(event.target.value)}
+                  onBlur={(event) => {
+                    const nextTarget = event.relatedTarget
+                    const movedToControl = nextTarget instanceof HTMLElement
+                      && nextTarget.closest('button, a, select, textarea')
+
+                    if (!movedToControl) {
+                      window.requestAnimationFrame(focusCommandInput)
+                    }
+                  }}
+                />
+              </form>
+              <div ref={endRef} />
+            </div>
+          )}
         </section>
       </div>
       {message && <p className="form-message form-message--error">{message}</p>}

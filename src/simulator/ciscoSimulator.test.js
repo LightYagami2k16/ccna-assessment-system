@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  configurePcState,
   createDeviceState,
   executeCiscoCommand,
+  executePcCommand,
   executeTopologyCommand,
   normalizeInterface,
   parseVlanList,
@@ -638,4 +640,272 @@ test('simulates ping success only across active topology links', () => {
   })
   assert.match(failed.output, /\.\.\.\.\./)
   assert.match(failed.output, /Success rate is 0 percent/)
+})
+
+test('requires forward and return routes across multi-router topology paths', () => {
+  const r1Commands = [
+    'enable',
+    'configure terminal',
+    'interface g0/0',
+    'ip address 10.0.12.1 255.255.255.252',
+    'no shutdown',
+    'exit',
+  ]
+  const r3Commands = [
+    'enable',
+    'configure terminal',
+    'interface g0/0',
+    'ip address 10.0.23.2 255.255.255.252',
+    'no shutdown',
+    'exit',
+    'ip route 10.0.12.0 255.255.255.252 10.0.23.1',
+    'end',
+  ]
+  const deviceStates = {
+    r1: runCommands([...r1Commands, 'end'], 'R1'),
+    r2: runCommands([
+      'enable',
+      'configure terminal',
+      'interface g0/0',
+      'ip address 10.0.12.2 255.255.255.252',
+      'no shutdown',
+      'exit',
+      'interface g0/1',
+      'ip address 10.0.23.1 255.255.255.252',
+      'no shutdown',
+      'end',
+    ], 'R2'),
+    r3: runCommands(r3Commands, 'R3'),
+  }
+  const devices = [
+    { id: 'r1', type: 'router', label: 'R1' },
+    { id: 'r2', type: 'router', label: 'R2' },
+    { id: 'r3', type: 'router', label: 'R3' },
+  ]
+  const topology = {
+    links: [
+      {
+        id: 'r1-r2',
+        fromDeviceId: 'r1',
+        fromInterface: 'g0/0',
+        toDeviceId: 'r2',
+        toInterface: 'g0/0',
+      },
+      {
+        id: 'r2-r3',
+        fromDeviceId: 'r2',
+        fromInterface: 'g0/1',
+        toDeviceId: 'r3',
+        toInterface: 'g0/0',
+      },
+    ],
+  }
+
+  const missingForwardRoute = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'ping 10.0.23.2',
+  })
+  assert.match(missingForwardRoute.output, /Success rate is 0 percent/)
+
+  deviceStates.r1 = runCommands([
+    ...r1Commands,
+    'ip route 10.0.23.0 255.255.255.252 10.0.12.2',
+    'end',
+  ], 'R1')
+  const routedPing = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'ping 10.0.23.2',
+  })
+  assert.match(routedPing.output, /Success rate is 100 percent/)
+  assert.deepEqual(routedPing.state.successfulPings, ['10.0.23.2'])
+})
+
+test('records successful traceroute criteria across routed devices', () => {
+  const deviceStates = {
+    r1: runCommands([
+      'enable',
+      'configure terminal',
+      'interface g0/0',
+      'ip address 10.0.12.1 255.255.255.252',
+      'no shutdown',
+      'exit',
+      'ip route 10.0.23.0 255.255.255.252 10.0.12.2',
+      'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable',
+      'configure terminal',
+      'interface g0/0',
+      'ip address 10.0.12.2 255.255.255.252',
+      'no shutdown',
+      'exit',
+      'interface g0/1',
+      'ip address 10.0.23.1 255.255.255.252',
+      'no shutdown',
+      'end',
+    ], 'R2'),
+    r3: runCommands([
+      'enable',
+      'configure terminal',
+      'interface g0/0',
+      'ip address 10.0.23.2 255.255.255.252',
+      'no shutdown',
+      'end',
+    ], 'R3'),
+  }
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: [
+      { id: 'r1', type: 'router', label: 'R1' },
+      { id: 'r2', type: 'router', label: 'R2' },
+      { id: 'r3', type: 'router', label: 'R3' },
+    ],
+    activeDeviceId: 'r1',
+    topology: {
+      links: [
+        {
+          id: 'r1-r2',
+          fromDeviceId: 'r1',
+          fromInterface: 'g0/0',
+          toDeviceId: 'r2',
+          toInterface: 'g0/0',
+        },
+        {
+          id: 'r2-r3',
+          fromDeviceId: 'r2',
+          fromInterface: 'g0/1',
+          toDeviceId: 'r3',
+          toInterface: 'g0/0',
+        },
+      ],
+    },
+    rawCommand: 'traceroute 10.0.23.2',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.match(result.output, /R2/)
+  assert.match(result.output, /R3/)
+  assert.match(result.output, /Trace complete/)
+  assert.deepEqual(result.state.successfulTraceroutes, ['10.0.23.2'])
+})
+
+test('configures a PC IPv4 address and default gateway from its prompt', () => {
+  let state = createDeviceState('PC1', 'pc')
+
+  let result = executePcCommand(
+    state,
+    'ipconfig /ip 192.168.10.10 255.255.255.0',
+  )
+  assert.equal(result.accepted, true)
+  state = result.state
+
+  result = executePcCommand(state, 'ipconfig /gateway 192.168.10.1')
+  assert.equal(result.accepted, true)
+  state = result.state
+
+  const display = executePcCommand(state, 'ipconfig /all')
+  assert.match(display.output, /192\.168\.10\.10/)
+  assert.match(display.output, /255\.255\.255\.0/)
+  assert.match(display.output, /192\.168\.10\.1/)
+})
+
+test('applies PC IPv4 and DNS settings from the configuration panel', () => {
+  const result = configurePcState(createDeviceState('PC1', 'pc'), {
+    ipAddress: '192.168.56.10',
+    subnetMask: '255.255.255.0',
+    defaultGateway: '192.168.56.1',
+    preferredDns: '8.8.8.8',
+    alternateDns: '1.1.1.1',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.equal(
+    result.state.interfaces.Ethernet0.ipAddress,
+    '192.168.56.10',
+  )
+  assert.equal(result.state.defaultGateway, '192.168.56.1')
+  assert.deepEqual(result.state.dnsServers, ['8.8.8.8', '1.1.1.1'])
+
+  const invalidGateway = configurePcState(result.state, {
+    ipAddress: '192.168.56.10',
+    subnetMask: '255.255.255.0',
+    defaultGateway: '10.0.0.1',
+  })
+  assert.equal(invalidGateway.accepted, false)
+  assert.match(invalidGateway.error, /same subnet/i)
+})
+
+test('supports PC-to-router ping through an active access switch', () => {
+  let pcState = createDeviceState('PC1', 'pc')
+  pcState = executePcCommand(
+    pcState,
+    'ipconfig /ip 192.168.10.10 255.255.255.0',
+  ).state
+  pcState = executePcCommand(
+    pcState,
+    'ipconfig /gateway 192.168.10.1',
+  ).state
+
+  const deviceStates = {
+    pc1: pcState,
+    sw1: runCommands([
+      'enable',
+      'configure terminal',
+      'interface f0/1',
+      'no shutdown',
+      'exit',
+      'interface f0/24',
+      'no shutdown',
+      'end',
+    ], 'SW1'),
+    r1: runCommands([
+      'enable',
+      'configure terminal',
+      'interface g0/0',
+      'ip address 192.168.10.1 255.255.255.0',
+      'no shutdown',
+      'end',
+    ], 'R1'),
+  }
+  const devices = [
+    { id: 'pc1', type: 'pc', label: 'Student PC' },
+    { id: 'sw1', type: 'switch', label: 'Access switch' },
+    { id: 'r1', type: 'router', label: 'Gateway router' },
+  ]
+  const topology = {
+    links: [
+      {
+        id: 'pc-switch',
+        fromDeviceId: 'pc1',
+        fromInterface: 'Ethernet0',
+        toDeviceId: 'sw1',
+        toInterface: 'FastEthernet0/1',
+      },
+      {
+        id: 'switch-router',
+        fromDeviceId: 'sw1',
+        fromInterface: 'FastEthernet0/24',
+        toDeviceId: 'r1',
+        toInterface: 'GigabitEthernet0/0',
+      },
+    ],
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'pc1',
+    topology,
+    rawCommand: 'ping 192.168.10.1',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.match(result.output, /Success rate is 100 percent/)
+  assert.deepEqual(result.state.successfulPings, ['192.168.10.1'])
 })

@@ -165,7 +165,7 @@ export default function StudentCliArea({
     <section className="student-cli-labs">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">PHASE 2 PRACTICALS</span>
+          <span className="eyebrow">PRACTICALS</span>
           <h2>Available CLI practicals</h2>
           <p>Configure a simulated Cisco device and receive partial-credit grading.</p>
         </div>

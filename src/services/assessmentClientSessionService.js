@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase'
 
+export { acquireAssessmentTabLock } from './assessmentTabLock'
+
 const DEVICE_KEY = 'ccna-assessment-device-id'
 const TAB_KEY = 'ccna-assessment-tab-id'
 let fallbackDeviceId = null
@@ -38,6 +40,11 @@ export function getAssessmentClientId() {
   return `device:${deviceId}:tab:${tabId}`
 }
 
+export function getAssessmentClientLabel() {
+  const platform = navigator.userAgentData?.platform || navigator.platform
+  return platform ? `Browser on ${platform}` : 'Browser session'
+}
+
 export async function claimAssessmentClientSession({
   assessmentType,
   attemptId,
@@ -49,7 +56,7 @@ export async function claimAssessmentClientSession({
       p_assessment_type: assessmentType,
       p_attempt_id: attemptId,
       p_client_id: clientId,
-      p_client_label: 'Browser session',
+      p_client_label: getAssessmentClientLabel(),
     },
   )
   if (error) throw error

@@ -1,6 +1,7 @@
-export function createDeviceState(hostname = 'Switch') {
-  return {
+export function createDeviceState(hostname = 'Switch', deviceType = 'switch') {
+  const state = {
     hostname,
+    deviceType,
     mode: 'user_exec',
     activeVlan: null,
     activeInterface: null,
@@ -15,6 +16,7 @@ export function createDeviceState(hostname = 'Switch') {
     lines: {},
     ipRouting: false,
     defaultGateway: '',
+    dnsServers: [],
     staticRoutes: [],
     ospfProcesses: {},
     activeOspfProcess: null,
@@ -33,9 +35,32 @@ export function createDeviceState(hostname = 'Switch') {
     sshVersion: 1,
     saved: false,
   }
+
+  if (deviceType === 'pc') {
+    state.interfaces.Ethernet0 = {
+      description: 'PC network adapter',
+      switchportMode: '',
+      accessVlan: null,
+      voiceVlan: null,
+      trunkNativeVlan: 1,
+      trunkAllowedVlans: null,
+      encapsulationDot1q: null,
+      encapsulationNative: false,
+      ipAddress: '',
+      subnetMask: '',
+      shutdown: false,
+      ipAccessGroups: { in: '', out: '' },
+      natRole: '',
+      channelGroup: null,
+      spanningTreePortfast: false,
+    }
+  }
+
+  return state
 }
 
 function ensureStateShape(state) {
+  state.deviceType ??= 'switch'
   state.vlans ??= {}
   state.interfaces ??= {}
   state.enableSecret ??= ''
@@ -46,6 +71,7 @@ function ensureStateShape(state) {
   state.lines ??= {}
   state.ipRouting ??= false
   state.defaultGateway ??= ''
+  state.dnsServers ??= []
   state.staticRoutes ??= []
   state.ospfProcesses ??= {}
   Object.keys(state.ospfProcesses).forEach((processId) => {
@@ -82,6 +108,7 @@ function ensureStateShape(state) {
 
 export function getDevicePrompt(state) {
   const hostname = state.hostname || 'Switch'
+  if (state.deviceType === 'pc') return `${hostname}>`
   if (state.mode === 'acl_config') {
     const accessList = state.accessLists?.[state.activeAccessList]
     return `${hostname}${
@@ -105,6 +132,136 @@ export function getDevicePrompt(state) {
   return `${hostname}${suffix ?? '>'}`
 }
 
+export function executePcCommand(currentState, rawCommand) {
+  const state = ensureStateShape(structuredClone(currentState))
+  const modeBefore = state.mode ?? 'user_exec'
+  const command = String(rawCommand ?? '').trim().replace(/\s+/g, ' ')
+  const lower = command.toLowerCase()
+  const adapter = state.interfaces.Ethernet0 ?? {
+    ipAddress: '',
+    subnetMask: '',
+    shutdown: false,
+  }
+  state.interfaces.Ethernet0 = adapter
+
+  const outcome = (accepted, output = '') => ({
+    state,
+    accepted,
+    output,
+    modeBefore,
+    modeAfter: state.mode ?? 'user_exec',
+  })
+
+  if (lower === 'ipconfig' || lower === 'ipconfig /all') {
+    return outcome(true, [
+      'Ethernet adapter Ethernet0:',
+      '',
+      `   IPv4 Address. . . . . . . . . . . : ${adapter.ipAddress || '0.0.0.0'}`,
+      `   Subnet Mask . . . . . . . . . . . : ${adapter.subnetMask || '0.0.0.0'}`,
+      `   Default Gateway . . . . . . . . . : ${state.defaultGateway || ''}`,
+      `   DNS Servers . . . . . . . . . . . : ${state.dnsServers[0] || ''}`,
+      ...(state.dnsServers[1] ? [`                                         ${state.dnsServers[1]}`] : []),
+    ].join('\n'))
+  }
+
+  const addressMatch = command.match(/^ipconfig \/ip (\S+) (\S+)$/i)
+  if (addressMatch) {
+    if (
+      ipv4ToNumber(addressMatch[1]) === null
+      || prefixLengthFromMask(addressMatch[2]) === null
+    ) return outcome(false, 'Invalid IPv4 address or subnet mask.')
+    adapter.ipAddress = addressMatch[1]
+    adapter.subnetMask = addressMatch[2]
+    return outcome(true, 'IPv4 configuration updated.')
+  }
+
+  const gatewayMatch = command.match(/^ipconfig \/gateway (\S+)$/i)
+  if (gatewayMatch) {
+    if (ipv4ToNumber(gatewayMatch[1]) === null) {
+      return outcome(false, 'Invalid default gateway address.')
+    }
+    state.defaultGateway = gatewayMatch[1]
+    return outcome(true, 'Default gateway updated.')
+  }
+
+  if (lower === 'ipconfig /clear') {
+    adapter.ipAddress = ''
+    adapter.subnetMask = ''
+    state.defaultGateway = ''
+    return outcome(true, 'IPv4 configuration cleared.')
+  }
+
+  if (lower === 'help' || lower === '?') {
+    return outcome(true, [
+      'Supported PC commands:',
+      '  ipconfig',
+      '  ipconfig /all',
+      '  ipconfig /ip <address> <subnet-mask>',
+      '  ipconfig /gateway <address>',
+      '  ipconfig /clear',
+      '  ping <address>',
+      '  tracert <address>',
+    ].join('\n'))
+  }
+
+  return outcome(false, `'${command}' is not recognized as a supported command.`)
+}
+
+export function configurePcState(currentState, settings) {
+  const state = ensureStateShape(structuredClone(currentState))
+  const values = {
+    ipAddress: String(settings?.ipAddress ?? '').trim(),
+    subnetMask: String(settings?.subnetMask ?? '').trim(),
+    defaultGateway: String(settings?.defaultGateway ?? '').trim(),
+    preferredDns: String(settings?.preferredDns ?? '').trim(),
+    alternateDns: String(settings?.alternateDns ?? '').trim(),
+  }
+
+  if (ipv4ToNumber(values.ipAddress) === null) {
+    return { accepted: false, error: 'Enter a valid IPv4 address.' }
+  }
+  if (prefixLengthFromMask(values.subnetMask) === null) {
+    return { accepted: false, error: 'Enter a valid contiguous subnet mask.' }
+  }
+  for (const [field, label] of [
+    ['defaultGateway', 'default gateway'],
+    ['preferredDns', 'preferred DNS server'],
+    ['alternateDns', 'alternate DNS server'],
+  ]) {
+    if (values[field] && ipv4ToNumber(values[field]) === null) {
+      return { accepted: false, error: `Enter a valid ${label}.` }
+    }
+  }
+  if (
+    values.defaultGateway
+    && !addressMatchesNetwork(
+      values.defaultGateway,
+      networkAddress(values.ipAddress, values.subnetMask),
+      values.subnetMask,
+    )
+  ) {
+    return {
+      accepted: false,
+      error: 'The default gateway must be in the same subnet as the PC.',
+    }
+  }
+
+  const adapter = state.interfaces.Ethernet0
+  adapter.ipAddress = values.ipAddress
+  adapter.subnetMask = values.subnetMask
+  adapter.shutdown = false
+  state.defaultGateway = values.defaultGateway
+  state.dnsServers = [values.preferredDns, values.alternateDns].filter(Boolean)
+
+  return {
+    state,
+    accepted: true,
+    output: 'IPv4 settings applied.',
+    modeBefore: state.mode ?? 'user_exec',
+    modeAfter: state.mode ?? 'user_exec',
+  }
+}
+
 export function normalizeInterface(value) {
   const compact = String(value ?? '').replaceAll(' ', '').toLowerCase()
   const patterns = [
@@ -121,7 +278,7 @@ export function normalizeInterface(value) {
       prefix: 'TenGigabitEthernet',
     },
     {
-      expression: /^(ethernet|e)(\d+(?:\/\d+){1,2}(?:\.\d+)?)$/,
+      expression: /^(ethernet|e)(\d+(?:\/\d+){0,2}(?:\.\d+)?)$/,
       prefix: 'Ethernet',
     },
     {
@@ -2021,14 +2178,172 @@ export function executeCiscoCommand(currentState, rawCommand) {
   return { state, accepted, output, modeBefore, modeAfter: state.mode }
 }
 
+function addressMatchesNetwork(address, network, mask) {
+  const addressNumber = ipv4ToNumber(address)
+  const networkNumber = ipv4ToNumber(network)
+  const maskNumber = ipv4ToNumber(mask)
+  if (
+    addressNumber === null
+    || networkNumber === null
+    || prefixLengthFromMask(mask) === null
+  ) return false
+  return ((addressNumber & maskNumber) >>> 0) === networkNumber
+}
+
+function interfaceContainsAddress(interfaceState, address) {
+  if (
+    !interfaceState
+    || interfaceState.shutdown
+    || !interfaceState.ipAddress
+    || !interfaceState.subnetMask
+  ) return false
+  const network = networkAddress(
+    interfaceState.ipAddress,
+    interfaceState.subnetMask,
+  )
+  return network !== null
+    && addressMatchesNetwork(address, network, interfaceState.subnetMask)
+}
+
+function matchingStaticRoute(state, destinationIp) {
+  return (state.staticRoutes ?? [])
+    .filter((route) =>
+      addressMatchesNetwork(destinationIp, route.network, route.mask),
+    )
+    .sort(
+      (left, right) =>
+        prefixLengthFromMask(right.mask) - prefixLengthFromMask(left.mask),
+    )[0] ?? null
+}
+
+function activeTopologyAdjacency(deviceStates, topology) {
+  const adjacency = new Map(
+    Object.keys(deviceStates).map((deviceId) => [deviceId, []]),
+  )
+
+  for (const link of topology?.links ?? []) {
+    const fromState = deviceStates[link.fromDeviceId]
+    const toState = deviceStates[link.toDeviceId]
+    const fromInterface = normalizeInterface(link.fromInterface)
+    const toInterface = normalizeInterface(link.toInterface)
+    const fromItem = fromInterface
+      ? fromState?.interfaces?.[fromInterface]
+      : null
+    const toItem = toInterface
+      ? toState?.interfaces?.[toInterface]
+      : null
+    if (!fromItem || !toItem || fromItem.shutdown || toItem.shutdown) continue
+
+    adjacency.get(link.fromDeviceId)?.push({
+      deviceId: link.toDeviceId,
+      outgoingInterface: fromInterface,
+      neighborInterface: toInterface,
+    })
+    adjacency.get(link.toDeviceId)?.push({
+      deviceId: link.fromDeviceId,
+      outgoingInterface: toInterface,
+      neighborInterface: fromInterface,
+    })
+  }
+
+  return adjacency
+}
+
+function canForwardAcrossLink({
+  state,
+  deviceType,
+  outgoingInterface,
+  destinationIp,
+}) {
+  if (deviceType === 'switch' && !state.ipRouting) return true
+
+  const outgoingState = state.interfaces?.[outgoingInterface]
+  if (interfaceContainsAddress(outgoingState, destinationIp)) return true
+
+  if (deviceType === 'pc') {
+    return Boolean(
+      state.defaultGateway
+      && interfaceContainsAddress(outgoingState, state.defaultGateway),
+    )
+  }
+
+  const route = matchingStaticRoute(state, destinationIp)
+  if (!route) return false
+
+  const normalizedNextHopInterface = normalizeInterface(route.nextHop)
+  if (normalizedNextHopInterface) {
+    return normalizedNextHopInterface === outgoingInterface
+  }
+
+  return interfaceContainsAddress(outgoingState, route.nextHop)
+}
+
+function findRoutedTopologyPath({
+  deviceStates,
+  devices,
+  topology,
+  sourceDeviceId,
+  destinationDeviceId,
+  destinationIp,
+}) {
+  const adjacency = activeTopologyAdjacency(deviceStates, topology)
+  const deviceTypes = new Map(
+    (devices ?? []).map((device) => [device.id, device.type]),
+  )
+  const visited = new Set([sourceDeviceId])
+  const queue = [{ deviceId: sourceDeviceId, path: [sourceDeviceId] }]
+
+  while (queue.length) {
+    const current = queue.shift()
+    if (current.deviceId === destinationDeviceId) return current.path
+
+    const currentState = deviceStates[current.deviceId]
+    if (!currentState) continue
+
+    for (const edge of adjacency.get(current.deviceId) ?? []) {
+      if (visited.has(edge.deviceId)) continue
+      if (!canForwardAcrossLink({
+        state: currentState,
+        deviceType: deviceTypes.get(current.deviceId) ?? 'router',
+        outgoingInterface: edge.outgoingInterface,
+        destinationIp,
+      })) continue
+
+      visited.add(edge.deviceId)
+      queue.push({
+        deviceId: edge.deviceId,
+        path: [...current.path, edge.deviceId],
+      })
+    }
+  }
+
+  return null
+}
+
+function activeInterfaceAddresses(state) {
+  return Object.values(state?.interfaces ?? {})
+    .filter((item) => item.ipAddress && !item.shutdown)
+    .map((item) => item.ipAddress)
+}
+
+function topologyHopLabel(deviceId, deviceStates, devices) {
+  const device = (devices ?? []).find((item) => item.id === deviceId)
+  const state = deviceStates[deviceId]
+  const address = activeInterfaceAddresses(state)[0]
+  return `${state?.hostname || device?.label || deviceId}${
+    address ? ` (${address})` : ''
+  }`
+}
+
 export function executeTopologyCommand({
   deviceStates,
   activeDeviceId,
+  devices = [],
   topology,
   rawCommand,
 }) {
   const command = String(rawCommand ?? '').trim().replace(/\s+/g, ' ')
-  const match = command.match(/^ping (\S+)$/i)
+  const match = command.match(/^(ping|traceroute|tracert) (\S+)$/i)
   if (!match) return null
 
   const currentState = deviceStates[activeDeviceId]
@@ -2043,7 +2358,10 @@ export function executeTopologyCommand({
     }
   }
 
-  const destinationIp = match[1]
+  const operation = match[1].toLowerCase() === 'ping'
+    ? 'ping'
+    : 'traceroute'
+  const destinationIp = match[2]
   if (ipv4ToNumber(destinationIp) === null) {
     return {
       state: structuredClone(currentState),
@@ -2060,52 +2378,76 @@ export function executeTopologyCommand({
         (item) => item.ipAddress === destinationIp && !item.shutdown,
       ),
   )
-  const sourceHasAddress = Object.values(currentState.interfaces ?? {}).some(
-    (item) => item.ipAddress && !item.shutdown,
-  )
+  const sourceAddresses = activeInterfaceAddresses(currentState)
   const destinationDeviceId = destinationEntry?.[0]
-
-  const adjacency = new Map(
-    Object.keys(deviceStates).map((deviceId) => [deviceId, new Set()]),
+  const forwardPath = destinationDeviceId && sourceAddresses.length
+    ? findRoutedTopologyPath({
+        deviceStates,
+        devices,
+        topology,
+        sourceDeviceId: activeDeviceId,
+        destinationDeviceId,
+        destinationIp,
+      })
+    : null
+  const destinationAddresses = destinationDeviceId
+    ? activeInterfaceAddresses(deviceStates[destinationDeviceId])
+    : []
+  const returnPath = forwardPath && sourceAddresses.some((sourceIp) =>
+    findRoutedTopologyPath({
+      deviceStates,
+      devices,
+      topology,
+      sourceDeviceId: destinationDeviceId,
+      destinationDeviceId: activeDeviceId,
+      destinationIp: sourceIp,
+    }),
   )
-  for (const link of topology?.links ?? []) {
-    const fromState = deviceStates[link.fromDeviceId]
-    const toState = deviceStates[link.toDeviceId]
-    const fromInterface = normalizeInterface(link.fromInterface)
-    const toInterface = normalizeInterface(link.toInterface)
-    const fromItem = fromInterface
-      ? fromState?.interfaces?.[fromInterface]
-      : null
-    const toItem = toInterface
-      ? toState?.interfaces?.[toInterface]
-      : null
-    if (!fromItem || !toItem || fromItem.shutdown || toItem.shutdown) continue
-    adjacency.get(link.fromDeviceId)?.add(link.toDeviceId)
-    adjacency.get(link.toDeviceId)?.add(link.fromDeviceId)
-  }
 
-  const visited = new Set([activeDeviceId])
-  const queue = [activeDeviceId]
-  while (queue.length) {
-    const deviceId = queue.shift()
-    for (const neighbor of adjacency.get(deviceId) ?? []) {
-      if (visited.has(neighbor)) continue
-      visited.add(neighbor)
-      queue.push(neighbor)
-    }
-  }
-
-  const successful = Boolean(
-    sourceHasAddress
-    && destinationDeviceId
-    && visited.has(destinationDeviceId),
-  )
+  const successful = operation === 'ping'
+    ? Boolean(forwardPath && returnPath && destinationAddresses.length)
+    : Boolean(forwardPath)
   const state = structuredClone(currentState)
-  state.successfulPings ??= []
-  if (successful) {
+  if (operation === 'ping') {
+    state.successfulPings ??= []
+  } else {
+    state.successfulTraceroutes ??= []
+  }
+  if (successful && operation === 'ping') {
     state.successfulPings = [
       ...new Set([...state.successfulPings, destinationIp]),
     ]
+  }
+
+  if (successful && operation === 'traceroute') {
+    state.successfulTraceroutes = [
+      ...new Set([...state.successfulTraceroutes, destinationIp]),
+    ]
+  }
+
+  if (operation === 'traceroute') {
+    const hopLines = forwardPath
+      ? forwardPath.slice(1).map(
+          (deviceId, index) =>
+            ` ${index + 1}  ${topologyHopLabel(
+              deviceId,
+              deviceStates,
+              devices,
+            )}  1 ms  2 ms  1 ms`,
+        )
+      : [' 1  *  *  *', ' 2  *  *  *', ' 3  *  *  *']
+
+    return {
+      state,
+      accepted: true,
+      output: [
+        `Tracing the route to ${destinationIp}`,
+        ...hopLines,
+        successful ? 'Trace complete.' : 'Destination unreachable.',
+      ].join('\n'),
+      modeBefore,
+      modeAfter: modeBefore,
+    }
   }
 
   return {
