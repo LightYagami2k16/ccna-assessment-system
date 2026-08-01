@@ -10,12 +10,35 @@ export async function getInstructorAttempts() {
 }
 
 export async function getInstructorAttemptDetail(attemptId) {
-  const { data, error } = await supabase.rpc(
-    'get_instructor_attempt_detail',
-    { p_attempt_id: attemptId },
+  const [detailResponse, timingResponse] = await Promise.all([
+    supabase.rpc('get_instructor_attempt_detail', {
+      p_attempt_id: attemptId,
+    }),
+    supabase.rpc('get_instructor_quiz_question_times', {
+      p_attempt_id: attemptId,
+    }),
+  ])
+
+  if (detailResponse.error) throw detailResponse.error
+  if (timingResponse.error) throw timingResponse.error
+
+  const timingByQuestion = new Map(
+    (timingResponse.data ?? []).map((item) => [
+      item.attemptQuestionId,
+      Number(item.timeSpentSeconds) || 0,
+    ]),
   )
-  if (error) throw error
-  return data
+
+  return {
+    ...detailResponse.data,
+    questions: (detailResponse.data?.questions ?? []).map(
+      (question) => ({
+        ...question,
+        timeSpentSeconds:
+          timingByQuestion.get(question.attemptQuestionId) ?? 0,
+      }),
+    ),
+  }
 }
 
 export async function resetInstructorAttempts(attemptIds) {

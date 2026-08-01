@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 
 export default function AccountSettings({
@@ -19,6 +20,7 @@ export default function AccountSettings({
     useState('success')
   const [savingName, setSavingName] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
+  const closeButtonRef = useRef(null)
   const passwordEmailRequired = [
     'instructor',
     'administrator',
@@ -28,6 +30,26 @@ export default function AccountSettings({
   useEffect(() => {
     setFullName(profile?.full_name ?? '')
   }, [profile?.full_name])
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement
+    const previousOverflow = document.body.style.overflow
+
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') onClose?.()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus?.()
+    }
+  }, [onClose])
 
   async function handleNameSubmit(event) {
     event.preventDefault()
@@ -158,12 +180,25 @@ export default function AccountSettings({
     }
   }
 
-  return (
-    <section className="account-settings-panel">
+  return createPortal(
+    <div
+      className="account-settings-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose?.()
+      }}
+    >
+    <section
+      className="account-settings-panel account-settings-modal"
+      id="account-settings-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="account-settings-title"
+    >
       <header className="section-heading account-settings-heading">
         <div>
           <span className="eyebrow">ACCOUNT SETTINGS</span>
-          <h2>Profile and security</h2>
+          <h2 id="account-settings-title">Profile and security</h2>
           <p>
             Update the name displayed in the platform or create a new
             sign-in password.
@@ -171,6 +206,7 @@ export default function AccountSettings({
         </div>
 
         <button
+          ref={closeButtonRef}
           className="secondary"
           type="button"
           onClick={onClose}
@@ -335,5 +371,7 @@ export default function AccountSettings({
         )}
       </div>
     </section>
+    </div>,
+    document.body,
   )
 }

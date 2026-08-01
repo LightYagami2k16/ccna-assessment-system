@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react';
 
@@ -9,6 +10,9 @@ import QuizTimer from './QuizTimer';
 import QuizResult from './QuizResult';
 import ConfirmationDialog from './ConfirmationDialog';
 import useExamIntegrityMonitor from '../hooks/useExamIntegrityMonitor';
+import useAssessmentClientSession from '../hooks/useAssessmentClientSession';
+import useQuizQuestionTimeTracker from '../hooks/useQuizQuestionTimeTracker';
+import useAssessmentFocusMode from '../hooks/useAssessmentFocusMode';
 import {
   cachePendingAnswer,
   clearAttemptCache,
@@ -88,8 +92,11 @@ function answerFields(question, answer) {
 
 export default function QuizPlayer({
   attemptId,
+  onSubmitted,
   onExit
 }) {
+  useAssessmentFocusMode();
+
   const [attemptData, setAttemptData] = useState(null);
 
   const [
@@ -114,6 +121,16 @@ export default function QuizPlayer({
   const [result, setResult] = useState(null);
   const [integrityWarning, setIntegrityWarning] = useState('');
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const clientSession = useAssessmentClientSession({
+    assessmentType: 'quiz',
+    attemptId,
+    enabled: !result,
+  });
+
+  const handleExit = useCallback(async () => {
+    await clientSession.release();
+    onExit?.();
+  }, [clientSession, onExit]);
 
   const handleIntegrityIncident = useCallback((eventType) => {
     const messages = {
@@ -139,6 +156,8 @@ export default function QuizPlayer({
   });
 
   const loadAttempt = useCallback(async () => {
+    if (clientSession.status !== 'active') return;
+
     try {
       setLoading(true);
       setPageMessage('');
@@ -146,7 +165,10 @@ export default function QuizPlayer({
       let data;
 
       try {
-        data = await getQuizAttempt(attemptId);
+        data = await getQuizAttempt(
+          attemptId,
+          clientSession.clientId
+        );
         saveAttemptSnapshot(attemptId, data);
       } catch (error) {
         data = getAttemptSnapshot(attemptId);
@@ -215,7 +237,7 @@ export default function QuizPlayer({
     } finally {
       setLoading(false);
     }
-  }, [attemptId]);
+  }, [attemptId, clientSession.clientId, clientSession.status]);
 
   useEffect(() => {
     void loadAttempt();
@@ -228,6 +250,22 @@ export default function QuizPlayer({
 
   const currentQuestion =
     questions[currentQuestionIndex] ?? null;
+
+  const questionTimeTracker = useQuizQuestionTimeTracker({
+    attemptId,
+    attemptQuestionId: currentQuestion?.attemptQuestionId,
+    clientId: clientSession.clientId,
+    enabled:
+      clientSession.status === 'active' &&
+      attemptData?.attempt?.status === 'in_progress' &&
+      !result,
+  });
+
+  const questionTimeTrackerRef = useRef(questionTimeTracker);
+
+  useEffect(() => {
+    questionTimeTrackerRef.current = questionTimeTracker;
+  }, [questionTimeTracker]);
 
   const answeredCount = useMemo(() => {
     return questions.filter((question) =>
@@ -289,6 +327,7 @@ export default function QuizPlayer({
         await saveQuizAnswer({
           attemptId,
           attemptQuestionId,
+          clientId: clientSession.clientId,
           ...answerFields(
             question,
             answerFromPending(question, pendingAnswer)
@@ -308,7 +347,7 @@ export default function QuizPlayer({
 
     setSaveMessage('All saved answers are synchronized.');
     return true;
-  }, [attemptData?.questions, attemptId]);
+  }, [attemptData?.questions, attemptId, clientSession.clientId]);
 
   useEffect(() => {
     function handleOnline() {
@@ -349,11 +388,17 @@ export default function QuizPlayer({
           return;
         }
 
+        await questionTimeTrackerRef.current.flush();
+
         const submissionResult =
-          await submitQuizAttempt(attemptId);
+          await submitQuizAttempt(
+            attemptId,
+            clientSession.clientId
+          );
 
         clearAttemptCache(attemptId);
         setResult(submissionResult);
+        onSubmitted?.(submissionResult);
       } catch (error) {
         const errorMessage =
           error?.message ?? 'Unable to submit quiz.';
@@ -377,7 +422,9 @@ export default function QuizPlayer({
     },
     [
       attemptId,
+      clientSession.clientId,
       loadAttempt,
+      onSubmitted,
       result,
       submitting,
       syncPendingAnswers
@@ -433,6 +480,7 @@ export default function QuizPlayer({
       await saveQuizAnswer({
         attemptId,
         attemptQuestionId,
+        clientId: clientSession.clientId,
         ...answerFields(question, answer)
       });
 
@@ -530,6 +578,34 @@ export default function QuizPlayer({
     void persistAnswer(currentQuestion, answerText);
   }
 
+  if (clientSession.status === 'claiming') {
+    return (
+      <main className="quiz-player assessment-session-state">
+        <h1>Securing quiz session</h1>
+        <p>Confirming that this browser can continue the attempt...</p>
+      </main>
+    );
+  }
+
+  if (clientSession.status === 'blocked') {
+    return (
+      <main className="quiz-player assessment-session-state">
+        <h1>Quiz open elsewhere</h1>
+        <p className="form-message form-message--error">
+          {clientSession.message}
+        </p>
+        <div className="assessment-session-state__actions">
+          <button type="button" onClick={clientSession.retry}>
+            Try again
+          </button>
+          <button type="button" className="secondary" onClick={onExit}>
+            Return to quizzes
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   if (loading) {
     return (
       <main className="quiz-player">
@@ -542,7 +618,7 @@ export default function QuizPlayer({
     return (
       <QuizResult
         result={result}
-        onReturn={onExit}
+        onReturn={handleExit}
       />
     );
   }
@@ -557,7 +633,7 @@ export default function QuizPlayer({
 
         <button
           type="button"
-          onClick={onExit}
+          onClick={handleExit}
         >
           Return
         </button>

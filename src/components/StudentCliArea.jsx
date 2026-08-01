@@ -2,20 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import CliTerminal from './CliTerminal'
 import {
   getAvailableCliLabs,
+  getStudentCliArchiveStatuses,
+  setStudentCliLabArchived,
   startCliAttempt,
 } from '../services/cliLabService'
-
-function readStoredAttempt(userId) {
-  if (!userId) return null
-
-  try {
-    return window.localStorage.getItem(
-      `ccna-student-active-cli-attempt:${userId}`,
-    )
-  } catch {
-    return null
-  }
-}
 
 function clearStoredAttempt(userId) {
   if (!userId) return
@@ -31,36 +21,78 @@ function clearStoredAttempt(userId) {
 
 export default function StudentCliArea({
   userId,
+  activeAttemptId: controlledActiveAttemptId,
+  onActiveAttemptChange,
+  resumeAttemptId = null,
+  onActiveSessionChanged,
+  onAttemptSubmitted,
   onCompletedAttempt,
+  onArchived,
 }) {
   const [labs, setLabs] = useState([])
-  const [activeAttemptId, setActiveAttemptId] = useState(() =>
-    readStoredAttempt(userId),
-  )
+  const [archiveStatuses, setArchiveStatuses] = useState([])
+  const [internalActiveAttemptId, setInternalActiveAttemptId] =
+    useState(null)
   const [startingId, setStartingId] = useState(null)
+  const [archivingId, setArchivingId] = useState(null)
   const [message, setMessage] = useState('')
+  const controlled = controlledActiveAttemptId !== undefined
+  const activeAttemptId = controlled
+    ? controlledActiveAttemptId
+    : internalActiveAttemptId
+
+  const setActiveAttemptId = useCallback(
+    (attemptId) => {
+      if (!controlled) setInternalActiveAttemptId(attemptId)
+      onActiveAttemptChange?.(attemptId)
+    },
+    [controlled, onActiveAttemptChange],
+  )
 
   const loadLabs = useCallback(async () => {
     try {
       setMessage('')
-      setLabs(await getAvailableCliLabs())
+      const [availableData, archiveData] = await Promise.all([
+        getAvailableCliLabs(),
+        getStudentCliArchiveStatuses(),
+      ])
+      setLabs(availableData)
+      setArchiveStatuses(archiveData)
     } catch (error) {
       setMessage(
-        `${error.message} Ask the instructor to confirm that migrations 020 and 038 are installed.`,
+        `${error.message} Ask the instructor to confirm that migrations 020, 038, and 051 are installed.`,
       )
     }
   }, [])
 
   useEffect(() => { void loadLabs() }, [loadLabs])
 
+  useEffect(() => {
+    if (resumeAttemptId) {
+      setActiveAttemptId(resumeAttemptId)
+    }
+  }, [resumeAttemptId, setActiveAttemptId])
+
   const availableLabs = useMemo(
     () =>
       labs.filter(
-        (lab) =>
-          Boolean(lab.activeAttemptId) ||
-          Number(lab.attemptsUsed) < Number(lab.maxAttempts),
+        (lab) => {
+          const status = archiveStatuses.find(
+            (item) => String(item.labId) === String(lab.id),
+          )
+          if (lab.activeAttemptId) return true
+          if (status?.archived) return false
+          return Number(lab.attemptsUsed) < Number(lab.maxAttempts)
+        },
       ),
-    [labs],
+    [archiveStatuses, labs],
+  )
+
+  const archiveStatusByLab = useMemo(
+    () => new Map(
+      archiveStatuses.map((item) => [String(item.labId), item]),
+    ),
+    [archiveStatuses],
   )
 
   useEffect(() => {
@@ -82,13 +114,28 @@ export default function StudentCliArea({
   async function startLab(lab) {
     setStartingId(lab.id)
     try {
-      setActiveAttemptId(
-        lab.activeAttemptId || await startCliAttempt(lab.id),
-      )
+      const attemptId =
+        lab.activeAttemptId || await startCliAttempt(lab.id)
+      setActiveAttemptId(attemptId)
+      onActiveSessionChanged?.()
     } catch (error) {
       setMessage(error.message)
     } finally {
       setStartingId(null)
+    }
+  }
+
+  async function archiveLab(labId) {
+    setArchivingId(labId)
+    try {
+      setMessage('')
+      await setStudentCliLabArchived(labId, true)
+      await loadLabs()
+      onArchived?.()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setArchivingId(null)
     }
   }
 
@@ -97,10 +144,16 @@ export default function StudentCliArea({
       <div className="quiz-focus-mode">
         <CliTerminal
           attemptId={activeAttemptId}
+          onSubmitted={() => {
+            clearStoredAttempt(userId)
+            onActiveSessionChanged?.()
+            onAttemptSubmitted?.()
+          }}
           onExit={({ completed = false } = {}) => {
             clearStoredAttempt(userId)
             setActiveAttemptId(null)
             void loadLabs()
+            onActiveSessionChanged?.()
             if (completed) onCompletedAttempt?.()
           }}
         />
@@ -124,6 +177,10 @@ export default function StudentCliArea({
         <div className="cli-lab-grid">
           {availableLabs.map((lab) => {
             const canStart = Boolean(lab.activeAttemptId) || lab.attemptsUsed < lab.maxAttempts
+            const status = archiveStatusByLab.get(String(lab.id))
+            const canArchive = Boolean(status?.hasCompletedAttempt)
+              && !lab.activeAttemptId
+              && Number(status?.attemptsRemaining) > 0
             return (
               <article className="cli-lab-card" key={lab.id}>
                 <header><span className="course-code">{lab.courseCode}</span><span>{lab.moduleCode}</span></header>
@@ -144,10 +201,18 @@ export default function StudentCliArea({
                     </dd>
                   </div>
                 </dl>
-                <button className="primary" type="button" disabled={!canStart || startingId === lab.id}
-                  onClick={() => void startLab(lab)}>
-                  {startingId === lab.id ? 'Opening...' : lab.activeAttemptId ? 'Resume practical' : canStart ? 'Start practical' : 'No attempts remaining'}
-                </button>
+                <div className="cli-lab-card__student-actions">
+                  <button className="primary" type="button" disabled={!canStart || startingId === lab.id || archivingId === lab.id}
+                    onClick={() => void startLab(lab)}>
+                    {startingId === lab.id ? 'Opening...' : lab.activeAttemptId ? 'Resume practical' : canStart ? 'Start practical' : 'No attempts remaining'}
+                  </button>
+                  {canArchive && (
+                    <button className="secondary" type="button" disabled={archivingId === lab.id || startingId === lab.id}
+                      onClick={() => void archiveLab(lab.id)}>
+                      {archivingId === lab.id ? 'Archiving...' : 'Archive to history'}
+                    </button>
+                  )}
+                </div>
               </article>
             )
           })}

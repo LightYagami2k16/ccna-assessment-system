@@ -520,12 +520,9 @@ export default function InstructorResultsDashboard() {
       {confirmationDialog}
       <div className="section-heading">
         <div>
-          <span className="eyebrow">ASSESSMENT REPORTING</span>
-          <h2>Student results</h2>
-          <p>
-            Results are organized by class, student, quiz, and
-            attempt.
-          </p>
+          <span className="eyebrow">QUIZ RESULTS</span>
+          <h2>Student Quiz attempts</h2>
+          <p>Review final scores, integrity events, and every grading requirement.</p>
         </div>
 
         <div className="results-heading-actions">

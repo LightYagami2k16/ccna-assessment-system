@@ -1,7 +1,14 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentQuizList from './StudentQuizList'
 import WorkspaceLoading from './WorkspaceLoading'
+import { getStudentActiveAssessmentSession } from '../services/assessmentAttemptService'
 
 const QuizPlayer = lazy(() => import('./QuizPlayer'))
 const StudentRecentResults = lazy(() => import('./StudentRecentResults'))
@@ -9,7 +16,7 @@ const StudentCliArea = lazy(() => import('./StudentCliArea'))
 const StudentCliHistory = lazy(() => import('./StudentCliHistory'))
 
 const studentSections = new Set(['available', 'history', 'cli'])
-const studentSectionOrder = ['available', 'history', 'cli']
+const studentSectionOrder = ['available', 'cli', 'history']
 
 function readStoredValue(key, fallback = null) {
   if (!key) return fallback
@@ -35,7 +42,19 @@ function storeValue(key, value) {
   }
 }
 
-export default function StudentQuizArea({ user }) {
+function formatSessionExpiration(value) {
+  if (!value) return 'No recorded deadline'
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+export default function StudentQuizArea({
+  user,
+  onExamModeChange = () => {},
+}) {
   const userId = user?.id ?? null
   const sectionStorageKey = userId
     ? `ccna-student-active-section:${userId}`
@@ -47,12 +66,41 @@ export default function StudentQuizArea({ user }) {
   const [activeAttemptId, setActiveAttemptId] = useState(() =>
     readStoredValue(attemptStorageKey),
   )
+  const [activeCliAttemptId, setActiveCliAttemptId] = useState(null)
   const [resultsVersion, setResultsVersion] = useState(0)
   const [enrollmentVersion, setEnrollmentVersion] = useState(0)
+  const [activeSession, setActiveSession] = useState(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
+  const [sessionMessage, setSessionMessage] = useState('')
   const [activeSection, setActiveSection] = useState(() => {
     const storedSection = readStoredValue(sectionStorageKey, 'available')
     return studentSections.has(storedSection) ? storedSection : 'available'
   })
+
+  const loadActiveSession = useCallback(async () => {
+    try {
+      setSessionMessage('')
+      const session = await getStudentActiveAssessmentSession()
+      setActiveSession(session)
+      setActiveAttemptId((currentAttemptId) => {
+        if (!currentAttemptId) return null
+
+        return session?.type === 'quiz' &&
+          session.attemptId === currentAttemptId
+          ? currentAttemptId
+          : null
+      })
+    } catch (error) {
+      setSessionMessage(error.message)
+      setActiveAttemptId(null)
+    } finally {
+      setSessionLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadActiveSession()
+  }, [loadActiveSession])
 
   useEffect(() => {
     storeValue(sectionStorageKey, activeSection)
@@ -61,6 +109,16 @@ export default function StudentQuizArea({ user }) {
   useEffect(() => {
     storeValue(attemptStorageKey, activeAttemptId)
   }, [activeAttemptId, attemptStorageKey])
+
+  const examModeActive = Boolean(
+    activeAttemptId || activeCliAttemptId,
+  )
+
+  useEffect(() => {
+    onExamModeChange(examModeActive)
+
+    return () => onExamModeChange(false)
+  }, [examModeActive, onExamModeChange])
 
   function handleTabKeyDown(event) {
     const currentIndex = studentSectionOrder.indexOf(activeSection)
@@ -88,6 +146,22 @@ export default function StudentQuizArea({ user }) {
     })
   }
 
+  function resumeActiveSession() {
+    if (!activeSession) return
+
+    if (activeSession.type === 'quiz') {
+      setActiveAttemptId(activeSession.attemptId)
+      return
+    }
+
+    setActiveCliAttemptId(activeSession.attemptId)
+    setActiveSection('cli')
+  }
+
+  if (sessionLoading && activeAttemptId) {
+    return <WorkspaceLoading label="Validating saved assessment..." />
+  }
+
   if (activeAttemptId) {
     return (
       <div className="quiz-focus-mode">
@@ -96,8 +170,42 @@ export default function StudentQuizArea({ user }) {
         >
           <QuizPlayer
             attemptId={activeAttemptId}
+            onSubmitted={() => {
+              storeValue(attemptStorageKey, null)
+              storeValue(sectionStorageKey, 'history')
+            }}
             onExit={() => {
               setActiveAttemptId(null)
+              setResultsVersion((current) => current + 1)
+              setActiveSection('history')
+              void loadActiveSession()
+            }}
+          />
+        </Suspense>
+      </div>
+    )
+  }
+
+  if (activeCliAttemptId) {
+    return (
+      <div className="quiz-focus-mode">
+        <Suspense
+          fallback={<WorkspaceLoading label="Loading CLI practical..." />}
+        >
+          <StudentCliArea
+            userId={userId}
+            activeAttemptId={activeCliAttemptId}
+            onActiveAttemptChange={setActiveCliAttemptId}
+            onActiveSessionChanged={loadActiveSession}
+            onAttemptSubmitted={() => {
+              storeValue(sectionStorageKey, 'history')
+            }}
+            onCompletedAttempt={() => {
+              setResultsVersion((current) => current + 1)
+              setActiveSection('history')
+              void loadActiveSession()
+            }}
+            onArchived={() => {
               setResultsVersion((current) => current + 1)
               setActiveSection('history')
             }}
@@ -130,6 +238,45 @@ export default function StudentQuizArea({ user }) {
         }
       />
 
+      {activeSession && (
+        <section
+          className="student-active-session"
+          aria-labelledby="student-active-session-title"
+        >
+          <div>
+            <span className="eyebrow">ACTIVE ASSESSMENT</span>
+            <h3 id="student-active-session-title">
+              {activeSession.title}
+            </h3>
+            <p>
+              {activeSession.type === 'quiz'
+                ? 'Quiz'
+                : 'CLI practical'}
+              {' · '}
+              Ends {formatSessionExpiration(activeSession.expiresAt)}
+            </p>
+            <small>
+              Finish or submit this assessment before starting another one.
+            </small>
+          </div>
+          <button
+            className="primary"
+            type="button"
+            onClick={resumeActiveSession}
+          >
+            {activeSession.type === 'quiz'
+              ? 'Resume quiz'
+              : 'Resume CLI practical'}
+          </button>
+        </section>
+      )}
+
+      {sessionMessage && (
+        <p className="form-message form-message--error" role="alert">
+          {sessionMessage}
+        </p>
+      )}
+
       <nav
         className="student-assessment-tabs"
         aria-label="Student assessments"
@@ -155,23 +302,6 @@ export default function StudentQuizArea({ user }) {
         </button>
         <button
           className={
-            activeSection === 'history'
-              ? 'student-assessment-tab student-assessment-tab--active'
-              : 'student-assessment-tab'
-          }
-          type="button"
-          id="student-tab-history"
-          role="tab"
-          aria-selected={activeSection === 'history'}
-          aria-controls="student-panel-history"
-          tabIndex={activeSection === 'history' ? 0 : -1}
-          onClick={() => setActiveSection('history')}
-        >
-          <strong>History</strong>
-          <small>Quiz and CLI results</small>
-        </button>
-        <button
-          className={
             activeSection === 'cli'
               ? 'student-assessment-tab student-assessment-tab--active'
               : 'student-assessment-tab'
@@ -186,6 +316,23 @@ export default function StudentQuizArea({ user }) {
         >
           <strong>CLI practicals</strong>
           <small>Cisco configuration</small>
+        </button>
+        <button
+          className={
+            activeSection === 'history'
+              ? 'student-assessment-tab student-assessment-tab--active'
+              : 'student-assessment-tab'
+          }
+          type="button"
+          id="student-tab-history"
+          role="tab"
+          aria-selected={activeSection === 'history'}
+          aria-controls="student-panel-history"
+          tabIndex={activeSection === 'history' ? 0 : -1}
+          onClick={() => setActiveSection('history')}
+        >
+          <strong>History</strong>
+          <small>Quiz and CLI results</small>
         </button>
       </nav>
 
@@ -217,12 +364,34 @@ export default function StudentQuizArea({ user }) {
                   setActiveSection('available')
                 }}
               />
-              <StudentCliHistory key={`cli-${resultsVersion}`} />
+              <StudentCliHistory
+                key={`cli-${resultsVersion}`}
+                onRestored={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('cli')
+                }}
+              />
             </>
           ) : (
             <StudentCliArea
               userId={userId}
+              activeAttemptId={activeCliAttemptId}
+              onActiveAttemptChange={setActiveCliAttemptId}
+              resumeAttemptId={
+                activeSession?.type === 'cli'
+                  ? activeSession.attemptId
+                  : null
+              }
+              onActiveSessionChanged={loadActiveSession}
+              onAttemptSubmitted={() => {
+                storeValue(sectionStorageKey, 'history')
+              }}
               onCompletedAttempt={() => {
+                setResultsVersion((current) => current + 1)
+                setActiveSection('history')
+                void loadActiveSession()
+              }}
+              onArchived={() => {
                 setResultsVersion((current) => current + 1)
                 setActiveSection('history')
               }}

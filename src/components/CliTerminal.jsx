@@ -3,6 +3,8 @@ import QuizResult from './QuizResult'
 import QuizTimer from './QuizTimer'
 import ConfirmationDialog from './ConfirmationDialog'
 import useExamIntegrityMonitor from '../hooks/useExamIntegrityMonitor'
+import useAssessmentClientSession from '../hooks/useAssessmentClientSession'
+import useAssessmentFocusMode from '../hooks/useAssessmentFocusMode'
 import {
   getCliAttempt,
   saveCliCommand,
@@ -15,7 +17,9 @@ import {
   getDevicePrompt,
 } from '../simulator/ciscoSimulator'
 
-export default function CliTerminal({ attemptId, onExit }) {
+export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
+  useAssessmentFocusMode()
+
   const [data, setData] = useState(null)
   const [state, setState] = useState(null)
   const [deviceStates, setDeviceStates] = useState({})
@@ -30,6 +34,16 @@ export default function CliTerminal({ attemptId, onExit }) {
   const endRef = useRef(null)
   const commandInputRef = useRef(null)
   const onExitRef = useRef(onExit)
+  const clientSession = useAssessmentClientSession({
+    assessmentType: 'cli',
+    attemptId,
+    enabled: !result,
+  })
+
+  const handleExit = useCallback(async (options) => {
+    await clientSession.release()
+    onExitRef.current?.(options)
+  }, [clientSession])
 
   useEffect(() => {
     onExitRef.current = onExit
@@ -68,8 +82,13 @@ export default function CliTerminal({ attemptId, onExit }) {
   })
 
   const loadAttempt = useCallback(async () => {
+    if (clientSession.status !== 'active') return
+
     try {
-      const attemptData = await getCliAttempt(attemptId)
+      const attemptData = await getCliAttempt(
+        attemptId,
+        clientSession.clientId,
+      )
       if (attemptData.attempt.status !== 'in_progress') {
         onExitRef.current?.({ completed: true })
         return
@@ -120,7 +139,7 @@ export default function CliTerminal({ attemptId, onExit }) {
     } catch (error) {
       setMessage(error.message)
     }
-  }, [attemptId])
+  }, [attemptId, clientSession.clientId, clientSession.status])
 
   useEffect(() => { void loadAttempt() }, [loadAttempt])
   useEffect(() => {
@@ -176,6 +195,7 @@ export default function CliTerminal({ attemptId, onExit }) {
     try {
       await saveCliCommand({
         attemptId,
+        clientId: clientSession.clientId,
         deviceId: activeDeviceId,
         command: entered,
         ...outcome,
@@ -203,19 +223,52 @@ export default function CliTerminal({ attemptId, onExit }) {
     if (busy || result) return
     setBusy(true)
     try {
-      setResult(await submitCliAttempt(attemptId))
+      const submissionResult = await submitCliAttempt(
+        attemptId,
+        clientSession.clientId,
+      )
+      setResult(submissionResult)
+      onSubmitted?.(submissionResult)
     } catch (error) {
       setMessage(error.message)
     } finally {
       setBusy(false)
     }
-  }, [attemptId, busy, result])
+  }, [attemptId, busy, clientSession.clientId, onSubmitted, result])
+
+  if (clientSession.status === 'claiming') {
+    return (
+      <main className="cli-focus-shell assessment-session-state">
+        <h1>Securing CLI session</h1>
+        <p>Confirming that this browser can continue the practical...</p>
+      </main>
+    )
+  }
+
+  if (clientSession.status === 'blocked') {
+    return (
+      <main className="cli-focus-shell assessment-session-state">
+        <h1>CLI practical open elsewhere</h1>
+        <p className="form-message form-message--error">
+          {clientSession.message}
+        </p>
+        <div className="assessment-session-state__actions">
+          <button type="button" onClick={clientSession.retry}>
+            Try again
+          </button>
+          <button type="button" className="secondary" onClick={() => onExit?.()}>
+            Return to practicals
+          </button>
+        </div>
+      </main>
+    )
+  }
 
   if (result) {
     return (
       <QuizResult
         result={result}
-        onReturn={() => onExit?.({ completed: true })}
+        onReturn={() => void handleExit({ completed: true })}
       />
     )
   }
@@ -299,7 +352,7 @@ export default function CliTerminal({ attemptId, onExit }) {
         <section className="cisco-terminal" aria-label="Cisco CLI terminal">
           <div className="cisco-terminal__titlebar">
             <span>{activeDevice.label} · {state.hostname} — Cisco IOS</span>
-            <button type="button" onClick={() => onExit?.()}>Exit</button>
+            <button type="button" onClick={() => void handleExit()}>Exit</button>
           </div>
           {devices.length > 1 && (
             <div

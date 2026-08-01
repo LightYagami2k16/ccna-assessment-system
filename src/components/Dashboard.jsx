@@ -38,6 +38,7 @@ export default function Dashboard({
   onProfileUpdated = () => {}
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [studentExamMode, setStudentExamMode] = useState(false);
   const role = profile?.role ?? 'student';
   const displayName =
     profile?.full_name ||
@@ -70,7 +71,14 @@ export default function Dashboard({
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={
+        studentExamMode
+          ? 'app-shell app-shell--exam-mode'
+          : 'app-shell'
+      }
+    >
+      {!studentExamMode && (
       <header className="topbar">
         <div className="topbar__brand">
           <span className="brand-mark" aria-hidden="true">
@@ -102,6 +110,8 @@ export default function Dashboard({
           <button
             className="topbar__account-settings"
             type="button"
+            aria-haspopup="dialog"
+            aria-controls="account-settings-dialog"
             aria-expanded={settingsOpen}
             onClick={() => setSettingsOpen((current) => !current)}
           >
@@ -117,9 +127,16 @@ export default function Dashboard({
           </button>
         </div>
       </header>
+      )}
 
-      <main className="dashboard">
-        {settingsOpen && (
+      <main
+        className={
+          studentExamMode
+            ? 'dashboard dashboard--exam-mode'
+            : 'dashboard'
+        }
+      >
+        {!studentExamMode && settingsOpen && (
           <AccountSettings
             user={user}
             profile={profile}
@@ -129,6 +146,7 @@ export default function Dashboard({
           />
         )}
 
+        {!studentExamMode && (
         <section className="welcome">
           <div>
             <span className="eyebrow">
@@ -170,8 +188,9 @@ export default function Dashboard({
             </strong>
           </div>
         </section>
+        )}
 
-        {!isAdministrator && (
+        {!studentExamMode && !isAdministrator && (
           <section className="dashboard-section">
             <div className="dashboard-section__heading">
               <div>
@@ -247,13 +266,19 @@ export default function Dashboard({
         )}
 
         {isStudent && (
-          <section className="dashboard-role-content">
+          <section
+            className="dashboard-role-content"
+            key="student-workspace"
+          >
             <Suspense
               fallback={
                 <WorkspaceLoading label="Loading student assessments..." />
               }
             >
-              <StudentQuizArea user={user} />
+              <StudentQuizArea
+                user={user}
+                onExamModeChange={setStudentExamMode}
+              />
             </Suspense>
           </section>
         )}

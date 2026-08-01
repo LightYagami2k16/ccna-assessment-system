@@ -9,6 +9,19 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
+function formatQuestionTime(totalSeconds) {
+  const safeSeconds = Math.max(0, Number(totalSeconds) || 0)
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`
+  }
+
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`
+}
+
 export default function InstructorAttemptReview({ attemptId, onBack }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -125,6 +138,12 @@ export default function InstructorAttemptReview({ attemptId, onBack }) {
                   {Number(question.pointsAwarded)} / {Number(question.points)} points
                 </strong>
               </header>
+              <div className="attempt-question__time">
+                <span>Time spent</span>
+                <strong>
+                  {formatQuestionTime(question.timeSpentSeconds)}
+                </strong>
+              </div>
               <p>{question.questionText}</p>
               <dl>
                 <div>

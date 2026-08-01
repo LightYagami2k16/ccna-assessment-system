@@ -97,11 +97,12 @@ export async function startCliAttempt(labId) {
   return data
 }
 
-export async function getCliAttempt(attemptId) {
+export async function getCliAttempt(attemptId, clientId) {
   await reconcileExpiredAssessmentAttempts()
 
-  const { data, error } = await supabase.rpc('get_cli_attempt_safe', {
+  const { data, error } = await supabase.rpc('get_cli_attempt_safe_v2', {
     p_attempt_id: attemptId,
+    p_client_id: clientId,
   })
   if (error) throw error
   const [labWithTopology] = await attachTopologyData([data.lab])
@@ -116,7 +117,7 @@ export async function getCliAttempt(attemptId) {
 }
 
 export async function saveCliCommand(payload) {
-  const { data, error } = await supabase.rpc('save_cli_device_command', {
+  const { data, error } = await supabase.rpc('save_cli_device_command_v2', {
     p_attempt_id: payload.attemptId,
     p_device_id: payload.deviceId ?? 'device-1',
     p_command: payload.command,
@@ -125,14 +126,16 @@ export async function saveCliCommand(payload) {
     p_accepted: payload.accepted,
     p_output: payload.output,
     p_state: payload.state,
+    p_client_id: payload.clientId,
   })
   if (error) throw error
   return data
 }
 
-export async function submitCliAttempt(attemptId) {
-  const { data, error } = await supabase.rpc('submit_cli_attempt', {
+export async function submitCliAttempt(attemptId, clientId) {
+  const { data, error } = await supabase.rpc('submit_cli_attempt_v2', {
     p_attempt_id: attemptId,
+    p_client_id: clientId,
   })
   if (error) throw error
   return data
@@ -147,6 +150,25 @@ export async function getStudentCliHistory(limit = 50) {
   )
   if (error) throw error
   return data ?? []
+}
+
+export async function getStudentCliArchiveStatuses() {
+  await reconcileExpiredAssessmentAttempts()
+
+  const { data, error } = await supabase.rpc(
+    'get_student_cli_archive_statuses',
+  )
+  if (error) throw error
+  return data ?? []
+}
+
+export async function setStudentCliLabArchived(labId, archived) {
+  const { data, error } = await supabase.rpc(
+    'set_student_cli_lab_archived',
+    { p_lab_id: labId, p_archived: archived },
+  )
+  if (error) throw error
+  return data
 }
 
 export async function getInstructorCliResults() {

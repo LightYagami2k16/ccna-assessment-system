@@ -335,6 +335,30 @@ export default function InstructorCliResults() {
     [filteredAttempts],
   )
 
+  const metrics = useMemo(() => {
+    const graded = attempts.filter(
+      (attempt) => attempt.passed != null,
+    )
+    const passed = graded.filter((attempt) => attempt.passed)
+    const average = graded.length
+      ? graded.reduce(
+          (sum, attempt) => sum + Number(attempt.percentage),
+          0,
+        ) / graded.length
+      : 0
+
+    return {
+      total: attempts.length,
+      active: attempts.filter(
+        (attempt) => attempt.status === 'in_progress',
+      ).length,
+      passRate: graded.length
+        ? (passed.length / graded.length) * 100
+        : 0,
+      average,
+    }
+  }, [attempts])
+
   function toggleAttempts(attemptIds, checked) {
     setSelectedAttemptIds((current) =>
       checked
@@ -512,6 +536,25 @@ export default function InstructorCliResults() {
             Refresh CLI results
           </button>
         </div>
+      </div>
+
+      <div className="results-metrics" aria-label="CLI practical results summary">
+        <article>
+          <span>Total attempts</span>
+          <strong>{metrics.total}</strong>
+        </article>
+        <article>
+          <span>Active now</span>
+          <strong>{metrics.active}</strong>
+        </article>
+        <article>
+          <span>Pass rate</span>
+          <strong>{metrics.passRate.toFixed(1)}%</strong>
+        </article>
+        <article>
+          <span>Average score</span>
+          <strong>{metrics.average.toFixed(1)}%</strong>
+        </article>
       </div>
 
       <div className="results-filters results-filters--with-class">

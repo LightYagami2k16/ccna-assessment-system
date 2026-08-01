@@ -60,16 +60,10 @@ export default function StudentRecentResults({ onRestored }) {
       groups.get(result.quizId).attempts.push(result)
     }
 
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        lifecycle: statusByQuiz[group.quizId],
-      }))
-      .filter(
-        (group) =>
-          group.lifecycle?.archived ||
-          group.lifecycle?.attemptsRemaining === 0,
-      )
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      lifecycle: statusByQuiz[group.quizId],
+    }))
   }, [archiveStatuses, results])
 
   async function handleRestore(quizId) {
@@ -92,8 +86,8 @@ export default function StudentRecentResults({ onRestored }) {
           <span className="eyebrow">MY PERFORMANCE</span>
           <h2>Quiz history</h2>
           <p>
-            Archived quizzes and quizzes with no attempts remaining are
-            grouped here. Restore an archived quiz whenever attempts remain.
+            Every completed quiz attempt appears here. Archiving only removes
+            a quiz from Available while attempts remain.
           </p>
         </div>
         <button
@@ -116,8 +110,7 @@ export default function StudentRecentResults({ onRestored }) {
         <div className="empty-state">
           <h3>No quizzes in history</h3>
           <p>
-            Complete a quiz and archive it, or use all available attempts,
-            to place it here.
+            Your quiz results will appear here after you complete an attempt.
           </p>
         </div>
       ) : (

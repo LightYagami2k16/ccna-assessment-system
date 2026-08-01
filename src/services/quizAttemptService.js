@@ -80,11 +80,12 @@ export async function startQuizAttempt(quizId) {
   return data
 }
 
-export async function getQuizAttempt(attemptId) {
+export async function getQuizAttempt(attemptId, clientId) {
   await reconcileExpiredAssessmentAttempts()
 
-  const { data, error } = await supabase.rpc('get_quiz_attempt_safe', {
+  const { data, error } = await supabase.rpc('get_quiz_attempt_safe_v2', {
     p_attempt_id: attemptId,
+    p_client_id: clientId,
   })
   if (error) throw error
 
@@ -118,6 +119,7 @@ export async function saveQuizAnswer({
   selectedOptionId = null,
   selectedOptionIds = [],
   answerText = null,
+  clientId,
 }) {
   const optionIds = selectedOptionIds.length
     ? selectedOptionIds
@@ -125,19 +127,40 @@ export async function saveQuizAnswer({
       ? [selectedOptionId]
       : []
 
-  const { data, error } = await supabase.rpc('save_quiz_answer_v2', {
+  const { data, error } = await supabase.rpc('save_quiz_answer_v3', {
     p_attempt_id: attemptId,
     p_attempt_question_id: attemptQuestionId,
     p_selected_option_ids: optionIds,
     p_answer_text: answerText,
+    p_client_id: clientId,
   })
   if (error) throw error
   return data
 }
 
-export async function submitQuizAttempt(attemptId) {
-  const { data, error } = await supabase.rpc('submit_quiz_attempt', {
+export async function recordQuizQuestionTime({
+  attemptId,
+  attemptQuestionId,
+  elapsedSeconds,
+  clientId,
+}) {
+  const { data, error } = await supabase.rpc(
+    'record_quiz_question_time',
+    {
+      p_attempt_id: attemptId,
+      p_attempt_question_id: attemptQuestionId,
+      p_elapsed_seconds: elapsedSeconds,
+      p_client_id: clientId,
+    },
+  )
+  if (error) throw error
+  return data
+}
+
+export async function submitQuizAttempt(attemptId, clientId) {
+  const { data, error } = await supabase.rpc('submit_quiz_attempt_v2', {
     p_attempt_id: attemptId,
+    p_client_id: clientId,
   })
   if (error) throw error
   return data

@@ -14,6 +14,9 @@ const InstructorCliLabBuilder = lazy(
   () => import('./InstructorCliLabBuilder'),
 )
 const InstructorCliResults = lazy(() => import('./InstructorCliResults'))
+const InstructorOverallResults = lazy(
+  () => import('./InstructorOverallResults'),
+)
 
 const instructorSections = new Set([
   'questions',
@@ -207,6 +210,7 @@ export default function InstructorWorkspace({ user }) {
             )}
             {activeSection === 'results' && (
               <div className="combined-results-workspace">
+                <InstructorOverallResults />
                 <InstructorResultsDashboard />
                 <InstructorCliResults />
               </div>
