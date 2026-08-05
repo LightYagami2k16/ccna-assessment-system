@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import QuestionEditor from './QuestionEditor'
 import QuestionList from './QuestionList'
 import InstructorModuleManager from './InstructorModuleManager'
+import QuestionBankPortability from './QuestionBankPortability'
 import { getInstructorQuestions } from '../services/questionService'
 
 export default function InstructorQuestionBank({ user }) {
@@ -43,6 +44,10 @@ export default function InstructorQuestionBank({ user }) {
           await loadQuestions()
         }}
         onCancel={() => setEditingQuestion(null)}
+      />
+      <QuestionBankPortability
+        questions={questions}
+        onImported={loadQuestions}
       />
       {loading ? (
         <section className="question-list">

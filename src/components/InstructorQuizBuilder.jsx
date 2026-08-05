@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import InstructorQuizList from './InstructorQuizList'
 import QuizEditor from './QuizEditor'
+import QuizTemplateManager from './QuizTemplateManager'
 import { getCourses, getModules } from '../services/questionService'
 import {
   getInstructorQuizzes,
+  getInstructorQuizTemplates,
   getQuizBuilderQuestions,
 } from '../services/quizBuilderService'
 
 export default function InstructorQuizBuilder() {
   const [quizzes, setQuizzes] = useState([])
   const [questions, setQuestions] = useState([])
+  const [templates, setTemplates] = useState([])
   const [courses, setCourses] = useState([])
   const [modules, setModules] = useState([])
   const [editingQuiz, setEditingQuiz] = useState(null)
@@ -21,14 +24,16 @@ export default function InstructorQuizBuilder() {
     try {
       setLoading(true)
       setMessage('')
-      const [quizData, questionData, courseData] = await Promise.all([
+      const [quizData, questionData, courseData, templateData] = await Promise.all([
         getInstructorQuizzes(),
         getQuizBuilderQuestions(),
         getCourses(),
+        getInstructorQuizTemplates(),
       ])
       setQuizzes(quizData)
       setQuestions(questionData)
       setCourses(courseData)
+      setTemplates(templateData)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -101,11 +106,14 @@ export default function InstructorQuizBuilder() {
       {loading ? (
         <p>Loading quizzes…</p>
       ) : (
-        <InstructorQuizList
-          quizzes={quizzes}
-          onEdit={(quiz) => void startEditing(quiz)}
-          onChanged={loadData}
-        />
+        <>
+          <QuizTemplateManager templates={templates} onChanged={loadData} />
+          <InstructorQuizList
+            quizzes={quizzes}
+            onEdit={(quiz) => void startEditing(quiz)}
+            onChanged={loadData}
+          />
+        </>
       )}
     </section>
   )

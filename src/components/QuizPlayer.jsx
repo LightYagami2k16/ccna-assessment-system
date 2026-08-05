@@ -147,12 +147,23 @@ export default function QuizPlayer({
     );
   }, []);
 
+  const handleIntegrityEnforcement = useCallback((outcome) => {
+    const reason = outcome?.reason === 'time_away_limit'
+      ? 'the allowed time away was exceeded'
+      : 'the configured incident limit was reached';
+    setIntegrityWarning(
+      `This quiz was automatically submitted because ${reason}.`
+    );
+    window.setTimeout(() => void handleExit(), 0);
+  }, [handleExit]);
+
   useExamIntegrityMonitor({
     attemptId,
     enabled:
       attemptData?.attempt?.status === 'in_progress' &&
       !result,
-    onIncident: handleIntegrityIncident
+    onIncident: handleIntegrityIncident,
+    onEnforcement: handleIntegrityEnforcement
   });
 
   const loadAttempt = useCallback(async () => {

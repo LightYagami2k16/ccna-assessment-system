@@ -5,9 +5,11 @@ import {
   createDeviceState,
   executeCiscoCommand,
   executePcCommand,
+  executeSshSessionCommand,
   executeTopologyCommand,
   normalizeInterface,
   parseVlanList,
+  requestDhcpLease,
 } from './ciscoSimulator.js'
 
 function runCommands(commands, hostname = 'Switch') {
@@ -557,6 +559,47 @@ test('configures SSH version 2 with RSA keys and local VTY login', () => {
   assert.match(showResult.output, /2048 bits/)
 })
 
+test('accepts common IOS SSH configuration and client command variants', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'hostname R2',
+      'ip domain-name school.example',
+      'username admin privilege 15 password class',
+      'crypto key generate rsa',
+      'line vty 0 15', 'login local', 'transport input ssh', 'exit',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  assert.equal(deviceStates.r2.rsaKeyBits, 2048)
+  assert.deepEqual(deviceStates.r2.users.admin, {
+    secret: 'class',
+    credentialType: 'password',
+    privilege: 15,
+  })
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ssh -v 2 -l admin 10.0.0.2',
+  })
+
+  assert.match(result.output, /Connection to 10\.0\.0\.2 established/)
+  assert.deepEqual(result.state.successfulSshConnections, [
+    'admin@10.0.0.2',
+  ])
+})
+
 test('keeps independent configuration state for multiple topology devices', () => {
   const routerState = runCommands([
     'enable',
@@ -795,6 +838,74 @@ test('records successful traceroute criteria across routed devices', () => {
   assert.deepEqual(result.state.successfulTraceroutes, ['10.0.23.2'])
 })
 
+test('opens SSH only when reachability and secure VTY configuration are valid', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'hostname R2',
+      'ip domain-name school.example',
+      'username admin secret class',
+      'crypto key generate rsa modulus 2048',
+      'ip ssh version 2',
+      'line vty 0 4', 'login local', 'transport input ssh', 'exit',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ssh -l admin 10.0.0.2',
+  })
+
+  assert.match(result.output, /Connection to 10\.0\.0\.2 established/)
+  assert.deepEqual(result.state.successfulSshConnections, [
+    'admin@10.0.0.2',
+  ])
+})
+
+test('refuses SSH when the target VTY lines do not use local login', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'ip domain-name school.example',
+      'username admin secret class',
+      'crypto key generate rsa modulus 2048',
+      'ip ssh version 2',
+      'line vty 0 4', 'password legacy', 'login',
+      'transport input ssh', 'exit',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ssh -l admin 10.0.0.2',
+  })
+
+  assert.match(result.output, /Connection refused/)
+  assert.deepEqual(result.state.successfulSshConnections, [])
+})
+
 test('configures a PC IPv4 address and default gateway from its prompt', () => {
   let state = createDeviceState('PC1', 'pc')
 
@@ -908,4 +1019,999 @@ test('supports PC-to-router ping through an active access switch', () => {
   assert.equal(result.accepted, true)
   assert.match(result.output, /Success rate is 100 percent/)
   assert.deepEqual(result.state.successfulPings, ['192.168.10.1'])
+})
+
+test('opens SSH from a PC to a Layer 2 switch management SVI', () => {
+  const pcState = configurePcState(createDeviceState('PC1', 'pc'), {
+    ipAddress: '192.168.0.2',
+    subnetMask: '255.255.255.0',
+    defaultGateway: '192.168.0.1',
+  }).state
+  const switchState = runCommands([
+    'enable', 'configure terminal',
+    'ip domain-name uc.edu.ph',
+    'username admin secret admin',
+    'crypto key generate rsa modulus 2048',
+    'ip ssh version 2',
+    'line vty 0 4', 'login local', 'transport input ssh', 'exit',
+    'interface vlan 1',
+    'ip address 192.168.0.1 255.255.255.0',
+    'no shutdown', 'exit',
+    'interface f0/1',
+    'switchport mode access',
+    'switchport access vlan 1',
+    'no shutdown', 'end',
+  ], 'Switch')
+  const deviceStates = { pc: pcState, switch: switchState }
+  const devices = [
+    { id: 'switch', type: 'switch', label: 'Switch' },
+    { id: 'pc', type: 'pc', label: 'PC' },
+  ]
+  const topology = {
+    links: [{
+      id: 'pc-switch',
+      fromDeviceId: 'pc',
+      fromInterface: 'Ethernet0',
+      toDeviceId: 'switch',
+      toInterface: 'FastEthernet0/1',
+    }],
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'pc',
+    topology,
+    rawCommand: 'ssh admin@192.168.0.1',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.match(result.output, /Connection to 192\.168\.0\.1 established/)
+  assert.deepEqual(result.state.successfulSshConnections, [
+    'admin@192.168.0.1',
+  ])
+
+  deviceStates.pc = result.state
+  let remoteResult = executeSshSessionCommand({
+    deviceStates,
+    activeDeviceId: 'pc',
+    rawCommand: 'configure terminal',
+  })
+  assert.equal(remoteResult.accepted, true)
+  assert.equal(remoteResult.state.sshSession.remoteMode, 'global_config')
+  deviceStates.pc = remoteResult.state
+  deviceStates.switch = remoteResult.destinationState
+
+  remoteResult = executeSshSessionCommand({
+    deviceStates,
+    activeDeviceId: 'pc',
+    rawCommand: 'hostname SW1',
+  })
+  assert.equal(remoteResult.destinationState.hostname, 'SW1')
+  assert.equal(remoteResult.state.sshSession.remoteMode, 'global_config')
+  deviceStates.pc = remoteResult.state
+  deviceStates.switch = remoteResult.destinationState
+
+  remoteResult = executeSshSessionCommand({
+    deviceStates,
+    activeDeviceId: 'pc',
+    rawCommand: 'end',
+  })
+  assert.equal(remoteResult.state.sshSession.remoteMode, 'privileged_exec')
+  deviceStates.pc = remoteResult.state
+  deviceStates.switch = remoteResult.destinationState
+
+  remoteResult = executeSshSessionCommand({
+    deviceStates,
+    activeDeviceId: 'pc',
+    rawCommand: 'exit',
+  })
+  assert.equal(remoteResult.sessionClosed, true)
+  assert.equal(remoteResult.state.sshSession, undefined)
+  assert.match(remoteResult.output, /Connection to 192\.168\.0\.1 closed/)
+})
+
+function createAccessSwitch(hostname, accessInterface, accessVlan, trunkInterface, allowedVlans) {
+  return runCommands([
+    'enable',
+    'configure terminal',
+    `vlan ${accessVlan}`,
+    'exit',
+    `interface ${accessInterface}`,
+    'switchport mode access',
+    `switchport access vlan ${accessVlan}`,
+    'no shutdown',
+    'exit',
+    `interface ${trunkInterface}`,
+    'switchport mode trunk',
+    `switchport trunk allowed vlan ${allowedVlans}`,
+    'no shutdown',
+    'end',
+  ], hostname)
+}
+
+function createConfiguredPc(hostname, ipAddress) {
+  return configurePcState(createDeviceState(hostname, 'pc'), {
+    ipAddress,
+    subnetMask: '255.255.255.0',
+  }).state
+}
+
+function twoSwitchPcTopology() {
+  return {
+    devices: [
+      { id: 'pc1', type: 'pc', label: 'PC1' },
+      { id: 'sw1', type: 'switch', label: 'SW1' },
+      { id: 'sw2', type: 'switch', label: 'SW2' },
+      { id: 'pc2', type: 'pc', label: 'PC2' },
+    ],
+    topology: {
+      links: [
+        {
+          id: 'pc1-sw1',
+          fromDeviceId: 'pc1',
+          fromInterface: 'Ethernet0',
+          toDeviceId: 'sw1',
+          toInterface: 'FastEthernet0/1',
+        },
+        {
+          id: 'sw1-sw2',
+          fromDeviceId: 'sw1',
+          fromInterface: 'GigabitEthernet0/1',
+          toDeviceId: 'sw2',
+          toInterface: 'GigabitEthernet0/1',
+        },
+        {
+          id: 'sw2-pc2',
+          fromDeviceId: 'sw2',
+          fromInterface: 'FastEthernet0/1',
+          toDeviceId: 'pc2',
+          toInterface: 'Ethernet0',
+        },
+      ],
+    },
+  }
+}
+
+test('forwards same-VLAN PC traffic across an allowed switch trunk', () => {
+  const fixture = twoSwitchPcTopology()
+  const deviceStates = {
+    pc1: createConfiguredPc('PC1', '192.168.10.10'),
+    sw1: createAccessSwitch('SW1', 'f0/1', 10, 'g0/1', '10'),
+    sw2: createAccessSwitch('SW2', 'f0/1', 10, 'g0/1', '10'),
+    pc2: createConfiguredPc('PC2', '192.168.10.20'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'pc1',
+    topology: fixture.topology,
+    rawCommand: 'ping 192.168.10.20',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+test('blocks PC traffic when access VLAN membership differs', () => {
+  const fixture = twoSwitchPcTopology()
+  const deviceStates = {
+    pc1: createConfiguredPc('PC1', '192.168.10.10'),
+    sw1: createAccessSwitch('SW1', 'f0/1', 10, 'g0/1', '10,20'),
+    sw2: createAccessSwitch('SW2', 'f0/1', 20, 'g0/1', '10,20'),
+    pc2: createConfiguredPc('PC2', '192.168.10.20'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'pc1',
+    topology: fixture.topology,
+    rawCommand: 'ping 192.168.10.20',
+  })
+
+  assert.match(result.output, /Success rate is 0 percent/)
+})
+
+test('blocks a VLAN excluded from either side of a switch trunk', () => {
+  const fixture = twoSwitchPcTopology()
+  const deviceStates = {
+    pc1: createConfiguredPc('PC1', '192.168.10.10'),
+    sw1: createAccessSwitch('SW1', 'f0/1', 10, 'g0/1', '20'),
+    sw2: createAccessSwitch('SW2', 'f0/1', 10, 'g0/1', '10'),
+    pc2: createConfiguredPc('PC2', '192.168.10.20'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'pc1',
+    topology: fixture.topology,
+    rawCommand: 'ping 192.168.10.20',
+  })
+
+  assert.match(result.output, /Success rate is 0 percent/)
+})
+
+test('maps untagged trunk traffic through matching native VLANs', () => {
+  const fixture = twoSwitchPcTopology()
+  const deviceStates = {
+    pc1: createConfiguredPc('PC1', '192.168.99.10'),
+    sw1: runCommands([
+      'enable', 'configure terminal',
+      'interface f0/1', 'switchport mode access',
+      'switchport access vlan 99', 'no shutdown', 'exit',
+      'interface g0/1', 'switchport mode trunk',
+      'switchport trunk native vlan 99',
+      'switchport trunk allowed vlan 99', 'no shutdown', 'end',
+    ], 'SW1'),
+    sw2: runCommands([
+      'enable', 'configure terminal',
+      'interface f0/1', 'switchport mode access',
+      'switchport access vlan 99', 'no shutdown', 'exit',
+      'interface g0/1', 'switchport mode trunk',
+      'switchport trunk native vlan 99',
+      'switchport trunk allowed vlan 99', 'no shutdown', 'end',
+    ], 'SW2'),
+    pc2: createConfiguredPc('PC2', '192.168.99.20'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'pc1',
+    topology: fixture.topology,
+    rawCommand: 'ping 192.168.99.20',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+function etherchannelSwitch(hostname, mode, secondMode = mode) {
+  return runCommands([
+    'enable', 'configure terminal',
+    'vlan 10', 'exit',
+    'interface f0/1', 'switchport mode access',
+    'switchport access vlan 10', 'no shutdown', 'exit',
+    'interface g0/1', `channel-group 1 mode ${mode}`,
+    'no shutdown', 'exit',
+    'interface g0/2', `channel-group 1 mode ${secondMode}`,
+    'no shutdown', 'exit',
+    'interface port-channel 1', 'switchport mode trunk',
+    'switchport trunk allowed vlan 10', 'no shutdown', 'end',
+  ], hostname)
+}
+
+function etherchannelTopology() {
+  const fixture = twoSwitchPcTopology()
+  fixture.topology.links.splice(1, 1,
+    {
+      id: 'sw1-sw2-member-1', fromDeviceId: 'sw1',
+      fromInterface: 'GigabitEthernet0/1', toDeviceId: 'sw2',
+      toInterface: 'GigabitEthernet0/1',
+    },
+    {
+      id: 'sw1-sw2-member-2', fromDeviceId: 'sw1',
+      fromInterface: 'GigabitEthernet0/2', toDeviceId: 'sw2',
+      toInterface: 'GigabitEthernet0/2',
+    },
+  )
+  return fixture
+}
+
+function pingAcrossEtherchannel(sw1, sw2) {
+  const fixture = etherchannelTopology()
+  return executeTopologyCommand({
+    deviceStates: {
+      pc1: createConfiguredPc('PC1', '192.168.10.10'),
+      sw1,
+      sw2,
+      pc2: createConfiguredPc('PC2', '192.168.10.20'),
+    },
+    devices: fixture.devices,
+    activeDeviceId: 'pc1',
+    topology: fixture.topology,
+    rawCommand: 'ping 192.168.10.20',
+  })
+}
+
+test('forwards a VLAN through a negotiated LACP EtherChannel', () => {
+  const result = pingAcrossEtherchannel(
+    etherchannelSwitch('SW1', 'active'),
+    etherchannelSwitch('SW2', 'passive'),
+  )
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+test('keeps an EtherChannel forwarding when one member link fails', () => {
+  const sw1 = etherchannelSwitch('SW1', 'active')
+  sw1.interfaces['GigabitEthernet0/1'].shutdown = true
+  const result = pingAcrossEtherchannel(
+    sw1,
+    etherchannelSwitch('SW2', 'passive'),
+  )
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+test('does not form an LACP EtherChannel with two passive endpoints', () => {
+  const result = pingAcrossEtherchannel(
+    etherchannelSwitch('SW1', 'passive'),
+    etherchannelSwitch('SW2', 'passive'),
+  )
+
+  assert.match(result.output, /Success rate is 0 percent/)
+})
+
+test('does not form an EtherChannel across mismatched protocols', () => {
+  const result = pingAcrossEtherchannel(
+    etherchannelSwitch('SW1', 'active'),
+    etherchannelSwitch('SW2', 'desirable'),
+  )
+
+  assert.match(result.output, /Success rate is 0 percent/)
+})
+
+function stpTriangleSwitch(hostname, root = false) {
+  return runCommands([
+    'enable', 'configure terminal',
+    'spanning-tree mode rapid-pvst',
+    ...(root ? ['spanning-tree vlan 10 root primary'] : []),
+    'vlan 10', 'exit',
+    'interface f0/1', 'switchport mode access',
+    'switchport access vlan 10', 'no shutdown', 'exit',
+    'interface g0/1', 'switchport mode trunk',
+    'switchport trunk allowed vlan 10', 'no shutdown', 'exit',
+    'interface g0/2', 'switchport mode trunk',
+    'switchport trunk allowed vlan 10', 'no shutdown', 'end',
+  ], hostname)
+}
+
+function stpTriangleFixture() {
+  return {
+    deviceStates: {
+      pc1: createConfiguredPc('PC1', '192.168.10.10'),
+      sw1: stpTriangleSwitch('SW1', true),
+      sw2: stpTriangleSwitch('SW2'),
+      sw3: stpTriangleSwitch('SW3'),
+      pc2: createConfiguredPc('PC2', '192.168.10.20'),
+    },
+    devices: [
+      { id: 'pc1', type: 'pc', label: 'PC1' },
+      { id: 'sw1', type: 'switch', label: 'SW1' },
+      { id: 'sw2', type: 'switch', label: 'SW2' },
+      { id: 'sw3', type: 'switch', label: 'SW3' },
+      { id: 'pc2', type: 'pc', label: 'PC2' },
+    ],
+    topology: {
+      links: [
+        {
+          id: 'pc1-sw2', fromDeviceId: 'pc1',
+          fromInterface: 'Ethernet0', toDeviceId: 'sw2',
+          toInterface: 'FastEthernet0/1',
+        },
+        {
+          id: 'sw1-sw2', fromDeviceId: 'sw1',
+          fromInterface: 'GigabitEthernet0/1', toDeviceId: 'sw2',
+          toInterface: 'GigabitEthernet0/1',
+        },
+        {
+          id: 'sw1-sw3', fromDeviceId: 'sw1',
+          fromInterface: 'GigabitEthernet0/2', toDeviceId: 'sw3',
+          toInterface: 'GigabitEthernet0/1',
+        },
+        {
+          id: 'sw2-sw3', fromDeviceId: 'sw2',
+          fromInterface: 'GigabitEthernet0/2', toDeviceId: 'sw3',
+          toInterface: 'GigabitEthernet0/2',
+        },
+        {
+          id: 'sw3-pc2', fromDeviceId: 'sw3',
+          fromInterface: 'FastEthernet0/1', toDeviceId: 'pc2',
+          toInterface: 'Ethernet0',
+        },
+      ],
+    },
+  }
+}
+
+test('blocks a redundant VLAN path according to the STP root tree', () => {
+  const fixture = stpTriangleFixture()
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'pc1',
+    rawCommand: 'tracert 192.168.10.20',
+  })
+
+  assert.match(result.output, /SW1/)
+  assert.match(result.output, /Trace complete/)
+})
+
+test('reconverges STP onto a backup link after a forwarding link fails', () => {
+  const fixture = stpTriangleFixture()
+  fixture.deviceStates.sw1.interfaces['GigabitEthernet0/2'].shutdown = true
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'pc1',
+    rawCommand: 'ping 192.168.10.20',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+test('routes between access VLANs through router-on-a-stick subinterfaces', () => {
+  const deviceStates = {
+    pc10: configurePcState(createDeviceState('PC10', 'pc'), {
+      ipAddress: '192.168.10.10',
+      subnetMask: '255.255.255.0',
+      defaultGateway: '192.168.10.1',
+    }).state,
+    sw1: runCommands([
+      'enable', 'configure terminal',
+      'interface f0/1', 'switchport mode access',
+      'switchport access vlan 10', 'no shutdown', 'exit',
+      'interface f0/2', 'switchport mode access',
+      'switchport access vlan 20', 'no shutdown', 'exit',
+      'interface g0/1', 'switchport mode trunk',
+      'switchport trunk allowed vlan 10,20', 'no shutdown', 'end',
+    ], 'SW1'),
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0.10', 'encapsulation dot1q 10',
+      'ip address 192.168.10.1 255.255.255.0', 'no shutdown', 'exit',
+      'interface g0/0.20', 'encapsulation dot1q 20',
+      'ip address 192.168.20.1 255.255.255.0', 'no shutdown', 'end',
+    ], 'R1'),
+    pc20: configurePcState(createDeviceState('PC20', 'pc'), {
+      ipAddress: '192.168.20.20',
+      subnetMask: '255.255.255.0',
+      defaultGateway: '192.168.20.1',
+    }).state,
+  }
+  const devices = [
+    { id: 'pc10', type: 'pc', label: 'PC10' },
+    { id: 'sw1', type: 'switch', label: 'SW1' },
+    { id: 'r1', type: 'router', label: 'R1' },
+    { id: 'pc20', type: 'pc', label: 'PC20' },
+  ]
+  const topology = {
+    links: [
+      {
+        id: 'pc10-sw1', fromDeviceId: 'pc10',
+        fromInterface: 'Ethernet0', toDeviceId: 'sw1',
+        toInterface: 'FastEthernet0/1',
+      },
+      {
+        id: 'sw1-r1', fromDeviceId: 'sw1',
+        fromInterface: 'GigabitEthernet0/1', toDeviceId: 'r1',
+        toInterface: 'GigabitEthernet0/0',
+      },
+      {
+        id: 'sw1-pc20', fromDeviceId: 'sw1',
+        fromInterface: 'FastEthernet0/2', toDeviceId: 'pc20',
+        toInterface: 'Ethernet0',
+      },
+    ],
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'pc10',
+    topology,
+    rawCommand: 'ping 192.168.20.20',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+function directRouterTopology() {
+  return {
+    devices: [
+      { id: 'r1', type: 'router', label: 'R1' },
+      { id: 'r2', type: 'router', label: 'R2' },
+    ],
+    topology: {
+      links: [{
+        id: 'r1-r2',
+        fromDeviceId: 'r1',
+        fromInterface: 'GigabitEthernet0/0',
+        toDeviceId: 'r2',
+        toInterface: 'GigabitEthernet0/0',
+      }],
+    },
+  }
+}
+
+test('learns remote topology networks through single-area OSPF neighbors', () => {
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.12.1 255.255.255.252',
+      'no shutdown', 'exit',
+      'router ospf 1',
+      'network 0.0.0.0 255.255.255.255 area 0',
+      'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.12.2 255.255.255.252',
+      'no shutdown', 'exit',
+      'interface g0/1', 'ip address 10.0.23.1 255.255.255.252',
+      'no shutdown', 'exit',
+      'router ospf 1',
+      'network 0.0.0.0 255.255.255.255 area 0',
+      'end',
+    ], 'R2'),
+    r3: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.23.2 255.255.255.252',
+      'no shutdown', 'exit',
+      'interface g0/1', 'ip address 192.168.30.1 255.255.255.0',
+      'no shutdown', 'exit',
+      'router ospf 1',
+      'network 0.0.0.0 255.255.255.255 area 0',
+      'end',
+    ], 'R3'),
+  }
+  const devices = [
+    { id: 'r1', type: 'router', label: 'R1' },
+    { id: 'r2', type: 'router', label: 'R2' },
+    { id: 'r3', type: 'router', label: 'R3' },
+  ]
+  const topology = {
+    links: [
+      {
+        id: 'r1-r2',
+        fromDeviceId: 'r1', fromInterface: 'GigabitEthernet0/0',
+        toDeviceId: 'r2', toInterface: 'GigabitEthernet0/0',
+      },
+      {
+        id: 'r2-r3',
+        fromDeviceId: 'r2', fromInterface: 'GigabitEthernet0/1',
+        toDeviceId: 'r3', toInterface: 'GigabitEthernet0/0',
+      },
+    ],
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'ping 192.168.30.1',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.match(result.output, /Success rate is 100 percent/)
+  assert.deepEqual(result.state.successfulPings, ['192.168.30.1'])
+
+  const routeOutput = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'show ip route ospf',
+  })
+  assert.match(routeOutput.output, /O\s+192\.168\.30\.0\/24/)
+  assert.match(routeOutput.output, /via 10\.0\.12\.2/)
+
+  const neighborOutput = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'show ip ospf neighbor',
+  })
+  assert.match(neighborOutput.output, /FULL\/DR/)
+  assert.match(neighborOutput.output, /10\.0\.12\.2/)
+})
+
+test('forms OSPF neighbors across a shared switched access VLAN', () => {
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.10.10.1 255.255.255.0',
+      'no shutdown', 'exit',
+      'router ospf 10',
+      'network 10.10.10.0 0.0.0.255 area 0',
+      'end',
+    ], 'R1'),
+    sw1: runCommands([
+      'enable', 'configure terminal',
+      'vlan 10', 'exit',
+      'interface f0/1', 'switchport mode access',
+      'switchport access vlan 10', 'no shutdown', 'exit',
+      'interface f0/2', 'switchport mode access',
+      'switchport access vlan 10', 'no shutdown', 'end',
+    ], 'SW1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.10.10.2 255.255.255.0',
+      'no shutdown', 'exit',
+      'interface g0/1', 'ip address 192.168.50.1 255.255.255.0',
+      'no shutdown', 'exit',
+      'router ospf 20',
+      'network 10.10.10.0 0.0.0.255 area 0',
+      'network 192.168.50.0 0.0.0.255 area 0',
+      'end',
+    ], 'R2'),
+  }
+  const devices = [
+    { id: 'r1', type: 'router', label: 'R1' },
+    { id: 'sw1', type: 'switch', label: 'SW1' },
+    { id: 'r2', type: 'router', label: 'R2' },
+  ]
+  const topology = {
+    links: [
+      {
+        id: 'r1-sw1',
+        fromDeviceId: 'r1', fromInterface: 'GigabitEthernet0/0',
+        toDeviceId: 'sw1', toInterface: 'FastEthernet0/1',
+      },
+      {
+        id: 'sw1-r2',
+        fromDeviceId: 'sw1', fromInterface: 'FastEthernet0/2',
+        toDeviceId: 'r2', toInterface: 'GigabitEthernet0/0',
+      },
+    ],
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'ping 192.168.50.1',
+  })
+  assert.match(result.output, /Success rate is 100 percent/)
+
+  const neighbors = executeTopologyCommand({
+    deviceStates,
+    devices,
+    activeDeviceId: 'r1',
+    topology,
+    rawCommand: 'show ip ospf neighbor',
+  })
+  assert.match(neighbors.output, /10\.10\.10\.2/)
+})
+
+test('enforces a standard ACL applied inbound on a topology interface', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'access-list 10 deny host 10.0.0.1',
+      'access-list 10 permit any',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'ip access-group 10 in', 'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ping 10.0.0.2',
+  })
+
+  assert.match(result.output, /Success rate is 0 percent/)
+  assert.deepEqual(result.state.successfulPings, [])
+})
+
+test('enforces an extended ICMP ACL applied outbound', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'ip access-list extended BLOCK-PING',
+      'deny icmp host 10.0.0.1 host 10.0.0.2',
+      'permit ip any any', 'exit',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'ip access-group BLOCK-PING out', 'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  const blocked = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ping 10.0.0.2',
+  })
+  assert.match(blocked.output, /Success rate is 0 percent/)
+
+  deviceStates.r1 = runCommands([
+    'enable', 'configure terminal',
+    'ip access-list extended ALLOW-PING',
+    'permit icmp host 10.0.0.1 host 10.0.0.2', 'exit',
+    'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+    'ip access-group ALLOW-PING out', 'no shutdown', 'end',
+  ], 'R1')
+  const permitted = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ping 10.0.0.2',
+  })
+  assert.match(permitted.output, /Success rate is 100 percent/)
+})
+
+test('applies the ACL implicit deny when no rule matches', () => {
+  const fixture = directRouterTopology()
+  const deviceStates = {
+    r1: runCommands([
+      'enable', 'configure terminal',
+      'interface g0/0', 'ip address 10.0.0.1 255.255.255.252',
+      'no shutdown', 'end',
+    ], 'R1'),
+    r2: runCommands([
+      'enable', 'configure terminal',
+      'access-list 10 permit host 192.0.2.10',
+      'interface g0/0', 'ip address 10.0.0.2 255.255.255.252',
+      'ip access-group 10 in', 'no shutdown', 'end',
+    ], 'R2'),
+  }
+
+  const result = executeTopologyCommand({
+    deviceStates,
+    devices: fixture.devices,
+    activeDeviceId: 'r1',
+    topology: fixture.topology,
+    rawCommand: 'ping 10.0.0.2',
+  })
+
+  assert.match(result.output, /Success rate is 0 percent/)
+})
+
+function natTopologyFixture(natCommands = []) {
+  return {
+    deviceStates: {
+      insidePc: configurePcState(createDeviceState('INSIDE-PC', 'pc'), {
+        ipAddress: '192.168.10.10',
+        subnetMask: '255.255.255.0',
+        defaultGateway: '192.168.10.1',
+      }).state,
+      edge: runCommands([
+        'enable', 'configure terminal',
+        'interface g0/0', 'ip address 192.168.10.1 255.255.255.0',
+        'ip nat inside', 'no shutdown', 'exit',
+        'interface g0/1', 'ip address 203.0.113.1 255.255.255.0',
+        'ip nat outside', 'no shutdown', 'exit',
+        ...natCommands,
+        'end',
+      ], 'EDGE'),
+      outsidePc: configurePcState(createDeviceState('OUTSIDE-PC', 'pc'), {
+        ipAddress: '203.0.113.2',
+        subnetMask: '255.255.255.0',
+        defaultGateway: '203.0.113.1',
+      }).state,
+    },
+    devices: [
+      { id: 'insidePc', type: 'pc', label: 'Inside PC' },
+      { id: 'edge', type: 'router', label: 'Edge router' },
+      { id: 'outsidePc', type: 'pc', label: 'Outside PC' },
+    ],
+    topology: {
+      links: [
+        {
+          id: 'inside-edge', fromDeviceId: 'insidePc',
+          fromInterface: 'Ethernet0', toDeviceId: 'edge',
+          toInterface: 'GigabitEthernet0/0',
+        },
+        {
+          id: 'edge-outside', fromDeviceId: 'edge',
+          fromInterface: 'GigabitEthernet0/1', toDeviceId: 'outsidePc',
+          toInterface: 'Ethernet0',
+        },
+      ],
+    },
+  }
+}
+
+test('translates and returns inside traffic through interface PAT', () => {
+  const fixture = natTopologyFixture([
+    'access-list 10 permit 192.168.10.0 0.0.0.255',
+    'ip nat inside source list 10 interface g0/1 overload',
+  ])
+
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'insidePc',
+    rawCommand: 'ping 203.0.113.2',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+  assert.deepEqual(result.state.successfulPings, ['203.0.113.2'])
+})
+
+test('blocks inside-to-outside traffic without a matching NAT rule', () => {
+  const fixture = natTopologyFixture([
+    'access-list 10 permit 192.168.20.0 0.0.0.255',
+    'ip nat inside source list 10 interface g0/1 overload',
+  ])
+
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'insidePc',
+    rawCommand: 'ping 203.0.113.2',
+  })
+
+  assert.match(result.output, /Success rate is 0 percent/)
+  assert.deepEqual(result.state.successfulPings, [])
+})
+
+test('supports bidirectional return handling for a static NAT mapping', () => {
+  const fixture = natTopologyFixture([
+    'ip nat inside source static 192.168.10.10 203.0.113.10',
+  ])
+
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'insidePc',
+    rawCommand: 'ping 203.0.113.2',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+test('allows outside hosts to reach an inside host through its static global address', () => {
+  const fixture = natTopologyFixture([
+    'ip nat inside source static 192.168.10.10 203.0.113.10',
+  ])
+
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'outsidePc',
+    rawCommand: 'ping 203.0.113.10',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+  assert.deepEqual(result.state.successfulPings, ['203.0.113.10'])
+})
+
+test('translates matching inside traffic through a configured NAT pool', () => {
+  const fixture = natTopologyFixture([
+    'access-list 10 permit 192.168.10.0 0.0.0.255',
+    'ip nat pool PUBLIC 203.0.113.10 203.0.113.20 netmask 255.255.255.0',
+    'ip nat inside source list 10 pool PUBLIC overload',
+  ])
+
+  const result = executeTopologyCommand({
+    ...fixture,
+    activeDeviceId: 'insidePc',
+    rawCommand: 'ping 203.0.113.2',
+  })
+
+  assert.match(result.output, /Success rate is 100 percent/)
+})
+
+function dhcpTopologyFixture() {
+  return {
+    deviceStates: {
+      pc1: createDeviceState('PC1', 'pc'),
+      pc2: createDeviceState('PC2', 'pc'),
+      sw1: runCommands([
+        'enable', 'configure terminal',
+        'interface f0/1', 'no shutdown', 'exit',
+        'interface f0/2', 'no shutdown', 'exit',
+        'interface f0/24', 'no shutdown', 'end',
+      ], 'SW1'),
+      r1: runCommands([
+        'enable', 'configure terminal',
+        'ip dhcp excluded-address 192.168.10.1 192.168.10.9',
+        'ip dhcp pool STUDENTS',
+        'network 192.168.10.0 255.255.255.0',
+        'default-router 192.168.10.1',
+        'dns-server 8.8.8.8 1.1.1.1',
+        'exit',
+        'interface g0/0', 'ip address 192.168.10.1 255.255.255.0',
+        'no shutdown', 'end',
+      ], 'R1'),
+    },
+    devices: [
+      { id: 'pc1', type: 'pc', label: 'PC1' },
+      { id: 'pc2', type: 'pc', label: 'PC2' },
+      { id: 'sw1', type: 'switch', label: 'SW1' },
+      { id: 'r1', type: 'router', label: 'R1' },
+    ],
+    topology: {
+      links: [
+        {
+          id: 'pc1-sw1', fromDeviceId: 'pc1',
+          fromInterface: 'Ethernet0', toDeviceId: 'sw1',
+          toInterface: 'FastEthernet0/1',
+        },
+        {
+          id: 'pc2-sw1', fromDeviceId: 'pc2',
+          fromInterface: 'Ethernet0', toDeviceId: 'sw1',
+          toInterface: 'FastEthernet0/2',
+        },
+        {
+          id: 'sw1-r1', fromDeviceId: 'sw1',
+          fromInterface: 'FastEthernet0/24', toDeviceId: 'r1',
+          toInterface: 'GigabitEthernet0/0',
+        },
+      ],
+    },
+  }
+}
+
+test('assigns PC addressing, gateway, and DNS from a reachable DHCP pool', () => {
+  const fixture = dhcpTopologyFixture()
+  const result = requestDhcpLease({
+    ...fixture,
+    clientDeviceId: 'pc1',
+  })
+
+  assert.equal(result.accepted, true)
+  assert.equal(result.state.interfaces.Ethernet0.ipAddress, '192.168.10.10')
+  assert.equal(result.state.interfaces.Ethernet0.subnetMask, '255.255.255.0')
+  assert.equal(result.state.defaultGateway, '192.168.10.1')
+  assert.deepEqual(result.state.dnsServers, ['8.8.8.8', '1.1.1.1'])
+  assert.equal(result.state.dhcpEnabled, true)
+  assert.equal(result.state.dhcpPoolName, 'STUDENTS')
+  assert.equal(result.state.dhcpServerId, 'r1')
+})
+
+test('does not assign the same DHCP lease to two PCs', () => {
+  const fixture = dhcpTopologyFixture()
+  const first = requestDhcpLease({
+    ...fixture,
+    clientDeviceId: 'pc1',
+  })
+  fixture.deviceStates.pc1 = first.state
+  const second = requestDhcpLease({
+    ...fixture,
+    clientDeviceId: 'pc2',
+  })
+
+  assert.equal(first.state.interfaces.Ethernet0.ipAddress, '192.168.10.10')
+  assert.equal(second.state.interfaces.Ethernet0.ipAddress, '192.168.10.11')
+})
+
+test('does not cross a router to discover a remote DHCP pool', () => {
+  const fixture = dhcpTopologyFixture()
+  fixture.topology.links = fixture.topology.links.filter(
+    (link) => link.id !== 'sw1-r1',
+  )
+
+  const result = requestDhcpLease({
+    ...fixture,
+    clientDeviceId: 'pc1',
+  })
+
+  assert.equal(result.accepted, false)
+  assert.match(result.error, /No reachable DHCP server/i)
+})
+
+test('reports an exhausted DHCP pool without changing the PC', () => {
+  const fixture = dhcpTopologyFixture()
+  fixture.deviceStates.r1.dhcpPools.STUDENTS.network = '192.168.10.0'
+  fixture.deviceStates.r1.dhcpPools.STUDENTS.subnetMask = '255.255.255.252'
+  fixture.deviceStates.r1.dhcpExcludedRanges = [{
+    startIp: '192.168.10.1',
+    endIp: '192.168.10.2',
+  }]
+
+  const result = requestDhcpLease({
+    ...fixture,
+    clientDeviceId: 'pc1',
+  })
+
+  assert.equal(result.accepted, false)
+  assert.match(result.error, /no available addresses/i)
 })

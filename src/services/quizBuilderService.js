@@ -60,6 +60,66 @@ export async function getQuizBuilderQuestions() {
   return data ?? []
 }
 
+export async function getInstructorQuizTemplates() {
+  const { data, error } = await supabase
+    .from('quiz_templates')
+    .select(`
+      id,
+      source_quiz_id,
+      course_id,
+      module_id,
+      name,
+      template_data,
+      created_at,
+      courses (id, code, title),
+      modules (id, code, title)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data ?? []
+}
+
+export async function duplicateInstructorQuiz(quizId, title = null) {
+  const { data, error } = await supabase.rpc(
+    'duplicate_instructor_quiz',
+    { p_quiz_id: quizId, p_title: title },
+  )
+
+  if (error) throw error
+  return data
+}
+
+export async function saveQuizAsTemplate(quizId, name = null) {
+  const { data, error } = await supabase.rpc(
+    'save_instructor_quiz_template',
+    { p_quiz_id: quizId, p_name: name },
+  )
+
+  if (error) throw error
+  return data
+}
+
+export async function createQuizFromTemplate(templateId, title = null) {
+  const { data, error } = await supabase.rpc(
+    'create_instructor_quiz_from_template',
+    { p_template_id: templateId, p_title: title },
+  )
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteQuizTemplate(templateId) {
+  const { data, error } = await supabase.rpc(
+    'delete_instructor_quiz_template',
+    { p_template_id: templateId },
+  )
+
+  if (error) throw error
+  return data
+}
+
 export async function saveInstructorQuiz(payload) {
   const { data, error } = await supabase.rpc('save_instructor_quiz', {
     p_payload: payload,

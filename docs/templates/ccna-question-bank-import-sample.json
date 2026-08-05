@@ -1,0 +1,71 @@
+{
+  "format": "ccna-assessment-question-bank",
+  "version": 1,
+  "exportedAt": "2026-08-05T00:00:00.000Z",
+  "questions": [
+    {
+      "courseCode": "ITN",
+      "moduleCode": "ITN-02",
+      "title": "Enter privileged EXEC mode",
+      "questionText": "Which Cisco IOS command enters privileged EXEC mode?",
+      "explanation": "The enable command changes the device from user EXEC mode to privileged EXEC mode.",
+      "questionType": "multiple_choice",
+      "points": 1,
+      "difficulty": "beginner",
+      "sourceStatus": "draft",
+      "options": [
+        { "text": "enable", "isCorrect": true },
+        { "text": "configure terminal", "isCorrect": false },
+        { "text": "login", "isCorrect": false },
+        { "text": "privileged", "isCorrect": false }
+      ]
+    },
+    {
+      "courseCode": "SRWE",
+      "moduleCode": "SRWE-03",
+      "title": "VLAN trunk characteristics",
+      "questionText": "Which two statements correctly describe an IEEE 802.1Q trunk?",
+      "explanation": "An 802.1Q trunk carries traffic for multiple VLANs and normally tags frames except those belonging to the native VLAN.",
+      "questionType": "multiple_answer",
+      "points": 2,
+      "difficulty": "intermediate",
+      "sourceStatus": "draft",
+      "options": [
+        { "text": "It can carry traffic for multiple VLANs.", "isCorrect": true },
+        { "text": "It tags VLAN traffic except native VLAN traffic by default.", "isCorrect": true },
+        { "text": "It permits traffic from only one access VLAN.", "isCorrect": false },
+        { "text": "It requires every endpoint to be a router.", "isCorrect": false }
+      ]
+    },
+    {
+      "courseCode": "ITN",
+      "moduleCode": "ITN-01",
+      "title": "Purpose of a default gateway",
+      "questionText": "A host uses its default gateway to send traffic to a destination outside its local network.",
+      "explanation": "The default gateway forwards packets destined for remote networks.",
+      "questionType": "true_false",
+      "points": 1,
+      "difficulty": "beginner",
+      "sourceStatus": "draft",
+      "options": [
+        { "text": "True", "isCorrect": true },
+        { "text": "False", "isCorrect": false }
+      ]
+    },
+    {
+      "courseCode": "ENSA",
+      "moduleCode": "ENSA-01",
+      "title": "IPv4 routing-table command",
+      "questionText": "Enter the Cisco IOS command used to display the IPv4 routing table.",
+      "explanation": "The full command and its common abbreviation are accepted.",
+      "questionType": "identification",
+      "points": 1,
+      "difficulty": "beginner",
+      "sourceStatus": "draft",
+      "options": [
+        { "text": "show ip route", "isCorrect": true },
+        { "text": "sh ip route", "isCorrect": true }
+      ]
+    }
+  ]
+}

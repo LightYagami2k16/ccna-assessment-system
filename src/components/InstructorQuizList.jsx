@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   deleteInstructorQuiz,
   deleteInstructorQuizzes,
+  duplicateInstructorQuiz,
+  saveQuizAsTemplate,
   setInstructorQuizStatus,
   setInstructorQuizzesStatus,
 } from '../services/quizBuilderService'
@@ -18,6 +20,8 @@ function formatDate(value) {
 export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   const [deletingId, setDeletingId] = useState(null)
   const [statusChangingId, setStatusChangingId] = useState(null)
+  const [duplicatingId, setDuplicatingId] = useState(null)
+  const [templatingId, setTemplatingId] = useState(null)
   const [message, setMessage] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkAction, setBulkAction] = useState(null)
@@ -147,6 +151,48 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
       setMessage(error.message)
     } finally {
       setStatusChangingId(null)
+    }
+  }
+
+  async function handleDuplicate(quiz) {
+    const confirmed = await confirm({
+      title: 'Duplicate quiz?',
+      message: `Create a draft copy of “${quiz.title}”? Assignments, schedules, attempts, and results will not be copied.`,
+      confirmLabel: 'Duplicate quiz',
+      tone: 'default',
+    })
+    if (!confirmed) return
+
+    setDuplicatingId(quiz.id)
+    setMessage('')
+    try {
+      await duplicateInstructorQuiz(quiz.id)
+      await onChanged()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
+
+  async function handleSaveTemplate(quiz) {
+    const confirmed = await confirm({
+      title: 'Save quiz as template?',
+      message: `Save the settings and question selection from “${quiz.title}” as a reusable template?`,
+      confirmLabel: 'Save template',
+      tone: 'default',
+    })
+    if (!confirmed) return
+
+    setTemplatingId(quiz.id)
+    setMessage('')
+    try {
+      await saveQuizAsTemplate(quiz.id)
+      await onChanged()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setTemplatingId(null)
     }
   }
 
@@ -398,6 +444,28 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                             </dd>
                           </div>
                         </dl>
+                        <div className="instructor-quiz-card__reuse-actions">
+                          <button
+                            className="secondary"
+                            type="button"
+                            disabled={duplicatingId === quiz.id}
+                            onClick={() => void handleDuplicate(quiz)}
+                          >
+                            {duplicatingId === quiz.id
+                              ? 'Duplicating...'
+                              : 'Duplicate draft'}
+                          </button>
+                          <button
+                            className="secondary"
+                            type="button"
+                            disabled={templatingId === quiz.id}
+                            onClick={() => void handleSaveTemplate(quiz)}
+                          >
+                            {templatingId === quiz.id
+                              ? 'Saving...'
+                              : 'Save as template'}
+                          </button>
+                        </div>
                         <div className="instructor-quiz-card__actions">
                           <button
                             className="primary"

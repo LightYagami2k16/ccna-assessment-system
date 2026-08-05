@@ -248,7 +248,11 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="loading-screen">Loading CCNA Assessment…</div>
+    return (
+      <div className="loading-screen" role="status" aria-live="polite">
+        Loading CCNA Assessment…
+      </div>
+    )
   }
   if (!session) {
     return <AuthForm initialMessage={authenticationLinkError} />

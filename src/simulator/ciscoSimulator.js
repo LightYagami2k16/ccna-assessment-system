@@ -17,6 +17,9 @@ export function createDeviceState(hostname = 'Switch', deviceType = 'switch') {
     ipRouting: false,
     defaultGateway: '',
     dnsServers: [],
+    dhcpEnabled: false,
+    dhcpServerId: '',
+    dhcpPoolName: '',
     staticRoutes: [],
     ospfProcesses: {},
     activeOspfProcess: null,
@@ -72,6 +75,9 @@ function ensureStateShape(state) {
   state.ipRouting ??= false
   state.defaultGateway ??= ''
   state.dnsServers ??= []
+  state.dhcpEnabled ??= false
+  state.dhcpServerId ??= ''
+  state.dhcpPoolName ??= ''
   state.staticRoutes ??= []
   state.ospfProcesses ??= {}
   Object.keys(state.ospfProcesses).forEach((processId) => {
@@ -201,6 +207,7 @@ export function executePcCommand(currentState, rawCommand) {
       '  ipconfig /clear',
       '  ping <address>',
       '  tracert <address>',
+      '  ssh <username>@<address>',
     ].join('\n'))
   }
 
@@ -252,6 +259,9 @@ export function configurePcState(currentState, settings) {
   adapter.shutdown = false
   state.defaultGateway = values.defaultGateway
   state.dnsServers = [values.preferredDns, values.alternateDns].filter(Boolean)
+  state.dhcpEnabled = false
+  state.dhcpServerId = ''
+  state.dhcpPoolName = ''
 
   return {
     state,
@@ -259,6 +269,205 @@ export function configurePcState(currentState, settings) {
     output: 'IPv4 settings applied.',
     modeBefore: state.mode ?? 'user_exec',
     modeAfter: state.mode ?? 'user_exec',
+  }
+}
+
+function crossDhcpLink({
+  currentState,
+  currentType,
+  outgoingInterface,
+  neighborState,
+  neighborType,
+  neighborInterface,
+  trafficVlan,
+}) {
+  let wireVlan = null
+  if (currentType === 'switch') {
+    const egress = leaveSwitchPort(
+      currentState.interfaces?.[outgoingInterface],
+      trafficVlan,
+    )
+    if (!egress.allowed) return null
+    wireVlan = egress.wireVlan
+  }
+
+  if (neighborType === 'switch') {
+    const ingress = enterSwitchPort(
+      neighborState.interfaces?.[neighborInterface],
+      wireVlan,
+    )
+    return ingress.allowed
+      ? { trafficVlan: ingress.trafficVlan, wireVlan }
+      : null
+  }
+
+  return nonSwitchAcceptsWireVlan(
+    neighborState,
+    neighborInterface,
+    wireVlan,
+  ) ? { trafficVlan: wireVlan, wireVlan } : null
+}
+
+function dhcpReachableDevices({ deviceStates, devices, topology, clientDeviceId }) {
+  const adjacency = activeTopologyAdjacency(deviceStates, topology)
+  const spanningTreeCache = new Map()
+  const deviceTypes = new Map(
+    (devices ?? []).map((device) => [device.id, device.type]),
+  )
+  const reachable = []
+  const visited = new Set([`${clientDeviceId}:untagged`])
+  const queue = [{ deviceId: clientDeviceId, trafficVlan: null }]
+
+  while (queue.length) {
+    const current = queue.shift()
+    const currentState = deviceStates[current.deviceId]
+    const currentType = deviceTypes.get(current.deviceId) ?? 'router'
+    if (!currentState || (current.deviceId !== clientDeviceId
+      && currentType !== 'switch')) continue
+
+    for (const edge of adjacency.get(current.deviceId) ?? []) {
+      const neighborState = deviceStates[edge.deviceId]
+      const neighborType = deviceTypes.get(edge.deviceId) ?? 'router'
+      if (!neighborState) continue
+      if (!spanningTreeAllowsEdge({
+        deviceStates,
+        deviceTypes,
+        adjacency,
+        cache: spanningTreeCache,
+        currentDeviceId: current.deviceId,
+        edge,
+        vlanId: current.trafficVlan,
+      })) continue
+      const crossing = crossDhcpLink({
+        currentState,
+        currentType,
+        outgoingInterface: edge.outgoingInterface,
+        neighborState,
+        neighborType,
+        neighborInterface: edge.neighborInterface,
+        trafficVlan: current.trafficVlan,
+      })
+      if (!crossing) continue
+
+      reachable.push({
+        deviceId: edge.deviceId,
+        incomingInterface: edge.neighborInterface,
+        wireVlan: crossing.wireVlan,
+      })
+      if (neighborType !== 'switch') continue
+      const visitKey = `${edge.deviceId}:${crossing.trafficVlan ?? 'untagged'}`
+      if (visited.has(visitKey)) continue
+      visited.add(visitKey)
+      queue.push({
+        deviceId: edge.deviceId,
+        trafficVlan: crossing.trafficVlan,
+      })
+    }
+  }
+  return reachable
+}
+
+function addressIsExcluded(address, ranges) {
+  const addressNumber = ipv4ToNumber(address)
+  return (ranges ?? []).some((range) => {
+    const start = ipv4ToNumber(range.startIp)
+    const end = ipv4ToNumber(range.endIp)
+    return start !== null && end !== null
+      && addressNumber >= start && addressNumber <= end
+  })
+}
+
+function nextDhcpAddress(pool, excludedRanges, usedAddresses) {
+  const networkNumber = ipv4ToNumber(pool.network)
+  const maskNumber = ipv4ToNumber(pool.subnetMask)
+  if (networkNumber === null || prefixLengthFromMask(pool.subnetMask) === null) {
+    return ''
+  }
+  const broadcastNumber = (networkNumber | (~maskNumber >>> 0)) >>> 0
+  for (let candidate = networkNumber + 1; candidate < broadcastNumber; candidate += 1) {
+    const address = numberToIpv4(candidate >>> 0)
+    if (!usedAddresses.has(address) && !addressIsExcluded(address, excludedRanges)) {
+      return address
+    }
+  }
+  return ''
+}
+
+export function requestDhcpLease({
+  deviceStates,
+  devices,
+  topology,
+  clientDeviceId,
+}) {
+  const clientState = deviceStates?.[clientDeviceId]
+  if (clientState?.deviceType !== 'pc') {
+    return { accepted: false, error: 'DHCP can only configure a PC.' }
+  }
+  const reachable = dhcpReachableDevices({
+    deviceStates,
+    devices,
+    topology,
+    clientDeviceId,
+  })
+  const server = reachable.flatMap((entry) => {
+    const state = deviceStates[entry.deviceId]
+    return Object.values(state?.dhcpPools ?? {}).map((pool) => ({
+      ...entry,
+      state,
+      pool,
+    }))
+  }).find(({ state, pool }) =>
+    pool.network
+    && pool.subnetMask
+    && activeInterfaceAddresses(state).some((address) =>
+      addressMatchesNetwork(address, pool.network, pool.subnetMask),
+    ),
+  )
+  if (!server) {
+    return {
+      accepted: false,
+      error: 'No reachable DHCP server has a valid pool for this network.',
+    }
+  }
+
+  const usedAddresses = new Set(
+    Object.entries(deviceStates)
+      .filter(([deviceId]) => deviceId !== clientDeviceId)
+      .flatMap(([, state]) => activeInterfaceAddresses(state)),
+  )
+  const currentAddress = clientState.interfaces?.Ethernet0?.ipAddress
+  const address = currentAddress
+    && addressMatchesNetwork(
+      currentAddress,
+      server.pool.network,
+      server.pool.subnetMask,
+    )
+    && !addressIsExcluded(currentAddress, server.state.dhcpExcludedRanges)
+    ? currentAddress
+    : nextDhcpAddress(
+      server.pool,
+      server.state.dhcpExcludedRanges,
+      usedAddresses,
+    )
+  if (!address) {
+    return { accepted: false, error: 'The DHCP pool has no available addresses.' }
+  }
+
+  const state = ensureStateShape(structuredClone(clientState))
+  state.interfaces.Ethernet0.ipAddress = address
+  state.interfaces.Ethernet0.subnetMask = server.pool.subnetMask
+  state.interfaces.Ethernet0.shutdown = false
+  state.defaultGateway = server.pool.defaultRouters?.[0] ?? ''
+  state.dnsServers = [...(server.pool.dnsServers ?? [])]
+  state.dhcpEnabled = true
+  state.dhcpServerId = server.deviceId
+  state.dhcpPoolName = server.pool.name
+  return {
+    accepted: true,
+    state,
+    output: `DHCP assigned ${address} from ${server.pool.name}.`,
+    modeBefore: state.mode,
+    modeAfter: state.mode,
   }
 }
 
@@ -669,7 +878,15 @@ function runningConfig(state) {
   if (state.ipRouting) lines.push('ip routing')
   if (state.defaultGateway) lines.push(`ip default-gateway ${state.defaultGateway}`)
   Object.entries(state.users).forEach(([username, user]) => {
-    lines.push(`username ${username} secret ${user.secret}`)
+    const credentialType = user.credentialType === 'password'
+      ? 'password'
+      : 'secret'
+    const privilege = Number.isInteger(user.privilege)
+      ? ` privilege ${user.privilege}`
+      : ''
+    lines.push(
+      `username ${username}${privilege} ${credentialType} ${user.secret}`,
+    )
   })
   Object.entries(state.vlans).forEach(([id, vlan]) => {
     lines.push('!', `vlan ${id}`)
@@ -1298,6 +1515,15 @@ export function executeCiscoCommand(currentState, rawCommand) {
     state.domainName = ''
     configurationChanged = true
   } else if (
+    /^crypto key generate rsa( general-keys)?$/.test(lower)
+    && state.mode === 'global_config'
+  ) {
+    // IOS normally asks for the modulus interactively. Use a secure default
+    // here so the common one-line classroom command remains usable.
+    state.rsaKeyBits = 2048
+    configurationChanged = true
+    output = '% Generating 2048 bit RSA keys, keys will be non-exportable... [OK]'
+  } else if (
     /^crypto key generate rsa( general-keys)? modulus \d+$/.test(lower)
     && state.mode === 'global_config'
   ) {
@@ -1842,10 +2068,26 @@ export function executeCiscoCommand(currentState, rawCommand) {
     } else {
       accepted = false
     }
-  } else if (/^username \S+ secret .+$/i.test(command) && state.mode === 'global_config') {
-    const match = command.match(/^username (\S+) secret (.+)$/i)
-    state.users[match[1]] = { secret: match[2] }
-    configurationChanged = true
+  } else if (
+    /^username \S+( privilege \d+)? (secret|password) .+$/i.test(command)
+    && state.mode === 'global_config'
+  ) {
+    const match = command.match(
+      /^username (\S+)(?: privilege (\d+))? (secret|password) (.+)$/i,
+    )
+    const privilege = match[2] === undefined ? null : Number(match[2])
+    if (privilege !== null && (privilege < 0 || privilege > 15)) {
+      accepted = false
+    } else {
+      state.users[match[1]] = {
+        secret: match[4],
+        ...(match[3].toLowerCase() === 'password'
+          ? { credentialType: 'password' }
+          : {}),
+        ...(privilege === null ? {} : { privilege }),
+      }
+      configurationChanged = true
+    }
   } else if (/^no username \S+$/i.test(command) && state.mode === 'global_config') {
     delete state.users[command.split(' ')[2]]
     configurationChanged = true
@@ -2216,33 +2458,945 @@ function matchingStaticRoute(state, destinationIp) {
     )[0] ?? null
 }
 
+function ospfInterfaceActivations(state, interfaceName) {
+  return interfacesOnPhysicalPort(state, interfaceName)
+    .flatMap(({ name, item }) => {
+      if (!item.ipAddress || item.shutdown) return []
+
+      return Object.values(state.ospfProcesses ?? {}).flatMap((process) => {
+        const network = (process.networks ?? []).find((statement) =>
+          ospfNetworkMatches(
+            item.ipAddress,
+            statement.network,
+            statement.wildcard,
+          ),
+        )
+        if (!network) return []
+
+        const passive = process.passiveDefault
+          ? !(process.nonPassiveInterfaces ?? []).includes(name)
+          : (process.passiveInterfaces ?? []).includes(name)
+        return [{ name, item, area: String(network.area), passive }]
+      })
+    })
+}
+
+function ospfReachableEndpoints({
+  deviceStates,
+  deviceTypes,
+  topology,
+  sourceDeviceId,
+  sourceActivation,
+}) {
+  const adjacency = activeTopologyAdjacency(deviceStates, topology)
+  const spanningTreeCache = new Map()
+  const reachable = []
+  const visited = new Set()
+  const queue = []
+
+  const inspectNeighbor = ({ edge, wireVlan }) => {
+    const neighborState = deviceStates[edge.deviceId]
+    const neighborType = deviceTypes.get(edge.deviceId) ?? 'router'
+    if (!neighborState || edge.deviceId === sourceDeviceId) return
+
+    if (neighborType !== 'switch' || neighborState.ipRouting) {
+      if (!nonSwitchAcceptsWireVlan(
+        neighborState,
+        edge.neighborInterface,
+        wireVlan,
+      )) return
+      for (const activation of ospfInterfaceActivations(
+        neighborState,
+        edge.neighborInterface,
+      )) {
+        const activationVlan = activation.item.encapsulationDot1q ?? null
+        if (activationVlan !== wireVlan) continue
+        reachable.push({ deviceId: edge.deviceId, activation })
+      }
+      return
+    }
+
+    const ingress = enterSwitchPort(
+      neighborState.interfaces?.[edge.neighborInterface],
+      wireVlan,
+    )
+    if (!ingress.allowed) return
+    const visitKey = `${edge.deviceId}:${ingress.trafficVlan}`
+    if (visited.has(visitKey)) return
+    visited.add(visitKey)
+    queue.push({
+      deviceId: edge.deviceId,
+      trafficVlan: ingress.trafficVlan,
+    })
+  }
+
+  const sourceWireVlan = sourceActivation.item.encapsulationDot1q ?? null
+  for (const edge of adjacency.get(sourceDeviceId) ?? []) {
+    if (
+      physicalInterfaceName(edge.outgoingInterface)
+      !== physicalInterfaceName(sourceActivation.name)
+    ) continue
+    inspectNeighbor({ edge, wireVlan: sourceWireVlan })
+  }
+
+  while (queue.length) {
+    const current = queue.shift()
+    const currentState = deviceStates[current.deviceId]
+    for (const edge of adjacency.get(current.deviceId) ?? []) {
+      if (!spanningTreeAllowsEdge({
+        deviceStates,
+        deviceTypes,
+        adjacency,
+        cache: spanningTreeCache,
+        currentDeviceId: current.deviceId,
+        edge,
+        vlanId: current.trafficVlan,
+      })) continue
+      const egress = leaveSwitchPort(
+        currentState.interfaces?.[edge.outgoingInterface],
+        current.trafficVlan,
+      )
+      if (!egress.allowed) continue
+      inspectNeighbor({ edge, wireVlan: egress.wireVlan })
+    }
+  }
+
+  return reachable
+}
+
+function buildOspfTopology(deviceStates, topology, devices = []) {
+  const deviceTypes = new Map(
+    (devices ?? []).map((device) => [device.id, device.type]),
+  )
+  for (const [deviceId, state] of Object.entries(deviceStates)) {
+    if (!deviceTypes.has(deviceId)) {
+      deviceTypes.set(deviceId, state.deviceType ?? 'router')
+    }
+  }
+  const neighbors = new Map(
+    Object.keys(deviceStates).map((deviceId) => [deviceId, new Set()]),
+  )
+  const neighborDetails = new Map(
+    Object.keys(deviceStates).map((deviceId) => [deviceId, new Map()]),
+  )
+
+  for (const [sourceDeviceId, sourceState] of Object.entries(deviceStates)) {
+    if (deviceTypes.get(sourceDeviceId) === 'pc') continue
+    for (const sourceActivation of Object.keys(sourceState.interfaces ?? {})
+      .flatMap((interfaceName) =>
+        ospfInterfaceActivations(sourceState, interfaceName),
+      )
+      .filter((activation, index, activations) =>
+        activations.findIndex((candidate) =>
+          candidate.name === activation.name
+          && candidate.area === activation.area,
+        ) === index,
+      )) {
+      if (sourceActivation.passive) continue
+      const endpoints = ospfReachableEndpoints({
+        deviceStates,
+        deviceTypes,
+        topology,
+        sourceDeviceId,
+        sourceActivation,
+      })
+      for (const endpoint of endpoints) {
+        const neighborActivation = endpoint.activation
+        if (
+          neighborActivation.passive
+          || sourceActivation.area !== neighborActivation.area
+          || !interfaceContainsAddress(
+            sourceActivation.item,
+            neighborActivation.item.ipAddress,
+          )
+          || !interfaceContainsAddress(
+            neighborActivation.item,
+            sourceActivation.item.ipAddress,
+          )
+        ) continue
+        neighbors.get(sourceDeviceId)?.add(endpoint.deviceId)
+        neighborDetails.get(sourceDeviceId)?.set(endpoint.deviceId, {
+          localInterface: sourceActivation.name,
+          neighborInterface: neighborActivation.name,
+          neighborAddress: neighborActivation.item.ipAddress,
+          area: sourceActivation.area,
+        })
+      }
+    }
+  }
+
+  const advertisedNetworks = new Map(
+    Object.entries(deviceStates).map(([deviceId, state]) => {
+      const networks = Object.entries(state.interfaces ?? {})
+        .filter(([, item]) => item.ipAddress && !item.shutdown)
+        .filter(([, item]) =>
+          Object.values(state.ospfProcesses ?? {}).some((process) =>
+            (process.networks ?? []).some((statement) =>
+              ospfNetworkMatches(
+                item.ipAddress,
+                statement.network,
+                statement.wildcard,
+              ),
+            ),
+          ),
+        )
+        .map(([, item]) => ({
+          network: networkAddress(item.ipAddress, item.subnetMask),
+          mask: item.subnetMask,
+        }))
+        .filter((network) => network.network !== null)
+      return [deviceId, networks]
+    }),
+  )
+
+  return { neighbors, neighborDetails, advertisedNetworks, deviceStates }
+}
+
+function ospfLearnedRoutes({
+  ospfTopology,
+  deviceStates,
+  sourceDeviceId,
+}) {
+  const sourceState = deviceStates[sourceDeviceId]
+  const connectedRouteKeys = new Set(
+    Object.values(sourceState?.interfaces ?? {})
+      .filter((item) => item.ipAddress && !item.shutdown)
+      .map((item) =>
+        `${networkAddress(item.ipAddress, item.subnetMask)}/${item.subnetMask}`,
+      ),
+  )
+  const routes = new Map()
+  const visited = new Set([sourceDeviceId])
+  const queue = [...(ospfTopology.neighbors.get(sourceDeviceId) ?? [])]
+    .map((deviceId) => ({ deviceId, firstHopId: deviceId, cost: 1 }))
+
+  while (queue.length) {
+    const current = queue.shift()
+    if (visited.has(current.deviceId)) continue
+    visited.add(current.deviceId)
+
+    const nextHop = ospfTopology.neighborDetails
+      .get(sourceDeviceId)?.get(current.firstHopId)
+    for (const route of ospfTopology.advertisedNetworks.get(current.deviceId) ?? []) {
+      const key = `${route.network}/${route.mask}`
+      if (connectedRouteKeys.has(key) || routes.has(key)) continue
+      routes.set(key, {
+        ...route,
+        cost: current.cost,
+        nextHopAddress: nextHop?.neighborAddress ?? '',
+        outgoingInterface: nextHop?.localInterface ?? '',
+      })
+    }
+
+    for (const nextDeviceId of
+      ospfTopology.neighbors.get(current.deviceId) ?? []) {
+      if (visited.has(nextDeviceId)) continue
+      queue.push({
+        deviceId: nextDeviceId,
+        firstHopId: current.firstHopId,
+        cost: current.cost + 1,
+      })
+    }
+  }
+  return [...routes.values()]
+}
+
+function topologyOspfRoutesOutput({
+  deviceStates,
+  devices,
+  activeDeviceId,
+  topology,
+}) {
+  const ospfTopology = buildOspfTopology(deviceStates, topology, devices)
+  const routes = ospfLearnedRoutes({
+    ospfTopology,
+    deviceStates,
+    sourceDeviceId: activeDeviceId,
+  })
+  if (!routes.length) {
+    return 'No OSPF routes are currently learned from neighbors.'
+  }
+  return routes.map((route) =>
+    `O    ${route.network}/${prefixLengthFromMask(route.mask)} `
+    + `[110/${route.cost}] via ${route.nextHopAddress}, `
+    + abbreviateInterface(route.outgoingInterface),
+  ).join('\n')
+}
+
+function topologyOspfNeighborsOutput({
+  deviceStates,
+  devices,
+  activeDeviceId,
+  topology,
+}) {
+  const ospfTopology = buildOspfTopology(deviceStates, topology, devices)
+  const neighbors = [...(
+    ospfTopology.neighborDetails.get(activeDeviceId)?.entries() ?? []
+  )]
+  if (!neighbors.length) return 'No OSPF neighbors are currently adjacent.'
+
+  return [
+    'Neighbor ID     Pri   State           Dead Time   Address         Interface',
+    ...neighbors.map(([deviceId, detail]) => {
+      const state = deviceStates[deviceId]
+      const routerId = Object.values(state?.ospfProcesses ?? {})
+        .find((process) => process.routerId)?.routerId
+        ?? detail.neighborAddress
+      return `${routerId.padEnd(16)}1     FULL/DR         00:00:39    `
+        + `${detail.neighborAddress.padEnd(16)}`
+        + abbreviateInterface(detail.localInterface)
+    }),
+  ].join('\n')
+}
+
+function ospfNeighborReachesDestination({
+  ospfTopology,
+  currentDeviceId,
+  neighborDeviceId,
+  destinationIp,
+}) {
+  if (!ospfTopology?.neighbors.get(currentDeviceId)?.has(neighborDeviceId)) {
+    return false
+  }
+
+  const visited = new Set([currentDeviceId, neighborDeviceId])
+  const queue = [neighborDeviceId]
+  while (queue.length) {
+    const deviceId = queue.shift()
+    if ((ospfTopology.advertisedNetworks.get(deviceId) ?? []).some((route) =>
+      addressMatchesNetwork(destinationIp, route.network, route.mask),
+    )) return true
+
+    for (const nextDeviceId of ospfTopology.neighbors.get(deviceId) ?? []) {
+      if (visited.has(nextDeviceId)) continue
+      visited.add(nextDeviceId)
+      queue.push(nextDeviceId)
+    }
+  }
+  return false
+}
+
+function ospfInterfaceReachesDestination({
+  ospfTopology,
+  deviceStates,
+  currentDeviceId,
+  outgoingInterface,
+  destinationIp,
+}) {
+  return ospfLearnedRoutes({
+    ospfTopology,
+    deviceStates,
+    sourceDeviceId: currentDeviceId,
+  }).some((route) =>
+    addressMatchesNetwork(destinationIp, route.network, route.mask)
+    && physicalInterfaceName(route.outgoingInterface)
+      === physicalInterfaceName(outgoingInterface),
+  )
+}
+
+function physicalInterfaceName(interfaceName) {
+  return String(interfaceName ?? '').split('.')[0]
+}
+
+function interfacesOnPhysicalPort(state, interfaceName) {
+  const physicalName = physicalInterfaceName(interfaceName)
+  return Object.entries(state?.interfaces ?? {})
+    .filter(([name]) => physicalInterfaceName(name) === physicalName)
+    .map(([name, item]) => ({ name, item }))
+}
+
+function etherchannelModesCompatible(leftMode, rightMode) {
+  if (leftMode === 'on' || rightMode === 'on') {
+    return leftMode === 'on' && rightMode === 'on'
+  }
+
+  const lacpModes = new Set(['active', 'passive'])
+  if (lacpModes.has(leftMode) || lacpModes.has(rightMode)) {
+    return lacpModes.has(leftMode)
+      && lacpModes.has(rightMode)
+      && (leftMode === 'active' || rightMode === 'active')
+  }
+
+  const pagpModes = new Set(['desirable', 'auto'])
+  return pagpModes.has(leftMode)
+    && pagpModes.has(rightMode)
+    && (leftMode === 'desirable' || rightMode === 'desirable')
+}
+
+function etherchannelInterface(state, physicalInterface) {
+  const member = state?.interfaces?.[physicalInterface]
+  const groupId = member?.channelGroup?.id
+  if (!groupId) return physicalInterface
+
+  const portChannelName = `Port-channel${groupId}`
+  const portChannel = state.interfaces?.[portChannelName]
+  if (!portChannel) return physicalInterface
+
+  const hasLogicalConfiguration = Boolean(
+    portChannel.switchportMode
+    || portChannel.ipAddress
+    || portChannel.description
+    || portChannel.ipAccessGroups?.in
+    || portChannel.ipAccessGroups?.out
+    || portChannel.natRole
+    || portChannel.accessVlan
+    || portChannel.voiceVlan
+    || portChannel.trunkAllowedVlans !== null
+    || Number(portChannel.trunkNativeVlan ?? 1) !== 1,
+  )
+
+  return hasLogicalConfiguration ? portChannelName : physicalInterface
+}
+
+function etherchannelBundleKey(link, fromGroup, toGroup) {
+  const left = `${link.fromDeviceId}:${fromGroup}`
+  const right = `${link.toDeviceId}:${toGroup}`
+  return [left, right].sort().join('|')
+}
+
+function topologyLinkKey(link, fromInterface, toInterface) {
+  if (link.id) return `link:${link.id}`
+  return `link:${[
+    `${link.fromDeviceId}:${fromInterface}`,
+    `${link.toDeviceId}:${toInterface}`,
+  ].sort().join('|')}`
+}
+
+function switchPortCarriesVlan(state, interfaceName, vlanId) {
+  const item = state?.interfaces?.[interfaceName]
+  if (!item || item.ipAddress) return false
+  if (item.switchportMode === 'trunk') return trunkAllowsVlan(item, vlanId)
+  return switchportAccessVlan(item) === Number(vlanId)
+}
+
+function spanningTreePriority(state, vlanId) {
+  return Number(state?.spanningTree?.vlanPriorities?.[String(vlanId)] ?? 32768)
+}
+
+function spanningTreeForwardingLinks(
+  deviceStates,
+  deviceTypes,
+  adjacency,
+  vlanId,
+) {
+  const linksByKey = new Map()
+
+  for (const [deviceId, edges] of adjacency.entries()) {
+    const state = deviceStates[deviceId]
+    if (deviceTypes.get(deviceId) !== 'switch') continue
+
+    for (const edge of edges) {
+      const neighborState = deviceStates[edge.deviceId]
+      if (deviceTypes.get(edge.deviceId) !== 'switch') continue
+      if (!switchPortCarriesVlan(state, edge.outgoingInterface, vlanId)) continue
+      if (!switchPortCarriesVlan(
+        neighborState,
+        edge.neighborInterface,
+        vlanId,
+      )) continue
+
+      if (!linksByKey.has(edge.linkKey)) {
+        linksByKey.set(edge.linkKey, {
+          key: edge.linkKey,
+          leftDeviceId: deviceId,
+          rightDeviceId: edge.deviceId,
+        })
+      }
+    }
+  }
+
+  const graph = new Map()
+  for (const link of linksByKey.values()) {
+    if (!graph.has(link.leftDeviceId)) graph.set(link.leftDeviceId, [])
+    if (!graph.has(link.rightDeviceId)) graph.set(link.rightDeviceId, [])
+    graph.get(link.leftDeviceId).push({
+      deviceId: link.rightDeviceId,
+      linkKey: link.key,
+    })
+    graph.get(link.rightDeviceId).push({
+      deviceId: link.leftDeviceId,
+      linkKey: link.key,
+    })
+  }
+
+  const forwarding = new Set()
+  const remaining = new Set(graph.keys())
+
+  while (remaining.size) {
+    const componentStart = [...remaining].sort()[0]
+    const component = []
+    const componentVisited = new Set([componentStart])
+    const componentQueue = [componentStart]
+
+    while (componentQueue.length) {
+      const current = componentQueue.shift()
+      component.push(current)
+      for (const edge of graph.get(current) ?? []) {
+        if (componentVisited.has(edge.deviceId)) continue
+        componentVisited.add(edge.deviceId)
+        componentQueue.push(edge.deviceId)
+      }
+    }
+
+    component.forEach((deviceId) => remaining.delete(deviceId))
+    const rootId = component.sort((left, right) => {
+      const priorityDifference = spanningTreePriority(
+        deviceStates[left],
+        vlanId,
+      ) - spanningTreePriority(deviceStates[right], vlanId)
+      return priorityDifference || left.localeCompare(right)
+    })[0]
+
+    const treeVisited = new Set([rootId])
+    const treeQueue = [rootId]
+    while (treeQueue.length) {
+      const current = treeQueue.shift()
+      const candidates = [...(graph.get(current) ?? [])].sort(
+        (left, right) => left.deviceId.localeCompare(right.deviceId)
+          || left.linkKey.localeCompare(right.linkKey),
+      )
+      for (const edge of candidates) {
+        if (treeVisited.has(edge.deviceId)) continue
+        treeVisited.add(edge.deviceId)
+        treeQueue.push(edge.deviceId)
+        forwarding.add(edge.linkKey)
+      }
+    }
+  }
+
+  return forwarding
+}
+
+function spanningTreeAllowsEdge({
+  deviceStates,
+  deviceTypes,
+  adjacency,
+  cache,
+  currentDeviceId,
+  edge,
+  vlanId,
+}) {
+  if (
+    deviceTypes.get(currentDeviceId) !== 'switch'
+    || deviceTypes.get(edge.deviceId) !== 'switch'
+    || !Number.isInteger(Number(vlanId))
+  ) return true
+
+  const cacheKey = String(vlanId)
+  if (!cache.has(cacheKey)) {
+    cache.set(
+      cacheKey,
+      spanningTreeForwardingLinks(
+        deviceStates,
+        deviceTypes,
+        adjacency,
+        vlanId,
+      ),
+    )
+  }
+  return cache.get(cacheKey).has(edge.linkKey)
+}
+
+function switchportAccessVlan(interfaceState) {
+  return Number(interfaceState?.accessVlan ?? 1)
+}
+
+function switchportNativeVlan(interfaceState) {
+  return Number(interfaceState?.trunkNativeVlan ?? 1)
+}
+
+function trunkAllowsVlan(interfaceState, vlanId) {
+  const vlan = Number(vlanId)
+  if (!Number.isInteger(vlan) || vlan < 1 || vlan > 4094) return false
+  if (interfaceState?.trunkAllowedVlans === null) return true
+  return (interfaceState?.trunkAllowedVlans ?? []).map(Number).includes(vlan)
+}
+
+function leaveSwitchPort(interfaceState, trafficVlan) {
+  const vlan = Number(trafficVlan)
+  if (!Number.isInteger(vlan)) return { allowed: false, wireVlan: null }
+
+  if (interfaceState?.switchportMode === 'trunk') {
+    if (!trunkAllowsVlan(interfaceState, vlan)) {
+      return { allowed: false, wireVlan: null }
+    }
+    return {
+      allowed: true,
+      wireVlan: vlan === switchportNativeVlan(interfaceState) ? null : vlan,
+    }
+  }
+
+  return {
+    allowed: switchportAccessVlan(interfaceState) === vlan,
+    wireVlan: null,
+  }
+}
+
+function enterSwitchPort(interfaceState, wireVlan) {
+  if (interfaceState?.switchportMode === 'trunk') {
+    const vlan = wireVlan ?? switchportNativeVlan(interfaceState)
+    return {
+      allowed: trunkAllowsVlan(interfaceState, vlan),
+      trafficVlan: vlan,
+    }
+  }
+
+  if (wireVlan !== null) return { allowed: false, trafficVlan: null }
+  return {
+    allowed: true,
+    trafficVlan: switchportAccessVlan(interfaceState),
+  }
+}
+
+function routedPortWireVlan(state, outgoingInterface, destinationIp) {
+  const candidates = interfacesOnPhysicalPort(state, outgoingInterface)
+  const route = matchingStaticRoute(state, destinationIp)
+  const routeTarget = route?.nextHop ?? destinationIp
+  const selected = candidates.find(({ item }) =>
+    interfaceContainsAddress(item, routeTarget),
+  ) ?? candidates.find(({ name }) => name === outgoingInterface)
+    ?? candidates.find(({ item }) => !item.shutdown)
+
+  return selected?.item?.encapsulationDot1q ?? null
+}
+
+function nonSwitchAcceptsWireVlan(state, neighborInterface, wireVlan) {
+  const candidates = interfacesOnPhysicalPort(state, neighborInterface)
+    .filter(({ item }) => !item.shutdown)
+  if (wireVlan === null) {
+    return candidates.some(({ item }) => item.encapsulationDot1q === null)
+  }
+  return candidates.some(
+    ({ item }) => Number(item.encapsulationDot1q) === Number(wireVlan),
+  )
+}
+
+function aclAddressMatches(expression, address) {
+  const normalized = String(expression ?? '').trim().toLowerCase()
+  if (normalized === 'any') return true
+  if (normalized.startsWith('host ')) {
+    return normalized.slice(5) === address
+  }
+
+  const [network, wildcard] = normalized.split(' ')
+  const addressNumber = ipv4ToNumber(address)
+  const networkNumber = ipv4ToNumber(network)
+  const wildcardNumber = ipv4ToNumber(wildcard)
+  if (
+    addressNumber === null
+    || networkNumber === null
+    || wildcardNumber === null
+  ) return false
+  const significantBits = (~wildcardNumber) >>> 0
+  return (addressNumber & significantBits) === (networkNumber & significantBits)
+}
+
+function aclEntryMatches(accessList, statement, packet) {
+  const tokens = String(statement ?? '').split(' ')
+  if (!['permit', 'deny'].includes(tokens[0])) return null
+
+  if (accessList.type === 'standard') {
+    const source = consumeAclAddress(tokens, 1)
+    if (!source || !aclAddressMatches(source.value, packet.sourceIp)) return null
+    return tokens[0]
+  }
+
+  const ruleProtocol = tokens[1]
+  if (ruleProtocol !== 'ip' && ruleProtocol !== packet.protocol) return null
+  const source = consumeAclAddress(tokens, 2)
+  if (!source || !aclAddressMatches(source.value, packet.sourceIp)) return null
+  const sourcePort = consumeAclPort(tokens, source.nextIndex)
+  if (!sourcePort) return null
+  const destination = consumeAclAddress(tokens, sourcePort.nextIndex)
+  if (
+    !destination
+    || !aclAddressMatches(destination.value, packet.destinationIp)
+  ) return null
+  return tokens[0]
+}
+
+function accessListPermitsPacket(state, accessListId, packet) {
+  if (!accessListId) return true
+  const accessList = state.accessLists?.[canonicalAccessListId(accessListId)]
+  if (!accessList) return true
+
+  for (const entry of accessList.entries ?? []) {
+    const action = aclEntryMatches(accessList, entry.statement, packet)
+    if (action) return action === 'permit'
+  }
+  return false
+}
+
+function packetInterfaceState(state, interfaceName, wireVlan) {
+  const candidates = interfacesOnPhysicalPort(state, interfaceName)
+    .filter(({ item }) => !item.shutdown)
+  if (wireVlan !== null) {
+    return candidates.find(
+      ({ item }) => Number(item.encapsulationDot1q) === Number(wireVlan),
+    )?.item ?? state.interfaces?.[interfaceName] ?? null
+  }
+  return candidates.find(({ item }) => item.encapsulationNative)?.item
+    ?? state.interfaces?.[interfaceName]
+    ?? candidates.find(({ item }) => item.encapsulationDot1q === null)?.item
+    ?? null
+}
+
+function interfaceAclPermitsPacket({
+  state,
+  interfaceName,
+  direction,
+  wireVlan,
+  packet,
+}) {
+  const interfaceState = packetInterfaceState(state, interfaceName, wireVlan)
+  return accessListPermitsPacket(
+    state,
+    interfaceState?.ipAccessGroups?.[direction],
+    packet,
+  )
+}
+
+function natInterfaceAddress(state, interfaceName) {
+  return interfacesOnPhysicalPort(state, interfaceName)
+    .map(({ item }) => item)
+    .find((item) => !item.shutdown && item.ipAddress)?.ipAddress ?? ''
+}
+
+function outboundNatTranslation(state, deviceId, outgoingInterface, packet) {
+  const staticRule = (state.natRules ?? []).find(
+    (rule) => rule.type === 'static' && rule.localIp === packet.sourceIp,
+  )
+  if (staticRule) {
+    return {
+      deviceId,
+      localIp: staticRule.localIp,
+      globalIp: staticRule.globalIp,
+    }
+  }
+
+  const dynamicRule = (state.natRules ?? []).find(
+    (rule) => rule.type === 'dynamic'
+      && accessListPermitsPacket(state, rule.aclId, packet),
+  )
+  if (!dynamicRule) return null
+
+  const globalIp = dynamicRule.sourceType === 'pool'
+    ? state.natPools?.[canonicalNatPoolName(dynamicRule.source)]?.startIp
+    : natInterfaceAddress(state, dynamicRule.source || outgoingInterface)
+  if (!globalIp) return null
+  return {
+    deviceId,
+    localIp: packet.sourceIp,
+    globalIp,
+  }
+}
+
+function reverseNatPacket(state, deviceId, incomingInterface, wireVlan, packet, translations) {
+  if (!incomingInterface) return packet
+  const incomingState = packetInterfaceState(
+    state,
+    incomingInterface,
+    wireVlan,
+  )
+  if (incomingState?.natRole !== 'outside') return packet
+
+  const dynamicTranslation = (translations ?? []).find(
+    (item) => item.deviceId === deviceId && item.globalIp === packet.destinationIp,
+  )
+  const staticRule = (state.natRules ?? []).find(
+    (rule) => rule.type === 'static' && rule.globalIp === packet.destinationIp,
+  )
+  const localIp = dynamicTranslation?.localIp ?? staticRule?.localIp
+  return localIp ? { ...packet, destinationIp: localIp } : packet
+}
+
+function applyOutboundNat({
+  state,
+  deviceId,
+  incomingInterface,
+  incomingWireVlan,
+  outgoingInterface,
+  wireVlan,
+  packet,
+  translations,
+}) {
+  if (!incomingInterface) {
+    return { allowed: true, packet, translations }
+  }
+  const incomingState = packetInterfaceState(
+    state,
+    incomingInterface,
+    incomingWireVlan,
+  )
+  const outgoingState = packetInterfaceState(state, outgoingInterface, wireVlan)
+  const crossesInsideOutside = incomingState?.natRole === 'inside'
+    && outgoingState?.natRole === 'outside'
+  if (!crossesInsideOutside) {
+    return { allowed: true, packet, translations }
+  }
+
+  const translation = outboundNatTranslation(
+    state,
+    deviceId,
+    outgoingInterface,
+    packet,
+  )
+  if (!translation) {
+    return { allowed: false, packet, translations }
+  }
+  return {
+    allowed: true,
+    packet: { ...packet, sourceIp: translation.globalIp },
+    translations: [
+      ...(translations ?? []).filter((item) =>
+        item.deviceId !== translation.deviceId
+        || item.localIp !== translation.localIp),
+      translation,
+    ],
+  }
+}
+
+function forwardAcrossTopologyEdge({
+  currentState,
+  currentType,
+  outgoingInterface,
+  neighborState,
+  neighborType,
+  neighborInterface,
+  incomingInterface,
+  incomingWireVlan,
+  trafficVlan,
+  packet,
+  translations,
+  currentDeviceId,
+  destinationIp,
+}) {
+  let wireVlan = null
+
+  if (currentType === 'switch' && !currentState.ipRouting) {
+    const egress = leaveSwitchPort(
+      currentState.interfaces?.[outgoingInterface],
+      trafficVlan,
+    )
+    if (!egress.allowed) return { allowed: false, trafficVlan: null }
+    wireVlan = egress.wireVlan
+  } else if (currentType !== 'pc') {
+    wireVlan = routedPortWireVlan(
+      currentState,
+      outgoingInterface,
+      destinationIp,
+    )
+  }
+
+  const natOutcome = applyOutboundNat({
+    state: currentState,
+    deviceId: currentDeviceId,
+    incomingInterface,
+    incomingWireVlan,
+    outgoingInterface,
+    wireVlan,
+    packet,
+    translations,
+  })
+  if (!natOutcome.allowed) return { allowed: false, trafficVlan: null }
+  const forwardedPacket = natOutcome.packet
+
+  if (!interfaceAclPermitsPacket({
+    state: currentState,
+    interfaceName: outgoingInterface,
+    direction: 'out',
+    wireVlan,
+    packet: forwardedPacket,
+  })) return { allowed: false, trafficVlan: null }
+
+  if (!interfaceAclPermitsPacket({
+    state: neighborState,
+    interfaceName: neighborInterface,
+    direction: 'in',
+    wireVlan,
+    packet: forwardedPacket,
+  })) return { allowed: false, trafficVlan: null }
+
+  if (neighborType === 'switch' && !neighborState.ipRouting) {
+    const ingress = enterSwitchPort(
+      neighborState.interfaces?.[neighborInterface],
+      wireVlan,
+    )
+    return {
+      allowed: ingress.allowed,
+      trafficVlan: ingress.trafficVlan,
+      wireVlan,
+      packet: forwardedPacket,
+      translations: natOutcome.translations,
+    }
+  }
+
+  return {
+    allowed: nonSwitchAcceptsWireVlan(
+      neighborState,
+      neighborInterface,
+      wireVlan,
+    ),
+    trafficVlan: wireVlan,
+    wireVlan,
+    packet: forwardedPacket,
+    translations: natOutcome.translations,
+  }
+}
+
 function activeTopologyAdjacency(deviceStates, topology) {
   const adjacency = new Map(
     Object.keys(deviceStates).map((deviceId) => [deviceId, []]),
   )
+
+  const addedBundles = new Set()
 
   for (const link of topology?.links ?? []) {
     const fromState = deviceStates[link.fromDeviceId]
     const toState = deviceStates[link.toDeviceId]
     const fromInterface = normalizeInterface(link.fromInterface)
     const toInterface = normalizeInterface(link.toInterface)
-    const fromItem = fromInterface
-      ? fromState?.interfaces?.[fromInterface]
-      : null
-    const toItem = toInterface
-      ? toState?.interfaces?.[toInterface]
-      : null
-    if (!fromItem || !toItem || fromItem.shutdown || toItem.shutdown) continue
+    const fromPortActive = fromInterface
+      && interfacesOnPhysicalPort(fromState, fromInterface)
+        .some(({ item }) => !item.shutdown)
+    const toPortActive = toInterface
+      && interfacesOnPhysicalPort(toState, toInterface)
+        .some(({ item }) => !item.shutdown)
+    if (!fromPortActive || !toPortActive) continue
+
+    const fromChannel = fromState?.interfaces?.[fromInterface]?.channelGroup
+    const toChannel = toState?.interfaces?.[toInterface]?.channelGroup
+    let fromForwardingInterface = fromInterface
+    let toForwardingInterface = toInterface
+    let linkKey = topologyLinkKey(link, fromInterface, toInterface)
+
+    if (fromChannel || toChannel) {
+      if (!fromChannel || !toChannel) continue
+      if (!etherchannelModesCompatible(fromChannel.mode, toChannel.mode)) continue
+
+      const bundleKey = etherchannelBundleKey(
+        link,
+        fromChannel.id,
+        toChannel.id,
+      )
+      if (addedBundles.has(bundleKey)) continue
+      addedBundles.add(bundleKey)
+      linkKey = `bundle:${bundleKey}`
+      fromForwardingInterface = etherchannelInterface(fromState, fromInterface)
+      toForwardingInterface = etherchannelInterface(toState, toInterface)
+    }
 
     adjacency.get(link.fromDeviceId)?.push({
       deviceId: link.toDeviceId,
-      outgoingInterface: fromInterface,
-      neighborInterface: toInterface,
+      outgoingInterface: fromForwardingInterface,
+      neighborInterface: toForwardingInterface,
+      linkKey,
     })
     adjacency.get(link.toDeviceId)?.push({
       deviceId: link.fromDeviceId,
-      outgoingInterface: toInterface,
-      neighborInterface: fromInterface,
+      outgoingInterface: toForwardingInterface,
+      neighborInterface: fromForwardingInterface,
+      linkKey,
     })
   }
 
@@ -2252,30 +3406,53 @@ function activeTopologyAdjacency(deviceStates, topology) {
 function canForwardAcrossLink({
   state,
   deviceType,
+  currentDeviceId,
+  neighborDeviceId,
   outgoingInterface,
   destinationIp,
+  ospfTopology,
 }) {
   if (deviceType === 'switch' && !state.ipRouting) return true
 
-  const outgoingState = state.interfaces?.[outgoingInterface]
-  if (interfaceContainsAddress(outgoingState, destinationIp)) return true
+  const outgoingCandidates = interfacesOnPhysicalPort(state, outgoingInterface)
+  if (outgoingCandidates.some(({ item }) =>
+    interfaceContainsAddress(item, destinationIp),
+  )) return true
 
   if (deviceType === 'pc') {
     return Boolean(
       state.defaultGateway
-      && interfaceContainsAddress(outgoingState, state.defaultGateway),
+      && outgoingCandidates.some(({ item }) =>
+        interfaceContainsAddress(item, state.defaultGateway),
+      ),
     )
   }
 
   const route = matchingStaticRoute(state, destinationIp)
-  if (!route) return false
+  if (!route) {
+    return ospfNeighborReachesDestination({
+      ospfTopology,
+      currentDeviceId,
+      neighborDeviceId,
+      destinationIp,
+    })
+      || ospfInterfaceReachesDestination({
+        ospfTopology,
+        deviceStates: ospfTopology.deviceStates,
+        currentDeviceId,
+        outgoingInterface,
+        destinationIp,
+      })
+  }
 
   const normalizedNextHopInterface = normalizeInterface(route.nextHop)
   if (normalizedNextHopInterface) {
     return normalizedNextHopInterface === outgoingInterface
   }
 
-  return interfaceContainsAddress(outgoingState, route.nextHop)
+  return outgoingCandidates.some(({ item }) =>
+    interfaceContainsAddress(item, route.nextHop),
+  )
 }
 
 function findRoutedTopologyPath({
@@ -2284,35 +3461,121 @@ function findRoutedTopologyPath({
   topology,
   sourceDeviceId,
   destinationDeviceId,
+  sourceIp,
   destinationIp,
+  protocol = 'icmp',
+  initialTranslations = [],
 }) {
   const adjacency = activeTopologyAdjacency(deviceStates, topology)
+  const ospfTopology = buildOspfTopology(deviceStates, topology, devices)
   const deviceTypes = new Map(
     (devices ?? []).map((device) => [device.id, device.type]),
   )
-  const visited = new Set([sourceDeviceId])
-  const queue = [{ deviceId: sourceDeviceId, path: [sourceDeviceId] }]
+  const sourceState = deviceStates[sourceDeviceId]
+  const sourceInterfaceEntry = Object.entries(sourceState?.interfaces ?? {})
+    .find(([, item]) => item.ipAddress === sourceIp && !item.shutdown)
+  const sourceSviMatch = sourceInterfaceEntry?.[0]?.match(/^Vlan(\d+)$/i)
+  const initialTrafficVlan =
+    deviceTypes.get(sourceDeviceId) === 'switch' && sourceSviMatch
+      ? Number(sourceSviMatch[1])
+      : null
+  const spanningTreeCache = new Map()
+  const visited = new Set([
+    `${sourceDeviceId}:${initialTrafficVlan ?? 'untagged'}`,
+  ])
+  const queue = [{
+    deviceId: sourceDeviceId,
+    path: [sourceDeviceId],
+    trafficVlan: initialTrafficVlan,
+    incomingInterface: null,
+    incomingWireVlan: null,
+    packet: { sourceIp, destinationIp, protocol },
+    translations: initialTranslations,
+  }]
 
   while (queue.length) {
     const current = queue.shift()
-    if (current.deviceId === destinationDeviceId) return current.path
-
     const currentState = deviceStates[current.deviceId]
     if (!currentState) continue
+    const currentPacket = reverseNatPacket(
+      currentState,
+      current.deviceId,
+      current.incomingInterface,
+      current.incomingWireVlan,
+      current.packet,
+      current.translations,
+    )
+    if (current.deviceId === destinationDeviceId) {
+      const ownsDestination = activeInterfaceAddresses(currentState)
+        .includes(currentPacket.destinationIp)
+      if (ownsDestination) {
+        return {
+          path: current.path,
+          packet: currentPacket,
+          translations: current.translations,
+        }
+      }
+      continue
+    }
 
     for (const edge of adjacency.get(current.deviceId) ?? []) {
-      if (visited.has(edge.deviceId)) continue
+      if (!spanningTreeAllowsEdge({
+        deviceStates,
+        deviceTypes,
+        adjacency,
+        cache: spanningTreeCache,
+        currentDeviceId: current.deviceId,
+        edge,
+        vlanId: current.trafficVlan,
+      })) continue
+
       if (!canForwardAcrossLink({
         state: currentState,
         deviceType: deviceTypes.get(current.deviceId) ?? 'router',
+        currentDeviceId: current.deviceId,
+        neighborDeviceId: edge.deviceId,
         outgoingInterface: edge.outgoingInterface,
-        destinationIp,
+        destinationIp: currentPacket.destinationIp,
+        ospfTopology,
       })) continue
 
-      visited.add(edge.deviceId)
+      const neighborState = deviceStates[edge.deviceId]
+      if (!neighborState) continue
+      const forwarding = forwardAcrossTopologyEdge({
+        currentState,
+        currentType: deviceTypes.get(current.deviceId) ?? 'router',
+        outgoingInterface: edge.outgoingInterface,
+        neighborState,
+        neighborType: deviceTypes.get(edge.deviceId) ?? 'router',
+        neighborInterface: edge.neighborInterface,
+        incomingInterface: current.incomingInterface,
+        incomingWireVlan: current.incomingWireVlan,
+        trafficVlan: current.trafficVlan,
+        packet: currentPacket,
+        translations: current.translations,
+        currentDeviceId: current.deviceId,
+        destinationIp: currentPacket.destinationIp,
+      })
+      if (!forwarding.allowed) continue
+      const nextTrafficVlan = forwarding.trafficVlan
+
+      const visitKey = [
+        edge.deviceId,
+        nextTrafficVlan ?? 'untagged',
+        forwarding.packet.sourceIp,
+        forwarding.packet.destinationIp,
+      ].join(':')
+      if (visited.has(visitKey)) continue
+
+      visited.add(visitKey)
       queue.push({
         deviceId: edge.deviceId,
         path: [...current.path, edge.deviceId],
+        trafficVlan: nextTrafficVlan,
+        incomingInterface: edge.neighborInterface,
+        incomingWireVlan: forwarding.wireVlan,
+        packet: forwarding.packet,
+        translations: forwarding.translations,
       })
     }
   }
@@ -2326,6 +3589,26 @@ function activeInterfaceAddresses(state) {
     .map((item) => item.ipAddress)
 }
 
+function resolveTopologyDestination(deviceStates, destinationIp) {
+  const directEntry = Object.entries(deviceStates).find(
+    ([, state]) => activeInterfaceAddresses(state).includes(destinationIp),
+  )
+  if (directEntry) return directEntry
+
+  for (const [, state] of Object.entries(deviceStates)) {
+    const staticRule = (state.natRules ?? []).find(
+      (rule) => rule.type === 'static' && rule.globalIp === destinationIp,
+    )
+    if (!staticRule) continue
+    const insideEntry = Object.entries(deviceStates).find(
+      ([, candidate]) => activeInterfaceAddresses(candidate)
+        .includes(staticRule.localIp),
+    )
+    if (insideEntry) return insideEntry
+  }
+  return null
+}
+
 function topologyHopLabel(deviceId, deviceStates, devices) {
   const device = (devices ?? []).find((item) => item.id === deviceId)
   const state = deviceStates[deviceId]
@@ -2333,6 +3616,91 @@ function topologyHopLabel(deviceId, deviceStates, devices) {
   return `${state?.hostname || device?.label || deviceId}${
     address ? ` (${address})` : ''
   }`
+}
+
+function sshServerIsReady(state, username) {
+  const vty = state?.lines?.vty
+  const transports = String(vty?.transportInput ?? '').split(/\s+/)
+  return Boolean(
+    state?.domainName
+    && Number(state?.rsaKeyBits) >= 512
+    // RSA-enabled IOS accepts SSH before version 2 is forced explicitly.
+    // The secure SSH grading criterion still checks for version 2 separately.
+    && [1, 2].includes(Number(state?.sshVersion))
+    && state?.users?.[username]?.secret
+    && vty?.loginLocal
+    && (transports.includes('ssh') || transports.includes('all')),
+  )
+}
+
+export function executeSshSessionCommand({
+  deviceStates,
+  activeDeviceId,
+  rawCommand,
+}) {
+  const sourceState = deviceStates[activeDeviceId]
+  const session = sourceState?.sshSession
+  if (!session?.destinationDeviceId) return null
+
+  const destinationState = deviceStates[session.destinationDeviceId]
+  const command = String(rawCommand ?? '').trim().replace(/\s+/g, ' ')
+  const modeBefore = session.remoteMode ?? 'privileged_exec'
+
+  if (!destinationState) {
+    const disconnectedState = structuredClone(sourceState)
+    delete disconnectedState.sshSession
+    return {
+      state: disconnectedState,
+      accepted: false,
+      output: '% SSH connection lost: remote device is unavailable.',
+      modeBefore,
+      modeAfter: sourceState.mode,
+      sessionClosed: true,
+    }
+  }
+
+  if (
+    ['user_exec', 'privileged_exec'].includes(modeBefore)
+    && ['exit', 'logout', 'disconnect'].includes(command.toLowerCase())
+  ) {
+    const disconnectedState = structuredClone(sourceState)
+    delete disconnectedState.sshSession
+    return {
+      state: disconnectedState,
+      destinationDeviceId: session.destinationDeviceId,
+      destinationState: structuredClone(destinationState),
+      accepted: true,
+      output: `Connection to ${session.destinationIp} closed.`,
+      modeBefore,
+      modeAfter: sourceState.mode,
+      sessionClosed: true,
+    }
+  }
+
+  const remoteSessionState = structuredClone(destinationState)
+  remoteSessionState.mode = modeBefore
+  if (['user_exec', 'privileged_exec'].includes(modeBefore)) {
+    remoteSessionState.activeVlan = null
+    remoteSessionState.activeInterface = null
+    remoteSessionState.activeLine = null
+    remoteSessionState.activeOspfProcess = null
+    remoteSessionState.activeAccessList = null
+    remoteSessionState.activeDhcpPool = null
+  }
+  const outcome = executeCiscoCommand(remoteSessionState, command)
+  const nextSourceState = structuredClone(sourceState)
+  nextSourceState.sshSession = {
+    ...session,
+    remoteMode: outcome.state.mode,
+  }
+
+  return {
+    ...outcome,
+    state: nextSourceState,
+    destinationDeviceId: session.destinationDeviceId,
+    destinationState: outcome.state,
+    sessionClosed: false,
+  }
 }
 
 export function executeTopologyCommand({
@@ -2344,7 +3712,14 @@ export function executeTopologyCommand({
 }) {
   const command = String(rawCommand ?? '').trim().replace(/\s+/g, ' ')
   const match = command.match(/^(ping|traceroute|tracert) (\S+)$/i)
-  if (!match) return null
+  const ciscoSshMatch = command.match(
+    /^ssh (?:-v 2 )?-l (\S+) (?:-v 2 )?(\S+)$/i,
+  )
+  const pcSshMatch = command.match(/^ssh (\S+)@(\S+)$/i)
+  const sshMatch = ciscoSshMatch ?? pcSshMatch
+  const showOspfRoutes = /^show ip route ospf$/i.test(command)
+  const showOspfNeighbors = /^show ip ospf neighbors?$/i.test(command)
+  if (!match && !sshMatch && !showOspfRoutes && !showOspfNeighbors) return null
 
   const currentState = deviceStates[activeDeviceId]
   const modeBefore = currentState?.mode ?? 'user_exec'
@@ -2358,10 +3733,49 @@ export function executeTopologyCommand({
     }
   }
 
-  const operation = match[1].toLowerCase() === 'ping'
-    ? 'ping'
-    : 'traceroute'
-  const destinationIp = match[2]
+  if (showOspfRoutes || showOspfNeighbors) {
+    if (modeBefore !== 'privileged_exec') {
+      return {
+        state: structuredClone(currentState),
+        accepted: false,
+        output: "% Invalid input detected at '^' marker.",
+        modeBefore,
+        modeAfter: modeBefore,
+      }
+    }
+    return {
+      state: structuredClone(currentState),
+      accepted: true,
+      output: showOspfRoutes
+        ? topologyOspfRoutesOutput({
+            deviceStates,
+            devices,
+            activeDeviceId,
+            topology,
+          })
+        : topologyOspfNeighborsOutput({
+            deviceStates,
+            devices,
+            activeDeviceId,
+            topology,
+          }),
+      modeBefore,
+      modeAfter: modeBefore,
+    }
+  }
+
+  const operation = sshMatch
+    ? 'ssh'
+    : match[1].toLowerCase() === 'ping'
+      ? 'ping'
+      : 'traceroute'
+  const protocol = operation === 'ssh'
+    ? 'tcp'
+    : ['ping', 'tracert'].includes(match[1].toLowerCase())
+      ? 'icmp'
+      : 'udp'
+  const sshUsername = sshMatch?.[1] ?? ''
+  const destinationIp = sshMatch?.[2] ?? match[2]
   if (ipv4ToNumber(destinationIp) === null) {
     return {
       state: structuredClone(currentState),
@@ -2372,13 +3786,16 @@ export function executeTopologyCommand({
     }
   }
 
-  const destinationEntry = Object.entries(deviceStates).find(
-    ([, state]) =>
-      Object.values(state.interfaces ?? {}).some(
-        (item) => item.ipAddress === destinationIp && !item.shutdown,
-      ),
+  const destinationEntry = resolveTopologyDestination(
+    deviceStates,
+    destinationIp,
   )
   const sourceAddresses = activeInterfaceAddresses(currentState)
+  const sourceIp = sourceAddresses.find((address) => {
+    const sourceInterface = Object.values(currentState.interfaces ?? {})
+      .find((item) => item.ipAddress === address)
+    return interfaceContainsAddress(sourceInterface, destinationIp)
+  }) ?? sourceAddresses[0]
   const destinationDeviceId = destinationEntry?.[0]
   const forwardPath = destinationDeviceId && sourceAddresses.length
     ? findRoutedTopologyPath({
@@ -2387,31 +3804,47 @@ export function executeTopologyCommand({
         topology,
         sourceDeviceId: activeDeviceId,
         destinationDeviceId,
+        sourceIp,
         destinationIp,
+        protocol,
       })
     : null
   const destinationAddresses = destinationDeviceId
     ? activeInterfaceAddresses(deviceStates[destinationDeviceId])
     : []
-  const returnPath = forwardPath && sourceAddresses.some((sourceIp) =>
-    findRoutedTopologyPath({
+  const returnPath = forwardPath
+    ? findRoutedTopologyPath({
       deviceStates,
       devices,
       topology,
       sourceDeviceId: destinationDeviceId,
       destinationDeviceId: activeDeviceId,
-      destinationIp: sourceIp,
-    }),
-  )
+      sourceIp: forwardPath.packet.destinationIp,
+      destinationIp: forwardPath.packet.sourceIp,
+      protocol,
+      initialTranslations: forwardPath.translations,
+    })
+    : null
 
-  const successful = operation === 'ping'
-    ? Boolean(forwardPath && returnPath && destinationAddresses.length)
-    : Boolean(forwardPath)
+  const destinationState = destinationDeviceId
+    ? deviceStates[destinationDeviceId]
+    : null
+  const successful = operation === 'traceroute'
+    ? Boolean(forwardPath)
+    : Boolean(
+      forwardPath
+      && returnPath
+      && destinationAddresses.length
+      && (operation !== 'ssh'
+        || sshServerIsReady(destinationState, sshUsername)),
+    )
   const state = structuredClone(currentState)
   if (operation === 'ping') {
     state.successfulPings ??= []
-  } else {
+  } else if (operation === 'traceroute') {
     state.successfulTraceroutes ??= []
+  } else {
+    state.successfulSshConnections ??= []
   }
   if (successful && operation === 'ping') {
     state.successfulPings = [
@@ -2425,9 +3858,24 @@ export function executeTopologyCommand({
     ]
   }
 
+  if (successful && operation === 'ssh') {
+    state.successfulSshConnections = [
+      ...new Set([
+        ...state.successfulSshConnections,
+        `${sshUsername}@${destinationIp}`,
+      ]),
+    ]
+    state.sshSession = {
+      destinationDeviceId,
+      destinationIp,
+      username: sshUsername,
+      remoteMode: 'privileged_exec',
+    }
+  }
+
   if (operation === 'traceroute') {
     const hopLines = forwardPath
-      ? forwardPath.slice(1).map(
+      ? forwardPath.path.slice(1).map(
           (deviceId, index) =>
             ` ${index + 1}  ${topologyHopLabel(
               deviceId,
@@ -2445,6 +3893,22 @@ export function executeTopologyCommand({
         ...hopLines,
         successful ? 'Trace complete.' : 'Destination unreachable.',
       ].join('\n'),
+      modeBefore,
+      modeAfter: modeBefore,
+    }
+  }
+
+  if (operation === 'ssh') {
+    return {
+      state,
+      accepted: true,
+      output: successful
+        ? [
+          `Open`,
+          `[Connection to ${destinationIp} established using SSH version 2]`,
+          `${destinationState.hostname}#`,
+        ].join('\n')
+        : `% Connection refused by remote host`,
       modeBefore,
       modeAfter: modeBefore,
     }

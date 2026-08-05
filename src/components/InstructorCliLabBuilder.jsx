@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCourses, getModules } from '../services/questionService'
+import CliPracticalTemplateManager from './CliPracticalTemplateManager'
 import {
   bulkManageCliLabs,
+  duplicateInstructorCliLab,
   deleteCliLab,
   getInstructorCliWorkspace,
+  getInstructorCliLabTemplates,
+  saveCliLabAsTemplate,
   saveCliLab,
 } from '../services/cliLabService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
@@ -68,6 +72,7 @@ const criterionTypes = [
   ['line_login_local', 'Line local login enabled'],
   ['connectivity_ping', 'Successful topology ping'],
   ['connectivity_traceroute', 'Successful topology traceroute'],
+  ['connectivity_ssh', 'Successful topology SSH connection'],
   ['pc_dns_servers', 'PC DNS servers'],
   ['config_saved', 'Configuration saved'],
 ]
@@ -107,6 +112,7 @@ const targetNotRequired = [
   'ssh_version',
   'connectivity_ping',
   'connectivity_traceroute',
+  'connectivity_ssh',
   'pc_dns_servers',
   'config_saved',
 ]
@@ -521,6 +527,12 @@ function criterionConfigurationCommands(criterion, allCriteria, deviceType) {
       return [`ping ${expected}`]
     case 'connectivity_traceroute':
       return [`traceroute ${expected}`]
+    case 'connectivity_ssh': {
+      const [username, address] = expected.split('@')
+      return deviceType === 'pc'
+        ? [`ssh ${expected}`]
+        : [`ssh -l ${username || '<username>'} ${address || '<address>'}`]
+    }
     case 'pc_dns_servers':
       return [`IP Configuration > DNS servers: ${expected}`]
     case 'config_saved':
@@ -632,11 +644,13 @@ function criterionHelp(type) {
   if (type === 'connectivity_ping') return 'Expected: destination interface IP that this device must successfully ping'
   if (type === 'pc_dns_servers') return 'Expected: preferred DNS followed by optional alternate DNS, such as 8.8.8.8 1.1.1.1'
   if (type === 'connectivity_traceroute') return 'Expected: destination interface IP that this device must successfully trace'
+  if (type === 'connectivity_ssh') return 'Expected: username@destination-IP, such as admin@192.168.1.1'
   return 'No target or expected value is needed.'
 }
 
 export default function InstructorCliLabBuilder() {
   const [workspace, setWorkspace] = useState({ labs: [], classes: [] })
+  const [templates, setTemplates] = useState([])
   const [courses, setCourses] = useState([])
   const [modules, setModules] = useState([])
   const [lab, setLab] = useState(blankLab)
@@ -653,6 +667,8 @@ export default function InstructorCliLabBuilder() {
   const [selectedLabIds, setSelectedLabIds] = useState([])
   const [bulkLabAction, setBulkLabAction] = useState('')
   const [bulkManaging, setBulkManaging] = useState(false)
+  const [duplicatingLabId, setDuplicatingLabId] = useState(null)
+  const [templatingLabId, setTemplatingLabId] = useState(null)
   const [answerKeyLabId, setAnswerKeyLabId] = useState(null)
   const [expandedLabIds, setExpandedLabIds] = useState([])
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
@@ -720,12 +736,14 @@ export default function InstructorCliLabBuilder() {
     try {
       setLoading(true)
       setMessage('')
-      const [workspaceData, courseData] = await Promise.all([
+      const [workspaceData, courseData, templateData] = await Promise.all([
         getInstructorCliWorkspace(),
         getCourses(),
+        getInstructorCliLabTemplates(),
       ])
       setWorkspace(workspaceData)
       setCourses(courseData)
+      setTemplates(templateData)
       setSelectedLabIds((current) =>
         current.filter((id) => workspaceData.labs.some((item) => item.id === id)),
       )
@@ -1111,6 +1129,50 @@ export default function InstructorCliLabBuilder() {
       await loadData()
     } catch (error) {
       setMessage(error.message)
+    }
+  }
+
+  async function handleDuplicateLab(item) {
+    const confirmed = await confirm({
+      title: 'Duplicate CLI practical?',
+      message: `Create a draft copy of “${item.title}”? Class assignments, attempts, commands, and results will not be copied.`,
+      confirmLabel: 'Duplicate practical',
+      tone: 'default',
+    })
+    if (!confirmed) return
+
+    setDuplicatingLabId(item.id)
+    setMessage('')
+    try {
+      await duplicateInstructorCliLab(item.id)
+      await loadData()
+      setMessage('A draft copy of the CLI practical was created.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setDuplicatingLabId(null)
+    }
+  }
+
+  async function handleSaveLabTemplate(item) {
+    const confirmed = await confirm({
+      title: 'Save practical as template?',
+      message: `Save the devices, topology, settings, and criteria from “${item.title}” as a reusable template?`,
+      confirmLabel: 'Save template',
+      tone: 'default',
+    })
+    if (!confirmed) return
+
+    setTemplatingLabId(item.id)
+    setMessage('')
+    try {
+      await saveCliLabAsTemplate(item.id)
+      await loadData()
+      setMessage('The CLI practical template was saved.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setTemplatingLabId(null)
     }
   }
 
@@ -1799,6 +1861,11 @@ export default function InstructorCliLabBuilder() {
         )}
       </section>
 
+      <CliPracticalTemplateManager
+        templates={templates}
+        onChanged={loadData}
+      />
+
       <section className="cli-lab-panel">
         <div className="section-heading">
           <div><span className="eyebrow">CLI CONTENT</span><h2>Practical library</h2></div>
@@ -1947,6 +2014,28 @@ export default function InstructorCliLabBuilder() {
                   <div><dt>Classes</dt><dd>{item.classIds.length}</dd></div>
                   <div><dt>Attempts</dt><dd>{item.maxAttempts}</dd></div>
                 </dl>
+                <div className="cli-lab-card__reuse-actions">
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={duplicatingLabId === item.id}
+                    onClick={() => void handleDuplicateLab(item)}
+                  >
+                    {duplicatingLabId === item.id
+                      ? 'Duplicating...'
+                      : 'Duplicate draft'}
+                  </button>
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={templatingLabId === item.id}
+                    onClick={() => void handleSaveLabTemplate(item)}
+                  >
+                    {templatingLabId === item.id
+                      ? 'Saving...'
+                      : 'Save as template'}
+                  </button>
+                </div>
                 <div className="class-card__actions">
                   <button
                     className="secondary"

@@ -9,11 +9,13 @@ export async function getExamControlsWorkspace() {
     { data: cliAttempts, error: cliError },
     { data: classContexts },
     { data: clientSessions, error: clientSessionError },
+    { data: integrityPolicies, error: integrityPolicyError },
   ] = await Promise.all([
     supabase.rpc('get_exam_controls_workspace'),
     supabase.rpc('get_cli_live_monitoring_attempts'),
     supabase.rpc('get_live_attempt_class_context'),
     supabase.rpc('get_instructor_assessment_client_sessions'),
+    supabase.rpc('get_instructor_integrity_policies'),
   ])
   if (error) throw error
   if (cliError) throw cliError
@@ -21,6 +23,10 @@ export async function getExamControlsWorkspace() {
     clientSessionError
     && !['42883', 'PGRST202'].includes(clientSessionError.code)
   ) throw clientSessionError
+  if (
+    integrityPolicyError
+    && !['42883', 'PGRST202'].includes(integrityPolicyError.code)
+  ) throw integrityPolicyError
   const classContextByAttempt = new Map(
     (classContexts ?? []).map((context) => [
       `${context.assessmentType}:${context.attemptId}`,
@@ -56,6 +62,8 @@ export async function getExamControlsWorkspace() {
     quizzes: data?.quizzes ?? [],
     assignments: data?.assignments ?? [],
     accommodations: data?.accommodations ?? [],
+    integrityPolicies: integrityPolicies ?? [],
+    integrityPoliciesAvailable: !integrityPolicyError,
     activeAttempts: [
       ...(data?.activeAttempts ?? []).map((attempt) => ({
         ...attempt,
@@ -73,6 +81,15 @@ export async function getExamControlsWorkspace() {
         new Date(left.startedAt).getTime(),
     ),
   }
+}
+
+export async function saveAssessmentIntegrityPolicy(payload) {
+  const { data, error } = await supabase.rpc(
+    'save_assessment_integrity_policy',
+    { p_payload: payload },
+  )
+  if (error) throw error
+  return data
 }
 
 export async function saveQuizAssignmentSchedule({

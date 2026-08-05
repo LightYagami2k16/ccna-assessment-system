@@ -21,6 +21,7 @@ export default function AccountSettings({
   const [savingName, setSavingName] = useState(false)
   const [savingPassword, setSavingPassword] = useState(false)
   const closeButtonRef = useRef(null)
+  const dialogRef = useRef(null)
   const passwordEmailRequired = [
     'instructor',
     'administrator',
@@ -39,7 +40,28 @@ export default function AccountSettings({
     closeButtonRef.current?.focus()
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') onClose?.()
+      if (event.key === 'Escape') {
+        onClose?.()
+        return
+      }
+
+      if (event.key !== 'Tab') return
+
+      const focusableElements = dialogRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusableElements?.length) return
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
     }
 
     document.addEventListener('keydown', handleKeyDown)
@@ -189,6 +211,7 @@ export default function AccountSettings({
       }}
     >
     <section
+      ref={dialogRef}
       className="account-settings-panel account-settings-modal"
       id="account-settings-dialog"
       role="dialog"

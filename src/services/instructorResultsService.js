@@ -49,3 +49,22 @@ export async function resetInstructorAttempts(attemptIds) {
   if (error) throw error
   return data
 }
+
+export async function getInstructorQuestionAnalytics() {
+  const { data, error } = await supabase.rpc(
+    'get_instructor_question_analytics',
+  )
+  if (error) throw error
+  return data?.questions ?? []
+}
+
+export async function getInstructorPerformanceTrends() {
+  const { data, error } = await supabase.rpc(
+    'get_instructor_performance_trends',
+  )
+  if (error) throw error
+  return {
+    trends: data?.trends ?? [],
+    learningAreas: data?.learningAreas ?? [],
+  }
+}

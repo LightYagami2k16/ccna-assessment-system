@@ -24,6 +24,7 @@ const commonIosCriteria = [
   'line_login_local',
   'connectivity_ping',
   'connectivity_traceroute',
+  'connectivity_ssh',
   'config_saved',
 ]
 
@@ -33,6 +34,7 @@ const applicableCriteria = {
     'default_gateway',
     'connectivity_ping',
     'connectivity_traceroute',
+    'connectivity_ssh',
     'pc_dns_servers',
   ]),
   router: new Set([

@@ -12,6 +12,7 @@ test('limits PC criteria to address, gateway, and connectivity checks', () => {
   assert.equal(isCriterionApplicable('pc', 'interface_ip'), true)
   assert.equal(isCriterionApplicable('pc', 'default_gateway'), true)
   assert.equal(isCriterionApplicable('pc', 'connectivity_ping'), true)
+  assert.equal(isCriterionApplicable('pc', 'connectivity_ssh'), true)
   assert.equal(isCriterionApplicable('pc', 'pc_dns_servers'), true)
   assert.equal(isCriterionApplicable('pc', 'hostname'), false)
   assert.equal(isCriterionApplicable('pc', 'vlan_exists'), false)

@@ -159,3 +159,12 @@ export async function setQuestionsStatus(questionIds, status) {
   if (error) throw error
   return data
 }
+
+export async function importQuestionBank(payload) {
+  const { data, error } = await supabase.rpc(
+    'import_instructor_question_bank',
+    { p_payload: payload },
+  )
+  if (error) throw error
+  return data
+}

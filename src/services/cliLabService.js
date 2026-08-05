@@ -48,6 +48,62 @@ export async function getInstructorCliWorkspace() {
   }
 }
 
+export async function getInstructorCliLabTemplates() {
+  const { data, error } = await supabase
+    .from('cli_lab_templates')
+    .select(`
+      id,
+      source_lab_id,
+      course_id,
+      module_id,
+      name,
+      template_data,
+      created_at,
+      courses (id, code, title),
+      modules (id, code, title)
+    `)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data ?? []
+}
+
+export async function duplicateInstructorCliLab(labId, title = null) {
+  const { data, error } = await supabase.rpc(
+    'duplicate_instructor_cli_lab',
+    { p_lab_id: labId, p_title: title },
+  )
+  if (error) throw error
+  return data
+}
+
+export async function saveCliLabAsTemplate(labId, name = null) {
+  const { data, error } = await supabase.rpc(
+    'save_instructor_cli_lab_template',
+    { p_lab_id: labId, p_name: name },
+  )
+  if (error) throw error
+  return data
+}
+
+export async function createCliLabFromTemplate(templateId, title = null) {
+  const { data, error } = await supabase.rpc(
+    'create_instructor_cli_lab_from_template',
+    { p_template_id: templateId, p_title: title },
+  )
+  if (error) throw error
+  return data
+}
+
+export async function deleteCliLabTemplate(templateId) {
+  const { data, error } = await supabase.rpc(
+    'delete_instructor_cli_lab_template',
+    { p_template_id: templateId },
+  )
+  if (error) throw error
+  return data
+}
+
 export async function saveCliLab(payload) {
   const { data, error } = await supabase.rpc('save_cli_lab', { p_payload: payload })
   if (error) throw error

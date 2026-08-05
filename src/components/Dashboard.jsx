@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 import AccountSettings from './AccountSettings';
@@ -39,6 +39,7 @@ export default function Dashboard({
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [studentExamMode, setStudentExamMode] = useState(false);
+  const settingsButtonRef = useRef(null);
   const role = profile?.role ?? 'student';
   const displayName =
     profile?.full_name ||
@@ -70,6 +71,13 @@ export default function Dashboard({
     }
   }
 
+  function closeSettings() {
+    setSettingsOpen(false);
+    window.requestAnimationFrame(() => {
+      settingsButtonRef.current?.focus();
+    });
+  }
+
   return (
     <div
       className={
@@ -78,6 +86,21 @@ export default function Dashboard({
           : 'app-shell'
       }
     >
+      {!studentExamMode && (
+        <a
+          className="skip-to-content"
+          href="#main-workspace-content"
+          onClick={() => {
+            window.requestAnimationFrame(() => {
+              document
+                .getElementById('main-workspace-content')
+                ?.focus();
+            });
+          }}
+        >
+          Skip to main content
+        </a>
+      )}
       {!studentExamMode && (
       <header className="topbar">
         <div className="topbar__brand">
@@ -108,12 +131,19 @@ export default function Dashboard({
           </span>
 
           <button
+            ref={settingsButtonRef}
             className="topbar__account-settings"
             type="button"
             aria-haspopup="dialog"
             aria-controls="account-settings-dialog"
             aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((current) => !current)}
+            onClick={() => {
+              if (settingsOpen) {
+                closeSettings();
+              } else {
+                setSettingsOpen(true);
+              }
+            }}
           >
             {settingsOpen ? 'Close settings' : 'Account settings'}
           </button>
@@ -130,6 +160,8 @@ export default function Dashboard({
       )}
 
       <main
+        id="main-workspace-content"
+        tabIndex="-1"
         className={
           studentExamMode
             ? 'dashboard dashboard--exam-mode'
@@ -142,7 +174,7 @@ export default function Dashboard({
             profile={profile}
             previewMode={previewMode}
             onProfileUpdated={onProfileUpdated}
-            onClose={() => setSettingsOpen(false)}
+            onClose={closeSettings}
           />
         )}
 

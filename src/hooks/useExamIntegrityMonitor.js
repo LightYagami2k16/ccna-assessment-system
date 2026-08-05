@@ -6,6 +6,7 @@ export default function useExamIntegrityMonitor({
   attemptType = 'quiz',
   enabled,
   onIncident,
+  onEnforcement,
 }) {
   const hiddenStartedAt = useRef(null)
   const wasFullscreen = useRef(Boolean(document.fullscreenElement))
@@ -13,54 +14,66 @@ export default function useExamIntegrityMonitor({
   useEffect(() => {
     if (!attemptId || !enabled) return undefined
 
-    function record(eventType, details = {}) {
-      void recordExamIntegrityEvent({
-        attemptId,
-        attemptType,
-        eventType,
-        details,
-      }).catch(() => {})
+    async function record(eventType, details = {}) {
+      try {
+        const result = await recordExamIntegrityEvent({
+          attemptId,
+          attemptType,
+          eventType,
+          details,
+        })
+        const behavior = result?.behavior ?? 'warn'
+        if (
+          behavior !== 'monitor'
+          && ['page_hidden', 'fullscreen_exited'].includes(eventType)
+        ) {
+          onIncident?.(eventType, result)
+        }
+        if (result?.autoSubmitted) {
+          onEnforcement?.(result)
+        }
+      } catch {
+        // A temporary connection failure must not interrupt the assessment.
+      }
     }
 
     function handleVisibilityChange() {
       if (document.visibilityState === 'hidden') {
         hiddenStartedAt.current = Date.now()
-        record('page_hidden')
-        onIncident?.('page_hidden')
+        void record('page_hidden')
         return
       }
 
       const awayDurationMs = hiddenStartedAt.current
         ? Date.now() - hiddenStartedAt.current
         : 0
-      record('page_visible', { awayDurationMs })
+      void record('page_visible', { awayDurationMs })
       hiddenStartedAt.current = null
     }
 
     function handleBlur() {
-      record('window_blur')
+      void record('window_blur')
     }
 
     function handleFocus() {
-      record('window_focus')
+      void record('window_focus')
     }
 
     function handleFullscreenChange() {
       const isFullscreen = Boolean(document.fullscreenElement)
       if (wasFullscreen.current && !isFullscreen) {
-        record('fullscreen_exited')
-        onIncident?.('fullscreen_exited')
+        void record('fullscreen_exited')
       }
       wasFullscreen.current = isFullscreen
     }
 
     function handleOffline() {
-      record('connection_lost')
-      onIncident?.('connection_lost')
+      onIncident?.('connection_lost', { operationalWarning: true })
+      void record('connection_lost')
     }
 
     function handleOnline() {
-      record('connection_restored')
+      void record('connection_restored')
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -78,5 +91,5 @@ export default function useExamIntegrityMonitor({
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('online', handleOnline)
     }
-  }, [attemptId, attemptType, enabled, onIncident])
+  }, [attemptId, attemptType, enabled, onEnforcement, onIncident])
 }

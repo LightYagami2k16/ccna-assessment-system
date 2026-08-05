@@ -61,3 +61,37 @@ test('holds an acquired lock until the assessment releases it', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(callbackFinished, true)
 })
+
+test('reuses the same-tab lock during an immediate React effect remount', async () => {
+  let requestCount = 0
+  let callbackFinished = false
+  const lockManager = {
+    async request(_name, _options, callback) {
+      requestCount += 1
+      await callback({ name: 'assessment-lock' })
+      callbackFinished = true
+    },
+  }
+
+  const firstMount = await acquireAssessmentTabLock({
+    assessmentType: 'cli',
+    attemptId: 'strict-mode-attempt',
+    lockManager,
+  })
+
+  firstMount.release()
+
+  const secondMount = await acquireAssessmentTabLock({
+    assessmentType: 'cli',
+    attemptId: 'strict-mode-attempt',
+    lockManager,
+  })
+
+  assert.equal(secondMount.acquired, true)
+  assert.equal(requestCount, 1)
+  assert.equal(callbackFinished, false)
+
+  secondMount.release()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(callbackFinished, true)
+})

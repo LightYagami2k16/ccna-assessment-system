@@ -3,6 +3,7 @@ import {
   deleteStudentQuizAccommodation,
   getExamControlsWorkspace,
   grantStudentExtraAttempt,
+  saveAssessmentIntegrityPolicy,
   saveQuizAssignmentSchedule,
   saveStudentQuizAccommodation,
 } from '../services/examControlService'
@@ -230,12 +231,137 @@ function AccommodationEditor({ students, quizzes, onSaved }) {
   )
 }
 
+function IntegrityPolicyEditor({ policies, available, onSaved }) {
+  const [selection, setSelection] = useState('')
+  const [behavior, setBehavior] = useState('warn')
+  const [incidentLimit, setIncidentLimit] = useState(3)
+  const [maxHiddenSeconds, setMaxHiddenSeconds] = useState(60)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const selectedPolicy = policies.find((policy) =>
+    `${policy.assessmentType}:${policy.assessmentId}` === selection,
+  )
+
+  useEffect(() => {
+    if (!selection && policies.length) {
+      const first = policies[0]
+      setSelection(`${first.assessmentType}:${first.assessmentId}`)
+      return
+    }
+    if (!selectedPolicy) return
+    setBehavior(selectedPolicy.behavior ?? 'warn')
+    setIncidentLimit(selectedPolicy.incidentLimit ?? 3)
+    setMaxHiddenSeconds(selectedPolicy.maxHiddenSeconds ?? 60)
+  }, [policies, selectedPolicy, selection])
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (!selectedPolicy) return
+    setSaving(true)
+    setMessage('')
+    try {
+      await saveAssessmentIntegrityPolicy({
+        assessmentType: selectedPolicy.assessmentType,
+        assessmentId: selectedPolicy.assessmentId,
+        behavior,
+        incidentLimit: Number(incidentLimit),
+        maxHiddenSeconds: Number(maxHiddenSeconds),
+      })
+      setMessage('Integrity policy saved.')
+      await onSaved()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!available) {
+    return (
+      <div className="empty-state">
+        <h3>Integrity policies require migration 057</h3>
+        <p>Apply the Phase 5.3 migration to configure enforcement.</p>
+      </div>
+    )
+  }
+  if (!policies.length) {
+    return (
+      <div className="empty-state">
+        <h3>No assessments available</h3>
+        <p>Create a quiz or CLI practical before configuring a policy.</p>
+      </div>
+    )
+  }
+
+  return (
+    <form className="integrity-policy-editor" onSubmit={handleSubmit}>
+      <label className="integrity-policy-editor__assessment">
+        Assessment
+        <select
+          value={selection}
+          onChange={(event) => setSelection(event.target.value)}
+        >
+          {policies.map((policy) => (
+            <option
+              key={`${policy.assessmentType}:${policy.assessmentId}`}
+              value={`${policy.assessmentType}:${policy.assessmentId}`}
+            >
+              {policy.courseCode} - {policy.title} ({policy.assessmentType === 'cli' ? 'CLI' : 'Quiz'})
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="form-grid form-grid--three">
+        <label>
+          Response to incidents
+          <select value={behavior} onChange={(event) => setBehavior(event.target.value)}>
+            <option value="monitor">Monitor only</option>
+            <option value="warn">Record and warn</option>
+            <option value="auto_submit">Automatically submit</option>
+          </select>
+        </label>
+        <label>
+          Incident limit
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={incidentLimit}
+            onChange={(event) => setIncidentLimit(event.target.value)}
+          />
+        </label>
+        <label>
+          Maximum time away (seconds)
+          <input
+            type="number"
+            min="5"
+            max="3600"
+            value={maxHiddenSeconds}
+            onChange={(event) => setMaxHiddenSeconds(event.target.value)}
+          />
+        </label>
+      </div>
+      <p className="integrity-policy-editor__note">
+        Automatic submission occurs when either threshold is reached. Brief
+        focus changes remain reviewable events and are not counted as incidents.
+      </p>
+      <button className="primary" type="submit" disabled={saving}>
+        {saving ? 'Saving...' : 'Save integrity policy'}
+      </button>
+      {message && <p className="form-message">{message}</p>}
+    </form>
+  )
+}
+
 export default function ExamControlsDashboard() {
   const [workspace, setWorkspace] = useState({
     students: [],
     quizzes: [],
     assignments: [],
     accommodations: [],
+    integrityPolicies: [],
+    integrityPoliciesAvailable: true,
     activeAttempts: [],
   })
   const [loading, setLoading] = useState(true)
@@ -570,6 +696,24 @@ export default function ExamControlsDashboard() {
             })}
           </div>
         )}
+      </section>
+
+      <section className="exam-control-panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">INTEGRITY ENFORCEMENT</span>
+            <h2>Assessment policies</h2>
+            <p>
+              Choose whether browser incidents are monitored, shown as student
+              warnings, or used to submit an attempt automatically.
+            </p>
+          </div>
+        </div>
+        <IntegrityPolicyEditor
+          policies={workspace.integrityPolicies}
+          available={workspace.integrityPoliciesAvailable}
+          onSaved={loadWorkspace}
+        />
       </section>
 
       <section className="exam-control-panel">
