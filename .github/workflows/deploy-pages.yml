@@ -38,7 +38,7 @@ jobs:
         run: npm run lint
       - name: Review dependency changes
         if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
       - name: Validate production configuration
         if: github.event_name != 'pull_request'
         env:
