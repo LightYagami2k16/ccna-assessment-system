@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getPublicAppUrl } from '../config/publicAppUrl'
 import { supabase } from '../lib/supabase'
 
 export default function AuthForm({ initialMessage = '' }) {
@@ -19,7 +20,10 @@ export default function AuthForm({ initialMessage = '' }) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: getPublicAppUrl(),
+          },
         })
         if (error) throw error
         setMessage('Account created. Check your email if confirmation is enabled.')

@@ -17,6 +17,9 @@ const InstructorCliResults = lazy(() => import('./InstructorCliResults'))
 const InstructorOverallResults = lazy(
   () => import('./InstructorOverallResults'),
 )
+const InstructorContentBackup = lazy(
+  () => import('./InstructorContentBackup'),
+)
 
 const instructorSections = new Set([
   'questions',
@@ -25,6 +28,7 @@ const instructorSections = new Set([
   'assignments',
   'exam-controls',
   'results',
+  'content-backup',
 ])
 
 const instructorNavigation = [
@@ -57,6 +61,11 @@ const instructorNavigation = [
     id: 'results',
     label: 'Student results',
     description: 'Review attempts and browser events',
+  },
+  {
+    id: 'content-backup',
+    label: 'Content backup',
+    description: 'Protect and restore instructional content',
   },
 ]
 
@@ -214,6 +223,9 @@ export default function InstructorWorkspace({ user }) {
                 <InstructorResultsDashboard />
                 <InstructorCliResults />
               </div>
+            )}
+            {activeSection === 'content-backup' && (
+              <InstructorContentBackup />
             )}
           </Suspense>
         </section>

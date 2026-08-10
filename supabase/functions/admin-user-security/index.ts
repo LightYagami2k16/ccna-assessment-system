@@ -97,6 +97,36 @@ Deno.serve(async (request) => {
       Deno.env.get('PUBLIC_SITE_URL') ?? '',
     ).trim()
 
+    if (['invite', 'send_password_reset'].includes(action)) {
+      let parsedSiteUrl: URL
+
+      try {
+        parsedSiteUrl = new URL(configuredSiteUrl)
+      } catch {
+        return jsonResponse(
+          {
+            error:
+              'Account email delivery is not configured. Set PUBLIC_SITE_URL to the deployed HTTPS application URL.',
+          },
+          503,
+        )
+      }
+
+      if (
+        parsedSiteUrl.protocol !== 'https:'
+        || parsedSiteUrl.search
+        || parsedSiteUrl.hash
+      ) {
+        return jsonResponse(
+          {
+            error:
+              'PUBLIC_SITE_URL must be an HTTPS application URL without a query string or fragment.',
+          },
+          503,
+        )
+      }
+    }
+
     if (action === 'reset_class_student_password') {
       const classId = String(body?.classId ?? '').trim()
       const targetUserId = String(body?.studentId ?? '').trim()

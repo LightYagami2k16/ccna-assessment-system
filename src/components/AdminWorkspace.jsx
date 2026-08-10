@@ -10,10 +10,14 @@ const InstructorWorkspace = lazy(
 const AdminAuditHistory = lazy(
   () => import('./AdminAuditHistory'),
 )
+const AdminSystemHealth = lazy(
+  () => import('./AdminSystemHealth'),
+)
 
 const adminSections = new Set([
   'accounts',
   'security-history',
+  'system-health',
   'assessment-tools',
 ])
 
@@ -27,6 +31,11 @@ const adminNavigation = [
     id: 'security-history',
     label: 'Security history',
     description: 'Account and role audit events',
+  },
+  {
+    id: 'system-health',
+    label: 'System health',
+    description: 'Runtime errors and backend readiness',
   },
   {
     id: 'assessment-tools',
@@ -139,6 +148,10 @@ export default function AdminWorkspace({
 
         {activeSection === 'security-history' && (
           <AdminAuditHistory previewMode={previewMode} />
+        )}
+
+        {activeSection === 'system-health' && (
+          <AdminSystemHealth previewMode={previewMode} />
         )}
       </Suspense>
     </div>

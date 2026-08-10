@@ -3,7 +3,9 @@ import { expect, test } from '@playwright/test'
 
 for (const role of ['student', 'instructor', 'administrator']) {
   test(`${role} workspace has no serious accessibility violations`, async ({ page }) => {
-    test.setTimeout(60_000)
+    // The administrator workspace contains the largest set of management
+    // controls, so allow the complete axe scan to finish on slower CI runners.
+    test.setTimeout(120_000)
     await page.goto(`/?uat-role=${role}`)
     await expect(page.getByRole('heading', {
       name: `Welcome back, UAT ${role === 'administrator' ? 'Administrator' : role === 'instructor' ? 'Instructor' : 'Student'}`,

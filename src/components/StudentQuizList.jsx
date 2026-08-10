@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AssessmentTypeIcon from './AssessmentTypeIcon'
+import WorkspaceLoading from './WorkspaceLoading'
 import {
   getAvailableQuizzes,
   getStudentAttempts,
@@ -101,14 +103,6 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
     }
   }
 
-  if (loading) {
-    return (
-      <section className="student-quiz-list">
-        Loading available quizzes...
-      </section>
-    )
-  }
-
   return (
     <section className="student-quiz-list">
       <div className="section-heading">
@@ -123,9 +117,10 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
         <button
           className="secondary"
           type="button"
+          disabled={loading}
           onClick={() => void loadData()}
         >
-          Refresh
+          {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
@@ -134,8 +129,13 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
           {message}
         </p>
       )}
-      {!availableQuizzes.length ? (
-        <div className="empty-state">
+      {loading ? (
+        <div className="student-assessment-loading">
+          <WorkspaceLoading label="Loading available quizzes..." />
+        </div>
+      ) : !availableQuizzes.length ? (
+        <div className="empty-state student-assessment-empty">
+          <AssessmentTypeIcon type="quiz" />
           <h3>No quizzes available</h3>
           <p>
             You have no active assigned quizzes. Archived quizzes and quizzes
@@ -164,11 +164,20 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
 
             return (
               <article className="student-quiz-card" key={quiz.id}>
-                <div className="student-quiz-card__course">
-                  <span>{quiz.courses?.code ?? 'CCNA'}</span>
-                  <span>{quiz.modules?.code ?? 'General'}</span>
-                </div>
-                <h3>{quiz.title}</h3>
+                <header className="student-assessment-card__header">
+                  <AssessmentTypeIcon type="quiz" />
+                  <div className="student-assessment-card__identity">
+                    <div className="student-assessment-card__kicker">
+                      <span className="course-code">
+                        {quiz.courses?.code ?? 'CCNA'}
+                      </span>
+                      <span className="student-assessment-card__module">
+                        {quiz.modules?.code ?? 'General'}
+                      </span>
+                    </div>
+                    <h3>{quiz.title}</h3>
+                  </div>
+                </header>
                 {quiz.access_mode === 'assigned_classes' && (
                   <span className="assignment-badge">
                     Assigned to your class

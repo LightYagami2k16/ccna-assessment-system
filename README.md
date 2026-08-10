@@ -1,13 +1,19 @@
-# CCNA Assessment System — Phase 1 Starter
+# CCNA Assessment System
 
-React/Vite front end for GitHub Pages with a Supabase backend. This starter includes:
+React/Vite assessment platform for GitHub Pages with a Supabase backend. The
+current application includes:
 
 - Email/password authentication
 - Automatic student profiles
 - Student, instructor, and admin roles
 - ITN, SRWE, and ENSA starter courses
 - Row Level Security policies
-- Responsive dashboard
+- Responsive student, instructor, and administrator workspaces
+- Question banks and timed quizzes
+- Multi-device Cisco CLI practicals
+- Class enrollment, assignment scheduling, monitoring, and results
+- Instructional-content import, templates, backup, and restore
+- Administrator system health and privacy-safe runtime monitoring
 - GitHub Pages deployment workflow
 
 ## 1. Create the Supabase project
@@ -31,12 +37,13 @@ Fill in `.env.local`:
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+VITE_PUBLIC_APP_URL=http://localhost:5173/
 ```
 
 Then:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -70,12 +77,48 @@ In GitHub, open **Settings → Secrets and variables → Actions** and add:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
+Add this repository variable under the **Variables** tab:
+
+- `VITE_PUBLIC_APP_URL` — the exact deployed HTTPS application URL
+
 The publishable key is designed for browser use but must always be paired with RLS. Never place a Supabase secret key or service-role key in this React project.
 
 ## 6. Enable GitHub Pages
 
 Open **Settings → Pages** and choose **GitHub Actions** as the source. Pushes to `main` will build and deploy the site.
 
-## Current boundary
+## Production verification
 
-This is the Phase 1 foundation. It does not yet include the question editor, timed quiz engine, grading, or Cisco terminal. Those are the next development increments.
+Run the full local quality suite before a release:
+
+```bash
+npm run test:qa
+```
+
+Run the repository secret scan independently with:
+
+```bash
+npm run security:scan
+```
+
+Run the read-only smoke test against the deployed application with:
+
+```powershell
+$env:PRODUCTION_APP_URL = 'https://LightYagami2k16.github.io/ccna-assessment-system/'
+npm run test:production
+```
+
+Deployment requirements and the production release checklist are documented
+in `docs/PHASE_10_PRODUCTION_READINESS.md`.
+
+Database backup schedules, integrity checks, and recovery drills are
+documented in `docs/PHASE_10_BACKUP_AND_RECOVERY.md`.
+
+Authentication email, SMTP, DNS, and redirect configuration are documented in
+`docs/PHASE_10_AUTH_AND_DELIVERABILITY.md`.
+
+Final security review, release handoff, rollback, and incident response are
+documented in `docs/PHASE_10_SECURITY_AND_HANDOFF.md`.
+
+Automated live-site validation and the post-launch operating cadence are
+documented in `docs/PHASE_11_POST_LAUNCH_OPERATIONS.md`.

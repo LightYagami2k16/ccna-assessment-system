@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { getPublicAppUrl } from '../config/publicAppUrl'
 import { supabase } from '../lib/supabase'
 
 export default function AccountSettings({
@@ -174,14 +175,10 @@ export default function AccountSettings({
       setSavingPassword(true)
 
       if (!previewMode) {
-        const redirectTo = new URL(
-          import.meta.env.BASE_URL,
-          window.location.origin,
-        ).toString()
         const { error } =
           await supabase.auth.resetPasswordForEmail(
             user.email,
-            { redirectTo },
+            { redirectTo: getPublicAppUrl() },
           )
 
         if (error) throw error

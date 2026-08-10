@@ -2,9 +2,11 @@ import { useRef, useState } from 'react'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import { importQuestionBank } from '../services/questionService'
 import {
+  analyzeQuestionBankPackage,
+  createValidationReportCsv,
   createQuestionBankPackage,
   questionBankFilename,
-  validateQuestionBankPackage,
+  validationReportFilename,
 } from '../services/questionBankPortability'
 
 function downloadJson(payload) {
@@ -21,9 +23,24 @@ function downloadJson(payload) {
   URL.revokeObjectURL(url)
 }
 
+function downloadValidationReport(report) {
+  const blob = new Blob([createValidationReportCsv(report)], {
+    type: 'text/csv;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = validationReportFilename()
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function QuestionBankPortability({ questions, onImported }) {
   const inputRef = useRef(null)
   const [pendingPackage, setPendingPackage] = useState(null)
+  const [validationReport, setValidationReport] = useState(null)
   const [selectedFilename, setSelectedFilename] = useState('')
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState('success')
@@ -32,6 +49,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
 
   function clearSelection() {
     setPendingPackage(null)
+    setValidationReport(null)
     setSelectedFilename('')
     if (inputRef.current) inputRef.current.value = ''
   }
@@ -39,6 +57,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
   async function handleFileSelection(event) {
     const file = event.target.files?.[0]
     setPendingPackage(null)
+    setValidationReport(null)
     setSelectedFilename('')
     setMessage('')
     if (!file) return
@@ -48,9 +67,20 @@ export default function QuestionBankPortability({ questions, onImported }) {
         throw new Error('The selected file must be 5 MB or smaller.')
       }
       const payload = JSON.parse(await file.text())
-      const validated = validateQuestionBankPackage(payload)
-      setPendingPackage(validated)
+      const analysis = analyzeQuestionBankPackage(payload)
+      setPendingPackage(
+        analysis.report.validCount > 0
+          ? analysis.importPackage
+          : null,
+      )
+      setValidationReport(analysis.report)
       setSelectedFilename(file.name)
+      if (analysis.report.invalidCount > 0) {
+        setMessageTone('error')
+        setMessage(
+          `${analysis.report.invalidCount} question(s) were rejected during validation. Download the report for details.`,
+        )
+      }
     } catch (error) {
       setMessageTone('error')
       setMessage(error instanceof SyntaxError
@@ -63,7 +93,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
     if (!pendingPackage) return
     const confirmed = await confirm({
       title: 'Import question bank?',
-      message: `Import ${pendingPackage.questions.length} validated questions? Existing matching questions will be skipped, and imported questions will be saved as drafts.`,
+      message: `Import ${pendingPackage.questions.length} validated questions? ${validationReport?.invalidCount ?? 0} rejected question(s) will be excluded. Existing matching questions will be skipped, and imported questions will be saved as drafts.`,
       confirmLabel: 'Import questions',
       tone: 'default',
     })
@@ -75,9 +105,10 @@ export default function QuestionBankPortability({ questions, onImported }) {
       const result = await importQuestionBank(pendingPackage)
       setMessageTone('success')
       setMessage(
-        `${result.importedCount} imported as drafts. ${result.skippedCount} duplicates skipped.`,
+        `${result.importedCount} imported as drafts. ${result.skippedCount} duplicates skipped. ${validationReport?.invalidCount ?? 0} invalid question(s) excluded.`,
       )
-      clearSelection()
+      setPendingPackage(null)
+      if (inputRef.current) inputRef.current.value = ''
       await onImported?.()
     } catch (error) {
       setMessageTone('error')
@@ -121,19 +152,59 @@ export default function QuestionBankPortability({ questions, onImported }) {
           />
         </label>
 
-        {pendingPackage && (
+        {validationReport && (
           <div className="question-portability-preview" role="status">
             <div>
               <strong>{selectedFilename}</strong>
               <span>
-                {pendingPackage.questions.length}{' '}
-                {pendingPackage.questions.length === 1 ? 'question' : 'questions'}
+                {validationReport.totalCount}{' '}
+                {validationReport.totalCount === 1 ? 'question' : 'questions'}
               </span>
             </div>
-            <p>
-              The file is valid. Imported questions remain unpublished until
-              an instructor reviews them.
-            </p>
+            <div className="question-validation-summary">
+              <div>
+                <span>Total rows</span>
+                <strong>{validationReport.totalCount}</strong>
+              </div>
+              <div className="question-validation-summary--valid">
+                <span>Ready to import</span>
+                <strong>{validationReport.validCount}</strong>
+              </div>
+              <div className="question-validation-summary--invalid">
+                <span>Rejected</span>
+                <strong>{validationReport.invalidCount}</strong>
+              </div>
+            </div>
+
+            {validationReport.invalidCount > 0 && (
+              <div className="question-validation-errors">
+                <strong>Rejected questions</strong>
+                <ul>
+                  {validationReport.entries
+                    .filter((entry) => entry.status === 'invalid')
+                    .slice(0, 8)
+                    .map((entry) => (
+                      <li key={entry.row}>
+                        <span>Row {entry.row}: {entry.title}</span>
+                        <small>{entry.message}</small>
+                      </li>
+                    ))}
+                </ul>
+                {validationReport.invalidCount > 8 && (
+                  <small>
+                    Download the report to view all rejected questions.
+                  </small>
+                )}
+              </div>
+            )}
+
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => downloadValidationReport(validationReport)}
+            >
+              Download validation report
+            </button>
           </div>
         )}
 
@@ -146,7 +217,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
           >
             {importing ? 'Importing...' : 'Import validated questions'}
           </button>
-          {pendingPackage && (
+          {validationReport && (
             <button
               className="secondary"
               type="button"

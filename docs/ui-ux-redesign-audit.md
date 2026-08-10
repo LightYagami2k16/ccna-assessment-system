@@ -101,9 +101,27 @@ and accommodation removal. Wide question-bank, accommodation, quiz-result, and
 CLI-result tables are now keyboard-focusable horizontal regions with consistent
 scrollbar and focus treatment.
 
+The Phase 4 responsive visual-QA pass has now been completed for Question Bank,
+Quiz Builder, CLI Practicals, Classes & Assignments, Exam Controls, and Student
+Results at desktop, tablet, and mobile widths. A remaining Student Results grid
+containment issue was corrected so wide class-performance tables scroll inside
+their region instead of widening the mobile page. Automated responsive coverage
+now opens and verifies every instructor tool at all three breakpoint groups.
+
+Redesign Phase 5 has started with the student workspace hierarchy and navigation.
+My assessments now appears before the non-interactive course catalog, the
+assessment header uses a compact supporting surface rather than repeating the
+portal hero, and Available, CLI practicals, and History have been verified at
+phone, tablet, and desktop widths. Automated responsive coverage now checks the
+student content order, tab selection, and document containment.
+
+The Available and CLI practical panels now share the same assessment-card
+hierarchy, line-icon language, metadata treatment, action separation, loading
+region, empty-state treatment, and error placement. The icons are code-native
+SVGs that inherit current colors, add no image payload, and remain decorative to
+assistive technology because the surrounding headings carry the meaning.
+
 ## Next recommended design task
 
-Complete Redesign Phase 4 with visual QA of Question Bank, Quiz Builder, CLI
-Practicals, Class Management, Exam Controls, and Student Results at desktop,
-tablet, and mobile widths. Then begin Redesign Phase 5 for the student
-dashboard, quiz history, assessment focus mode, and CLI practical experience.
+Continue Redesign Phase 5 with the combined quiz and CLI history experience,
+followed by real-attempt visual QA for quiz and CLI focus modes.

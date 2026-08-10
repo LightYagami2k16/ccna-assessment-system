@@ -222,6 +222,24 @@ export default function Dashboard({
         </section>
         )}
 
+        {isStudent && (
+          <section
+            className="dashboard-role-content dashboard-role-content--student"
+            key="student-workspace"
+          >
+            <Suspense
+              fallback={
+                <WorkspaceLoading label="Loading student assessments..." />
+              }
+            >
+              <StudentQuizArea
+                user={user}
+                onExamModeChange={setStudentExamMode}
+              />
+            </Suspense>
+          </section>
+        )}
+
         {!studentExamMode && !isAdministrator && (
           <section className="dashboard-section">
             <div className="dashboard-section__heading">
@@ -292,24 +310,6 @@ export default function Dashboard({
               <AdminWorkspace
                 user={user}
                 previewMode={previewMode}
-              />
-            </Suspense>
-          </section>
-        )}
-
-        {isStudent && (
-          <section
-            className="dashboard-role-content"
-            key="student-workspace"
-          >
-            <Suspense
-              fallback={
-                <WorkspaceLoading label="Loading student assessments..." />
-              }
-            >
-              <StudentQuizArea
-                user={user}
-                onExamModeChange={setStudentExamMode}
               />
             </Suspense>
           </section>

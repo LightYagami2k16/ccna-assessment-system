@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  analyzeQuestionBankPackage,
+  createValidationReportCsv,
   createQuestionBankPackage,
   questionBankFilename,
+  validationReportFilename,
   validateQuestionBankPackage,
 } from './questionBankPortability.js'
 
@@ -82,3 +85,60 @@ test('creates a stable dated export filename', () => {
   )
 })
 
+test('collects valid and invalid bulk-import rows without stopping early', () => {
+  const analysis = analyzeQuestionBankPackage({
+    format: 'ccna-assessment-question-bank',
+    version: 1,
+    questions: [
+      {
+        courseCode: 'ITN',
+        title: 'Valid question',
+        questionText: 'Which command enters privileged EXEC mode?',
+        questionType: 'multiple_choice',
+        points: 1,
+        options: [
+          { text: 'enable', isCorrect: true },
+          { text: 'login', isCorrect: false },
+        ],
+      },
+      {
+        courseCode: 'SRWE',
+        title: 'Invalid question',
+        questionText: 'Select two correct answers.',
+        questionType: 'multiple_answer',
+        points: 2,
+        options: [
+          { text: 'Only one selected', isCorrect: true },
+          { text: 'Incorrect', isCorrect: false },
+        ],
+      },
+    ],
+  })
+
+  assert.equal(analysis.report.totalCount, 2)
+  assert.equal(analysis.report.validCount, 1)
+  assert.equal(analysis.report.invalidCount, 1)
+  assert.equal(analysis.importPackage.questions.length, 1)
+  assert.match(analysis.report.entries[1].message, /at least two correct answers/)
+})
+
+test('creates a spreadsheet-safe CSV validation report', () => {
+  const csv = createValidationReportCsv({
+    entries: [{
+      row: 1,
+      status: 'invalid',
+      courseCode: 'ITN',
+      moduleCode: 'ITN-01',
+      questionType: 'identification',
+      title: '=unsafe formula',
+      message: 'An answer is required.',
+    }],
+  })
+
+  assert.match(csv, /Validation message/)
+  assert.match(csv, /'=unsafe formula/)
+  assert.equal(
+    validationReportFilename(new Date('2026-08-10T12:30:45Z')),
+    'ccna-question-import-validation-2026-08-10T12-30-45Z.csv',
+  )
+})

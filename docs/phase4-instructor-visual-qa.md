@@ -53,3 +53,18 @@ Use the instructor account and check each screen at approximately 1440 px,
 - Class, student, and quiz groups remain independently collapsible.
 - Quiz and CLI result tables retain score, events, time, and action columns.
 - Reset confirmation explains what will be permanently removed.
+
+## Resumed QA result
+
+The paused Phase 4 review was resumed across all six instructor work areas at
+desktop, tablet, and mobile widths. Question Bank, Quiz Builder, CLI
+Practicals, Classes & Assignments, Exam Controls, and Student Results now keep
+the document within the viewport while their intentionally wide data tables
+remain independently scrollable.
+
+Student Results required one additional containment correction: its nested
+grid tracks now use `minmax(0, 1fr)`, preventing the 900 px class-performance
+table from widening the mobile document.
+
+The responsive browser test now opens every instructor tool at each required
+breakpoint and checks for page-level horizontal overflow.

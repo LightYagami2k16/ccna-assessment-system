@@ -219,7 +219,7 @@ export default function StudentQuizArea({
     <div className="student-quiz-area">
       <header className="student-workspace-header">
         <div>
-          <span className="eyebrow">STUDENT WORKSPACE</span>
+          <span className="eyebrow">ASSESSMENT CENTER</span>
           <h2>My assessments</h2>
           <p>
             Join a class, complete assigned assessments, and review your

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AssessmentTypeIcon from './AssessmentTypeIcon'
 import CliTerminal from './CliTerminal'
+import WorkspaceLoading from './WorkspaceLoading'
 import {
   getAvailableCliLabs,
   getStudentCliArchiveStatuses,
@@ -35,6 +37,7 @@ export default function StudentCliArea({
     useState(null)
   const [startingId, setStartingId] = useState(null)
   const [archivingId, setArchivingId] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const controlled = controlledActiveAttemptId !== undefined
   const activeAttemptId = controlled
@@ -51,6 +54,7 @@ export default function StudentCliArea({
 
   const loadLabs = useCallback(async () => {
     try {
+      setLoading(true)
       setMessage('')
       const [availableData, archiveData] = await Promise.all([
         getAvailableCliLabs(),
@@ -62,6 +66,8 @@ export default function StudentCliArea({
       setMessage(
         `${error.message} Ask the instructor to confirm that migrations 020, 038, and 051 are installed.`,
       )
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -169,10 +175,25 @@ export default function StudentCliArea({
           <h2>Available CLI practicals</h2>
           <p>Configure a simulated Cisco device and receive partial-credit grading.</p>
         </div>
-        <button className="secondary" type="button" onClick={() => void loadLabs()}>Refresh</button>
+        <button className="secondary" type="button" disabled={loading} onClick={() => void loadLabs()}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
-      {!availableLabs.length ? (
-        <div className="empty-state"><h3>No CLI practicals available</h3><p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p></div>
+      {message && (
+        <p className="form-message form-message--error" role="alert">
+          {message}
+        </p>
+      )}
+      {loading ? (
+        <div className="student-assessment-loading">
+          <WorkspaceLoading label="Loading CLI practicals..." />
+        </div>
+      ) : !availableLabs.length ? (
+        <div className="empty-state student-assessment-empty">
+          <AssessmentTypeIcon type="cli" />
+          <h3>No CLI practicals available</h3>
+          <p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p>
+        </div>
       ) : (
         <div className="cli-lab-grid">
           {availableLabs.map((lab) => {
@@ -183,8 +204,18 @@ export default function StudentCliArea({
               && Number(status?.attemptsRemaining) > 0
             return (
               <article className="cli-lab-card" key={lab.id}>
-                <header><span className="course-code">{lab.courseCode}</span><span>{lab.moduleCode}</span></header>
-                <h3>{lab.title}</h3>
+                <header className="student-assessment-card__header">
+                  <AssessmentTypeIcon type="cli" />
+                  <div className="student-assessment-card__identity">
+                    <div className="student-assessment-card__kicker">
+                      <span className="course-code">{lab.courseCode}</span>
+                      <span className="student-assessment-card__module">
+                        {lab.moduleCode}
+                      </span>
+                    </div>
+                    <h3>{lab.title}</h3>
+                  </div>
+                </header>
                 <p>{lab.description || `${lab.deviceType} configuration practical`}</p>
                 <dl>
                   <div><dt>Duration</dt><dd>{lab.durationMinutes} minutes</dd></div>
@@ -218,7 +249,6 @@ export default function StudentCliArea({
           })}
         </div>
       )}
-      {message && <p className="form-message form-message--error">{message}</p>}
     </section>
   )
 }

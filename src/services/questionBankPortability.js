@@ -68,6 +68,21 @@ function normalizeQuestion(question, index) {
   }
 }
 
+function validatePackageEnvelope(payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Select a valid CCNA question-bank JSON file.')
+  }
+  if (payload.format !== FORMAT_NAME || payload.version !== FORMAT_VERSION) {
+    throw new Error('This question-bank file format or version is not supported.')
+  }
+  if (!Array.isArray(payload.questions) || !payload.questions.length) {
+    throw new Error('The question-bank file does not contain any questions.')
+  }
+  if (payload.questions.length > 500) {
+    throw new Error('A single import can contain at most 500 questions.')
+  }
+}
+
 export function createQuestionBankPackage(questions) {
   return {
     format: FORMAT_NAME,
@@ -92,18 +107,7 @@ export function createQuestionBankPackage(questions) {
 }
 
 export function validateQuestionBankPackage(payload) {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new Error('Select a valid CCNA question-bank JSON file.')
-  }
-  if (payload.format !== FORMAT_NAME || payload.version !== FORMAT_VERSION) {
-    throw new Error('This question-bank file format or version is not supported.')
-  }
-  if (!Array.isArray(payload.questions) || !payload.questions.length) {
-    throw new Error('The question-bank file does not contain any questions.')
-  }
-  if (payload.questions.length > 500) {
-    throw new Error('A single import can contain at most 500 questions.')
-  }
+  validatePackageEnvelope(payload)
 
   return {
     format: FORMAT_NAME,
@@ -112,8 +116,101 @@ export function validateQuestionBankPackage(payload) {
   }
 }
 
+export function analyzeQuestionBankPackage(payload) {
+  validatePackageEnvelope(payload)
+
+  const questions = []
+  const entries = payload.questions.map((question, index) => {
+    const fallbackTitle = String(question?.title ?? '').trim()
+      || `Question ${index + 1}`
+    const courseCode = String(question?.courseCode ?? '').trim().toUpperCase()
+    const moduleCode = String(question?.moduleCode ?? '').trim().toUpperCase()
+    const questionType = String(question?.questionType ?? '').trim()
+
+    try {
+      const normalized = normalizeQuestion(question, index)
+      questions.push(normalized)
+      return {
+        row: index + 1,
+        status: 'valid',
+        title: normalized.title,
+        courseCode: normalized.courseCode,
+        moduleCode: normalized.moduleCode ?? '',
+        questionType: normalized.questionType,
+        message: 'Ready to import as a draft.',
+      }
+    } catch (error) {
+      return {
+        row: index + 1,
+        status: 'invalid',
+        title: fallbackTitle,
+        courseCode,
+        moduleCode,
+        questionType,
+        message: error.message,
+      }
+    }
+  })
+
+  const invalidCount = entries.filter(
+    (entry) => entry.status === 'invalid',
+  ).length
+
+  return {
+    importPackage: {
+      format: FORMAT_NAME,
+      version: FORMAT_VERSION,
+      questions,
+    },
+    report: {
+      format: 'ccna-question-bank-validation-report',
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      totalCount: entries.length,
+      validCount: questions.length,
+      invalidCount,
+      entries,
+    },
+  }
+}
+
+function safeCsvValue(value) {
+  let text = String(value ?? '')
+  if (/^[=+@-]/.test(text)) text = `'${text}`
+  return `"${text.replaceAll('"', '""')}"`
+}
+
+export function createValidationReportCsv(report) {
+  const header = [
+    'Row',
+    'Status',
+    'Course code',
+    'Module code',
+    'Question type',
+    'Title',
+    'Validation message',
+  ]
+  const rows = (report?.entries ?? []).map((entry) => [
+    entry.row,
+    entry.status,
+    entry.courseCode,
+    entry.moduleCode,
+    entry.questionType,
+    entry.title,
+    entry.message,
+  ])
+
+  return [header, ...rows]
+    .map((row) => row.map(safeCsvValue).join(','))
+    .join('\r\n')
+}
+
+export function validationReportFilename(date = new Date()) {
+  const stamp = date.toISOString().replaceAll(':', '-').replace(/\.\d{3}Z$/, 'Z')
+  return `ccna-question-import-validation-${stamp}.csv`
+}
+
 export function questionBankFilename(date = new Date()) {
   const stamp = date.toISOString().slice(0, 10)
   return `ccna-question-bank-${stamp}.json`
 }
-

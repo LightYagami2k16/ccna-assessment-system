@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+import { validatePublicSupabaseConfig } from '../config/runtimeConfig'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const { supabaseUrl, publishableKey } = validatePublicSupabaseConfig({
+  url: import.meta.env.VITE_SUPABASE_URL,
+  key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+})
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, publishableKey)

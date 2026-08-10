@@ -71,7 +71,55 @@ Database migration:
 supabase/migrations/062_phase8_cli_practical_templates.sql
 ```
 
-## Remaining Phase 8 increments
+## Phase 8.4: Bulk question import validation reports
 
-- Phase 8.4 — Bulk content import with downloadable validation reports
-- Phase 8.5 — Complete instructional-content backup and restore
+Status: complete in the application. This increment reuses migration 060 and
+does not require an additional database migration.
+
+The question-bank importer now:
+
+- validates every question independently instead of stopping at the first
+  invalid row;
+- summarizes the total, import-ready, and rejected question counts;
+- displays the first rejected rows and their validation messages;
+- imports the valid subset while excluding invalid rows;
+- keeps all imported questions in draft status for instructor review; and
+- downloads a spreadsheet-safe CSV validation report for every selected file.
+
+Validation reports include the source row, status, course and module codes,
+question type, title, and validation message. Values that could be interpreted
+as spreadsheet formulas are escaped before download.
+
+## Phase 8.5: Complete instructional-content backup and restore
+
+Status: complete in the application. Migration 063 must be applied before
+backup and restore can be used in a live Supabase project.
+
+The instructor workspace now includes a dedicated Content backup area that:
+
+- exports the shared course, module, and question library;
+- exports the signed-in instructor's quizzes, CLI practicals, grading
+  criteria, device topologies, and reusable templates;
+- validates backup identity, version, required collections, size, and record
+  limits before restore;
+- rebuilds question references used by quizzes and quiz templates;
+- restores assessments as drafts and clears availability and class access;
+- skips matching modules and content to make repeated restores safer; and
+- performs the restore transactionally so a failure does not leave a partial
+  database restore.
+
+The backup deliberately excludes accounts, classes, memberships,
+assignments, schedules, attempts, answers, scores, CLI commands, session
+leases, and integrity-monitoring events.
+
+Database migration:
+
+```text
+supabase/migrations/063_phase8_complete_content_backup_restore.sql
+```
+
+## Phase 8 completion
+
+Phase 8 is complete. Question portability, reusable quiz and practical
+templates, bulk validation reporting, and complete instructional-content
+backup and restore are implemented.

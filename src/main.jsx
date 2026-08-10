@@ -1,10 +1,22 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+import ApplicationErrorBoundary from './components/ApplicationErrorBoundary.jsx'
+import { installGlobalErrorMonitoring } from './services/operationalMonitoringService.js'
 import './styles.css'
+
+const stopErrorMonitoring = installGlobalErrorMonitoring({
+  enabled: import.meta.env.PROD,
+})
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(stopErrorMonitoring)
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ApplicationErrorBoundary>
+      <App />
+    </ApplicationErrorBoundary>
   </StrictMode>,
 )
