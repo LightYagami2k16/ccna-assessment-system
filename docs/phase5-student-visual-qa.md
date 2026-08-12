@@ -22,6 +22,10 @@
 - Normalized the shared quiz and CLI card header so the assessment icon,
   course badge, optional module label, and title retain consistent scale and
   alignment when labels wrap.
+- Consolidated quiz and CLI attempt history under one Assessment history
+  workspace with one refresh action and accessible result-type filters.
+- Standardized embedded quiz and CLI result-section headings around the shared
+  assessment icons, spacing, and content hierarchy.
 
 ## Live visual checks
 
@@ -41,16 +45,15 @@ At each width:
 
 ## Remaining Redesign Phase 5 work
 
-1. Refine quiz and CLI history groups, result tables, and restore/archive actions.
-2. Review quiz focus mode at all breakpoints with a real active attempt.
-3. Review CLI practical focus mode, terminal scrolling, PC configuration, and
+1. Review quiz focus mode at all breakpoints with a real active attempt.
+2. Review CLI practical focus mode, terminal scrolling, PC configuration, and
    device navigation with a real active attempt.
-4. Complete student keyboard and screen-reader review for the above workflows.
+3. Complete student keyboard and screen-reader review for the above workflows.
 
 ## Asset summary
 
 - Added `AssessmentTypeIcon.jsx`, a reusable inline SVG line-icon component.
-- Added quiz/document and CLI/terminal variants using the existing blue and teal
-  design tokens.
+- Added quiz/document, CLI/terminal, and history/clock variants using the
+  existing blue, teal, and supporting accent tokens.
 - No external icon library, raster image, or additional network request was
   introduced.

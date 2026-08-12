@@ -6,6 +6,11 @@ import {
   setQuestionsStatus,
 } from '../services/questionService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import {
+  ActionBar,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const QUESTION_TYPE_LABELS = {
   multiple_choice: 'Multiple choice',
@@ -230,19 +235,20 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   return (
     <section className="question-list">
       {confirmationDialog}
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">CONTENT LIBRARY</span>
-          <h2>Question bank</h2>
-        </div>
-        <span className="status-chip">
-          {questions.length} {questions.length === 1 ? 'question' : 'questions'}
-        </span>
-      </div>
+      <SectionHeader
+        className="section-heading"
+        eyebrow="CONTENT LIBRARY"
+        title="Question bank"
+        actions={(
+          <span className="status-chip">
+            {questions.length} {questions.length === 1 ? 'question' : 'questions'}
+          </span>
+        )}
+      />
 
       {message && <p className="form-message form-message--error">{message}</p>}
       {!!questions.length && (
-        <div className="bulk-action-bar">
+        <ActionBar className="bulk-action-bar">
           <label className="bulk-select-control">
             <input
               type="checkbox"
@@ -298,7 +304,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                 : 'Delete selected'}
             </button>
           </div>
-        </div>
+        </ActionBar>
       )}
 
       {!questions.length ? (
@@ -321,7 +327,12 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
               )
 
             return (
-              <section className="question-course-group" key={course.id}>
+              <SurfaceCard
+                as="section"
+                subtle
+                className="question-course-group"
+                key={course.id}
+              >
                 <header className="question-course-group__header">
                   <div className="question-course-group__summary">
                     <div className="question-course-group__identity">
@@ -491,7 +502,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                     </table>
                   </div>
                 )}
-              </section>
+              </SurfaceCard>
             )
           })}
         </div>

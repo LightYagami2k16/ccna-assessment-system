@@ -5,6 +5,13 @@ import {
   saveInstructorModule,
 } from '../services/moduleService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const emptyForm = {
   id: null,
@@ -236,23 +243,18 @@ export default function InstructorModuleManager({ onChanged }) {
   return (
     <section className="module-manager">
       {confirmationDialog}
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">COURSE STRUCTURE</span>
-
-          <h2>Course modules</h2>
-
-          <p>
-            Expand a course to view and manage its modules. Modules are
-            displayed automatically by module code.
-          </p>
-        </div>
-
-        <span className="status-chip module-total-badge">
-          {workspace.modules.length}{' '}
-          {workspace.modules.length === 1 ? 'module' : 'modules'}
-        </span>
-      </div>
+      <SectionHeader
+        className="section-heading"
+        eyebrow="COURSE STRUCTURE"
+        title="Course modules"
+        description="Expand a course to view and manage its modules. Modules are displayed automatically by module code."
+        actions={(
+          <span className="status-chip module-total-badge">
+            {workspace.modules.length}{' '}
+            {workspace.modules.length === 1 ? 'module' : 'modules'}
+          </span>
+        )}
+      />
 
       {message && (
         <p
@@ -267,9 +269,9 @@ export default function InstructorModuleManager({ onChanged }) {
       )}
 
       {loading ? (
-        <p>Loading course modules...</p>
+        <LoadingState label="Loading course modules..." />
       ) : (
-        <div className="module-course-groups">
+        <ResponsiveGrid className="module-course-groups" min="20rem">
           {modulesByCourse.map((course) => {
             const courseId = String(course.id)
             const expanded = isCourseExpanded(courseId)
@@ -277,7 +279,9 @@ export default function InstructorModuleManager({ onChanged }) {
             const panelId = `course-module-panel-${courseId}`
 
             return (
-              <article
+              <SurfaceCard
+                as="article"
+                subtle
                 className={[
                   'module-course-group',
                   expanded
@@ -433,7 +437,7 @@ export default function InstructorModuleManager({ onChanged }) {
                           />
                         </label>
 
-                        <div className="module-editor__actions">
+                        <ActionBar className="module-editor__actions">
                           <button
                             className="primary"
                             type="submit"
@@ -454,7 +458,7 @@ export default function InstructorModuleManager({ onChanged }) {
                           >
                             Cancel
                           </button>
-                        </div>
+                        </ActionBar>
                       </form>
                     )}
 
@@ -512,10 +516,10 @@ export default function InstructorModuleManager({ onChanged }) {
                     )}
                   </div>
                 )}
-              </article>
+              </SurfaceCard>
             )
           })}
-        </div>
+        </ResponsiveGrid>
       )}
     </section>
   )

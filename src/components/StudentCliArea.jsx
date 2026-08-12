@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Archive, Play, RefreshCw } from 'lucide-react'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
+import AppIcon from './AppIcon'
 import CliTerminal from './CliTerminal'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 import WorkspaceLoading from './WorkspaceLoading'
 import {
   getAvailableCliLabs,
@@ -167,35 +174,35 @@ export default function StudentCliArea({
     )
   }
 
+  if (loading) {
+    return <WorkspaceLoading label="Loading assessments..." />
+  }
+
   return (
-    <section className="student-cli-labs">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">PRACTICALS</span>
-          <h2>Available CLI practicals</h2>
-          <p>Configure a simulated Cisco device and receive partial-credit grading.</p>
-        </div>
-        <button className="secondary" type="button" disabled={loading} onClick={() => void loadLabs()}>
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+    <SurfaceCard className="student-cli-labs">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="PRACTICALS"
+        title="Available CLI practicals"
+        description="Configure a simulated Cisco device and receive partial-credit grading."
+        actions={<button className="secondary" type="button" onClick={() => void loadLabs()}>
+          <AppIcon icon={RefreshCw} size="sm" />
+          Refresh
+        </button>}
+      />
       {message && (
         <p className="form-message form-message--error" role="alert">
           {message}
         </p>
       )}
-      {loading ? (
-        <div className="student-assessment-loading">
-          <WorkspaceLoading label="Loading CLI practicals..." />
-        </div>
-      ) : !availableLabs.length ? (
+      {!availableLabs.length ? (
         <div className="empty-state student-assessment-empty">
           <AssessmentTypeIcon type="cli" />
           <h3>No CLI practicals available</h3>
           <p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p>
         </div>
       ) : (
-        <div className="cli-lab-grid">
+        <ResponsiveGrid className="cli-lab-grid">
           {availableLabs.map((lab) => {
             const canStart = Boolean(lab.activeAttemptId) || lab.attemptsUsed < lab.maxAttempts
             const status = archiveStatusByLab.get(String(lab.id))
@@ -203,7 +210,12 @@ export default function StudentCliArea({
               && !lab.activeAttemptId
               && Number(status?.attemptsRemaining) > 0
             return (
-              <article className="cli-lab-card" key={lab.id}>
+              <SurfaceCard
+                as="article"
+                subtle
+                className="cli-lab-card"
+                key={lab.id}
+              >
                 <header className="student-assessment-card__header">
                   <AssessmentTypeIcon type="cli" />
                   <div className="student-assessment-card__identity">
@@ -235,20 +247,22 @@ export default function StudentCliArea({
                 <div className="cli-lab-card__student-actions">
                   <button className="primary" type="button" disabled={!canStart || startingId === lab.id || archivingId === lab.id}
                     onClick={() => void startLab(lab)}>
+                    <AppIcon icon={Play} size="sm" />
                     {startingId === lab.id ? 'Opening...' : lab.activeAttemptId ? 'Resume practical' : canStart ? 'Start practical' : 'No attempts remaining'}
                   </button>
                   {canArchive && (
                     <button className="secondary" type="button" disabled={archivingId === lab.id || startingId === lab.id}
                       onClick={() => void archiveLab(lab.id)}>
+                      <AppIcon icon={Archive} size="sm" />
                       {archivingId === lab.id ? 'Archiving...' : 'Archive to history'}
                     </button>
                   )}
                 </div>
-              </article>
+              </SurfaceCard>
             )
           })}
-        </div>
+        </ResponsiveGrid>
       )}
-    </section>
+    </SurfaceCard>
   )
 }

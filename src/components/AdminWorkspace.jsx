@@ -1,4 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import {
+  Activity,
+  ClipboardList,
+  ShieldCheck,
+  Users,
+} from 'lucide-react'
+import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
 
 const AdminUserManagement = lazy(
@@ -24,21 +31,25 @@ const adminSections = new Set([
 const adminNavigation = [
   {
     id: 'accounts',
+    icon: Users,
     label: 'User accounts',
     description: 'Roles and workspace access',
   },
   {
     id: 'security-history',
+    icon: ShieldCheck,
     label: 'Security history',
     description: 'Account and role audit events',
   },
   {
     id: 'system-health',
+    icon: Activity,
     label: 'System health',
     description: 'Runtime errors and backend readiness',
   },
   {
     id: 'assessment-tools',
+    icon: ClipboardList,
     label: 'Assessment tools',
     description: 'Instructor content and class management',
   },
@@ -102,7 +113,10 @@ export default function AdminWorkspace({
               aria-current={active ? 'page' : undefined}
               onClick={() => setActiveSection(item.id)}
             >
-              <span>{item.label}</span>
+              <span className="admin-workspace-tab__label">
+                <AppIcon icon={item.icon} aria-hidden="true" />
+                <span>{item.label}</span>
+              </span>
               <small>{item.description}</small>
             </button>
           )

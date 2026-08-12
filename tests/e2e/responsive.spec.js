@@ -88,6 +88,18 @@ for (const viewport of viewports) {
         await expect(page.locator('.assessment-type-icon--cli')).toBeVisible()
       }
 
+      if (tabName.startsWith('History')) {
+        await expect(
+          page.getByRole('heading', { name: 'Assessment history' }),
+        ).toBeVisible()
+
+        for (const filterName of ['All results', 'Quizzes', 'CLI practicals']) {
+          const filter = page.getByRole('button', { name: new RegExp(`^${filterName}`) })
+          await filter.click()
+          await expect(filter).toHaveAttribute('aria-pressed', 'true')
+        }
+      }
+
       const overflow = await page.evaluate(() =>
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )

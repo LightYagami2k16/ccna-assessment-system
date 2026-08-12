@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getInstructorQuestionAnalytics } from '../services/instructorResultsService'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const courseOrder = { ITN: 1, SRWE: 2, ENSA: 3 }
 
@@ -63,7 +68,7 @@ function QuestionAnalyticsRow({ question }) {
   const accuracy = Number(question.accuracyPercentage) || 0
 
   return (
-    <article className="question-analytics-row">
+    <SurfaceCard as="article" subtle className="question-analytics-row">
       <button
         className="question-analytics-row__summary"
         type="button"
@@ -131,7 +136,7 @@ function QuestionAnalyticsRow({ question }) {
           )}
         </div>
       )}
-    </article>
+    </SurfaceCard>
   )
 }
 
@@ -152,7 +157,7 @@ function QuestionCourseGroup({ courseCode, questions }) {
   ).length
 
   return (
-    <section className="question-analytics-course-group">
+    <SurfaceCard as="section" subtle className="question-analytics-course-group">
       <button
         className="question-analytics-course-group__toggle"
         type="button"
@@ -185,7 +190,7 @@ function QuestionCourseGroup({ courseCode, questions }) {
           ))}
         </div>
       )}
-    </section>
+    </SurfaceCard>
   )
 }
 
@@ -273,21 +278,20 @@ export default function InstructorQuestionAnalytics() {
 
   return (
     <section className="question-analytics-panel">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">QUESTION ANALYTICS</span>
-          <h2>Question performance</h2>
-          <p>Find difficult items, low response rates, and questions that consume the most time.</p>
-        </div>
-        <div className="question-analytics-panel__actions">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="QUESTION ANALYTICS"
+        title="Question performance"
+        description="Find difficult items, low response rates, and questions that consume the most time."
+        actions={<div className="question-analytics-panel__actions">
           <button className="secondary" type="button" disabled={!filteredQuestions.length}
             onClick={() => downloadQuestionCsv(filteredQuestions)}>Export question CSV</button>
           <button className="secondary" type="button" disabled={loading}
             onClick={() => void loadAnalytics()}>{loading ? 'Refreshing...' : 'Refresh analytics'}</button>
-        </div>
-      </div>
+        </div>}
+      />
 
-      <div className="question-analytics-filters">
+      <ResponsiveGrid className="question-analytics-filters" min="11rem">
         <label>Course<select value={courseFilter} onChange={(event) => changeCourse(event.target.value)}>
           <option value="all">All courses</option>
           {courses.map((course) => <option key={course} value={course}>{course}</option>)}
@@ -302,14 +306,14 @@ export default function InstructorQuestionAnalytics() {
         </select></label>
         <label>Search<input value={search} placeholder="Question title or text"
           onChange={(event) => setSearch(event.target.value)} /></label>
-      </div>
+      </ResponsiveGrid>
 
-      <div className="results-metrics question-analytics-metrics">
-        <article><span>Questions measured</span><strong>{metrics.questions}</strong></article>
-        <article><span>Student responses</span><strong>{metrics.responses}</strong></article>
-        <article><span>Average accuracy</span><strong>{metrics.averageAccuracy.toFixed(1)}%</strong></article>
-        <article><span>Need review</span><strong>{metrics.needsReview}</strong></article>
-      </div>
+      <ResponsiveGrid className="results-metrics question-analytics-metrics" min="10rem">
+        <SurfaceCard as="article" subtle><span>Questions measured</span><strong>{metrics.questions}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Student responses</span><strong>{metrics.responses}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Average accuracy</span><strong>{metrics.averageAccuracy.toFixed(1)}%</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Need review</span><strong>{metrics.needsReview}</strong></SurfaceCard>
+      </ResponsiveGrid>
 
       <div className="question-analytics-list">
         {questionGroups.map(([courseCode, courseQuestions]) => (

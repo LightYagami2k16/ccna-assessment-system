@@ -5,6 +5,11 @@ import {
   getModules,
   updateQuestion,
 } from '../services/questionService'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+} from './LayoutPrimitives'
 
 function newMultipleChoiceOptions() {
   return [
@@ -241,18 +246,14 @@ export default function QuestionEditor({
 
   return (
     <section className="question-editor">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">INSTRUCTOR TOOLS</span>
-          <h2>{isEditing ? 'Edit draft question' : 'Create question'}</h2>
-          {isEditing && (
-            <p>
-              Editing is limited to drafts. Publish the question again after
-              reviewing your changes.
-            </p>
-          )}
-        </div>
-        <div className="question-editor__heading-controls">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="INSTRUCTOR TOOLS"
+        title={isEditing ? 'Edit draft question' : 'Create question'}
+        description={isEditing
+          ? 'Editing is limited to drafts. Publish the question again after reviewing your changes.'
+          : 'Create a reusable question for the shared content library.'}
+        actions={(<div className="question-editor__heading-controls">
           <span className="status-chip">Draft editor</span>
 
           <button
@@ -268,12 +269,12 @@ export default function QuestionEditor({
                 ? 'Show form'
                 : 'Create question'}
           </button>
-        </div>
-      </div>
+        </div>)}
+      />
 
       {expanded && (
       <form id="question-editor-form" onSubmit={handleSubmit}>
-        <div className="form-grid">
+        <ResponsiveGrid min="15rem" className="form-grid">
           <label>
             Course
             <select
@@ -328,7 +329,7 @@ export default function QuestionEditor({
               placeholder="Example: Privileged EXEC command"
             />
           </label>
-        </div>
+        </ResponsiveGrid>
 
         <label>
           Question
@@ -340,7 +341,7 @@ export default function QuestionEditor({
           />
         </label>
 
-        <fieldset>
+        <fieldset className="form-fieldset">
           <legend>
             {questionType === 'identification'
               ? 'Accepted answer'
@@ -438,7 +439,7 @@ export default function QuestionEditor({
           />
         </label>
 
-        <div className="form-grid form-grid--three">
+        <ResponsiveGrid min="14rem" className="form-grid form-grid--three">
           <label>
             Points
             <input
@@ -471,9 +472,9 @@ export default function QuestionEditor({
               <option value="published">Published</option>
             </select>
           </label>
-        </div>
+        </ResponsiveGrid>
 
-        <div className="question-editor__actions">
+        <ActionBar className="question-editor__actions">
           <button className="primary form-submit" type="submit" disabled={submitting}>
             {submitting
               ? 'Saving question...'
@@ -486,8 +487,12 @@ export default function QuestionEditor({
               Cancel editing
             </button>
           )}
-        </div>
-        {message && <p className="form-message">{message}</p>}
+        </ActionBar>
+        {message && (
+          <p className="form-message" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
       </form>
       )}
     </section>

@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react'
 import { saveInstructorQuiz } from '../services/quizBuilderService'
+import {
+  ActionBar,
+  FormSection,
+  ResponsiveGrid,
+  SectionHeader,
+} from './LayoutPrimitives'
 
 function toLocalDateTime(value) {
   if (!value) return ''
@@ -251,19 +257,20 @@ export default function QuizEditor({
 
   return (
     <section className="quiz-editor">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">QUIZ BUILDER</span>
-          <h2>{quiz ? 'Edit quiz' : 'Create quiz'}</h2>
-          <p>Configure the assessment and choose questions from your bank.</p>
-        </div>
-        <button className="secondary" type="button" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
+      <SectionHeader
+        className="section-heading"
+        eyebrow="QUIZ BUILDER"
+        title={quiz ? 'Edit quiz' : 'Create quiz'}
+        description="Configure the assessment and choose questions from your bank."
+        actions={(
+          <button className="secondary" type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
+      />
 
       <form onSubmit={handleSubmit}>
-        <div className="form-grid">
+        <ResponsiveGrid min="15rem" className="form-grid">
           <label>
             Course
             <select value={courseId} onChange={handleCourseSelection} required>
@@ -293,7 +300,7 @@ export default function QuizEditor({
               ))}
             </select>
           </label>
-        </div>
+        </ResponsiveGrid>
 
         <label>
           Quiz title
@@ -321,7 +328,7 @@ export default function QuizEditor({
           />
         </label>
 
-        <div className="form-grid form-grid--three">
+        <ResponsiveGrid min="14rem" className="form-grid form-grid--three">
           <label>
             Duration in minutes
             <input
@@ -353,9 +360,9 @@ export default function QuizEditor({
               onChange={(event) => setPassingScore(event.target.value)}
             />
           </label>
-        </div>
+        </ResponsiveGrid>
 
-        <div className="form-grid">
+        <ResponsiveGrid min="15rem" className="form-grid">
           <label>
             Available from
             <input
@@ -372,7 +379,7 @@ export default function QuizEditor({
               onChange={(event) => setAvailableUntil(event.target.value)}
             />
           </label>
-        </div>
+        </ResponsiveGrid>
 
         <div className="quiz-settings">
           <label className="check-control">
@@ -393,14 +400,11 @@ export default function QuizEditor({
           </label>
         </div>
 
-        <section className="question-selection-mode">
-          <div>
-            <h3>Question selection method</h3>
-            <p>
-              Choose a fixed question set or let the server create a
-              different random set for each attempt.
-            </p>
-          </div>
+        <FormSection
+          className="question-selection-mode"
+          title="Question selection method"
+          description="Choose a fixed question set or let the server create a different random set for each attempt."
+        >
           <div className="question-selection-mode__options">
             <label
               className={
@@ -451,17 +455,14 @@ export default function QuizEditor({
               </span>
             </label>
           </div>
-        </section>
+        </FormSection>
 
         {questionSelectionMode === 'random_database' && (
-          <section className="automatic-question-pool">
-            <div>
-              <h3>Automatic random question pool</h3>
-              <p>
-                {eligiblePublishedQuestions.length} published question(s)
-                are currently eligible for this course and module.
-              </p>
-            </div>
+          <FormSection
+            className="automatic-question-pool"
+            title="Automatic random question pool"
+            description={`${eligiblePublishedQuestions.length} published question(s) are currently eligible for this course and module.`}
+          >
             <label>
               Questions per student attempt
               <input
@@ -482,17 +483,15 @@ export default function QuizEditor({
                 question pool.
               </p>
             </div>
-          </section>
+          </FormSection>
         )}
 
         {questionSelectionMode === 'manual' && (
-        <section className="quiz-question-selector">
-          <div className="section-heading">
-            <div>
-              <h3>Select questions</h3>
-              <p>{selectedQuestionIds.length} selected</p>
-            </div>
-          </div>
+        <FormSection
+          className="quiz-question-selector"
+          title="Select questions"
+          description={`${selectedQuestionIds.length} selected`}
+        >
           {!courseId ? (
             <div className="empty-state">Select a course to view questions.</div>
           ) : !eligibleQuestions.length ? (
@@ -564,12 +563,15 @@ export default function QuizEditor({
             </div>
             </>
           )}
-        </section>
+        </FormSection>
         )}
 
         {questionSelectionMode === 'manual' && selectedQuestions.length > 0 && (
-          <section className="selected-question-order">
-            <h3>Question order</h3>
+          <FormSection
+            className="selected-question-order"
+            title="Question order"
+            description="Review the sequence students will receive before saving the quiz."
+          >
             {selectedQuestions.map((question, index) => (
               <div key={question.id}>
                 <span>{index + 1}. {question.title}</span>
@@ -593,10 +595,10 @@ export default function QuizEditor({
                 </div>
               </div>
             ))}
-          </section>
+          </FormSection>
         )}
 
-        <div className="quiz-editor__actions">
+        <ActionBar className="quiz-editor__actions">
           <label>
             Status
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -607,9 +609,13 @@ export default function QuizEditor({
           <button className="primary form-submit" type="submit" disabled={saving}>
             {saving ? 'Saving quiz…' : quiz ? 'Save changes' : 'Create quiz'}
           </button>
-        </div>
+        </ActionBar>
 
-        {message && <p className="form-message form-message--error">{message}</p>}
+        {message && (
+          <p className="form-message form-message--error" role="alert">
+            {message}
+          </p>
+        )}
       </form>
     </section>
   )

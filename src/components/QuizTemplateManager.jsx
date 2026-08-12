@@ -4,6 +4,12 @@ import {
   createQuizFromTemplate,
   deleteQuizTemplate,
 } from '../services/quizBuilderService'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 export default function QuizTemplateManager({ templates, onChanged }) {
   const [expanded, setExpanded] = useState(false)
@@ -81,31 +87,30 @@ export default function QuizTemplateManager({ templates, onChanged }) {
   return (
     <section className="quiz-template-manager">
       {confirmationDialog}
-      <header className="quiz-template-manager__header">
-        <div>
-          <span className="eyebrow">REUSABLE CONTENT</span>
-          <h3>Quiz templates</h3>
-          <p>
-            Reuse quiz settings and questions without copying assignments,
-            schedules, attempts, or results.
-          </p>
-        </div>
-
-        <div className="quiz-template-manager__controls">
-          <span className="count-badge">
-            {templates.length} {templates.length === 1 ? 'Template' : 'Templates'}
-          </span>
-          <button
-            className="secondary"
-            type="button"
-            aria-expanded={expanded}
-            aria-controls="quiz-template-list"
-            onClick={() => setExpanded((current) => !current)}
-          >
-            {expanded ? 'Hide templates' : 'Show templates'}
-          </button>
-        </div>
-      </header>
+      <SectionHeader
+        as="header"
+        className="quiz-template-manager__header"
+        eyebrow="REUSABLE CONTENT"
+        title="Quiz templates"
+        titleAs="h3"
+        description="Reuse quiz settings and questions without copying assignments, schedules, attempts, or results."
+        actions={(
+          <div className="quiz-template-manager__controls">
+            <span className="count-badge">
+              {templates.length} {templates.length === 1 ? 'Template' : 'Templates'}
+            </span>
+            <button
+              className="secondary"
+              type="button"
+              aria-expanded={expanded}
+              aria-controls="quiz-template-list"
+              onClick={() => setExpanded((current) => !current)}
+            >
+              {expanded ? 'Hide templates' : 'Show templates'}
+            </button>
+          </div>
+        )}
+      />
 
       {message && (
         <p
@@ -128,13 +133,18 @@ export default function QuizTemplateManager({ templates, onChanged }) {
             </div>
           ) : (
             groupedTemplates.map((group) => (
-              <section className="quiz-template-course" key={group.code}>
+              <SurfaceCard
+                as="section"
+                subtle
+                className="quiz-template-course"
+                key={group.code}
+              >
                 <header>
                   <span className="course-code">{group.code}</span>
                   <strong>{group.title}</strong>
                 </header>
 
-                <div className="quiz-template-grid">
+                <ResponsiveGrid className="quiz-template-grid" min="18rem">
                   {group.templates.map((template) => {
                     const data = template.template_data ?? {}
                     const questionCount =
@@ -143,7 +153,12 @@ export default function QuizTemplateManager({ templates, onChanged }) {
                         : `${data.questionIds?.length ?? 0} selected`
 
                     return (
-                      <article className="quiz-template-card" key={template.id}>
+                      <SurfaceCard
+                        as="article"
+                        subtle
+                        className="quiz-template-card"
+                        key={template.id}
+                      >
                         <div>
                           <h4>{template.name}</h4>
                           <p>
@@ -163,7 +178,7 @@ export default function QuizTemplateManager({ templates, onChanged }) {
                           </div>
                         </dl>
 
-                        <div className="quiz-template-card__actions">
+                        <ActionBar className="quiz-template-card__actions">
                           <button
                             className="primary"
                             type="button"
@@ -184,12 +199,12 @@ export default function QuizTemplateManager({ templates, onChanged }) {
                               ? 'Deleting...'
                               : 'Delete template'}
                           </button>
-                        </div>
-                      </article>
+                        </ActionBar>
+                      </SurfaceCard>
                     )
                   })}
-                </div>
-              </section>
+                </ResponsiveGrid>
+              </SurfaceCard>
             ))
           )}
         </div>

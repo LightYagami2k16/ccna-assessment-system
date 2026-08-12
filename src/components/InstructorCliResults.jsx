@@ -7,6 +7,13 @@ import {
 import BrowserEventReview from './BrowserEventReview'
 import ResultActionMenu from './ResultActionMenu'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const criterionLabels = {
   hostname: 'Hostname',
@@ -494,14 +501,12 @@ export default function InstructorCliResults() {
   return (
     <section className="cli-results-panel">
       {confirmationDialog}
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">CLI PRACTICAL RESULTS</span>
-          <h2>Student CLI attempts</h2>
-          <p>Review final scores, integrity events, and every grading requirement.</p>
-        </div>
-
-        <div className="results-heading-actions">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="CLI PRACTICAL RESULTS"
+        title="Student CLI attempts"
+        description="Review final scores, integrity events, and every grading requirement."
+        actions={<div className="results-heading-actions">
           <div className="results-export-control">
             <label>
               Export class
@@ -535,29 +540,29 @@ export default function InstructorCliResults() {
           >
             Refresh CLI results
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
-      <div className="results-metrics" aria-label="CLI practical results summary">
-        <article>
+      <ResponsiveGrid className="results-metrics" min="10rem" aria-label="CLI practical results summary">
+        <SurfaceCard as="article" subtle>
           <span>Total attempts</span>
           <strong>{metrics.total}</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Active now</span>
           <strong>{metrics.active}</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Pass rate</span>
           <strong>{metrics.passRate.toFixed(1)}%</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Average score</span>
           <strong>{metrics.average.toFixed(1)}%</strong>
-        </article>
-      </div>
+        </SurfaceCard>
+      </ResponsiveGrid>
 
-      <div className="results-filters results-filters--with-class">
+      <ResponsiveGrid className="results-filters results-filters--with-class" min="11rem">
         <label>
           Search
           <input
@@ -634,10 +639,10 @@ export default function InstructorCliResults() {
             <option value="expired">Expired</option>
           </select>
         </label>
-      </div>
+      </ResponsiveGrid>
 
       {!!visibleAttemptIds.length && (
-        <div className="bulk-action-bar">
+        <ActionBar className="bulk-action-bar">
           <label className="bulk-select-control">
             <input
               type="checkbox"
@@ -674,11 +679,11 @@ export default function InstructorCliResults() {
               {resetting ? 'Resetting...' : 'Reset selected'}
             </button>
           </div>
-        </div>
+        </ActionBar>
       )}
 
       {loading ? (
-        <p>Loading CLI results...</p>
+        <LoadingState label="Loading CLI results..." />
       ) : !attempts.length ? (
         <div className="empty-state">
           <h3>No CLI attempts</h3>

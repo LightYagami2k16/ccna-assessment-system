@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SquareTerminal } from 'lucide-react'
 import {
   getStudentCliArchiveStatuses,
   getStudentCliHistory,
   setStudentCliLabArchived,
 } from '../services/cliLabService'
+import AssessmentTypeIcon from './AssessmentTypeIcon'
+import LoadingState from './LoadingState'
+import TailwindEmptyState from './TailwindEmptyState'
+import { DataTableRegion } from './LayoutPrimitives'
 
 function formatDate(value) {
   if (!value) return 'Not submitted'
@@ -13,7 +18,11 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function StudentCliHistory({ onRestored }) {
+export default function StudentCliHistory({
+  embedded = false,
+  onRestored,
+  refreshVersion = 0,
+}) {
   const [attempts, setAttempts] = useState([])
   const [statuses, setStatuses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +48,7 @@ export default function StudentCliHistory({ onRestored }) {
     }
   }, [])
 
-  useEffect(() => { void loadHistory() }, [loadHistory])
+  useEffect(() => { void loadHistory() }, [loadHistory, refreshVersion])
 
   const statusByLab = useMemo(
     () => new Map(statuses.map((item) => [String(item.labId), item])),
@@ -80,21 +89,38 @@ export default function StudentCliHistory({ onRestored }) {
   }
 
   return (
-    <section className="student-recent-results student-cli-history">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">CLI PRACTICAL HISTORY</span>
-          <h2>Practical history</h2>
-          <p>
-            Every completed CLI attempt appears here. Archiving only removes
-            a practical from Available while attempts remain.
-          </p>
+    <section
+      className={
+        embedded
+          ? 'student-recent-results student-cli-history student-recent-results--embedded'
+          : 'student-recent-results student-cli-history'
+      }
+    >
+      {embedded ? (
+        <div className="student-history-section__heading">
+          <AssessmentTypeIcon type="cli" />
+          <div>
+            <span className="eyebrow">CLI PRACTICAL RESULTS</span>
+            <h2>Practical history</h2>
+            <p>Scores, command totals, and outcomes from completed practicals.</p>
+          </div>
         </div>
-        <button className="secondary" type="button"
-          onClick={() => void loadHistory()}>
-          Refresh results
-        </button>
-      </div>
+      ) : (
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">CLI PRACTICAL HISTORY</span>
+            <h2>Practical history</h2>
+            <p>
+              Every completed CLI attempt appears here. Archiving only removes
+              a practical from Available while attempts remain.
+            </p>
+          </div>
+          <button className="secondary" type="button"
+            onClick={() => void loadHistory()}>
+            Refresh results
+          </button>
+        </div>
+      )}
 
       {message && (
         <p className="form-message form-message--error" role="alert">
@@ -102,11 +128,12 @@ export default function StudentCliHistory({ onRestored }) {
         </p>
       )}
 
-      {loading ? <p>Loading CLI history...</p> : !historyGroups.length ? (
-        <div className="empty-state">
-          <h3>No CLI practical history</h3>
-          <p>Your CLI practical results will appear here after an attempt is completed.</p>
-        </div>
+      {loading ? <LoadingState label="Loading CLI history..." /> : !historyGroups.length ? (
+        <TailwindEmptyState
+          icon={SquareTerminal}
+          title="No CLI practical history"
+          description="Your CLI practical results will appear here after an attempt is completed."
+        />
       ) : (
         <div className="recent-result-groups">
           {historyGroups.map((group) => {
@@ -148,8 +175,8 @@ export default function StudentCliHistory({ onRestored }) {
                   </div>
                 </header>
 
-                <div className="recent-attempt-table-wrapper" role="region"
-                  aria-label={`${group.title} attempt history`} tabIndex="0">
+                <DataTableRegion className="recent-attempt-table-wrapper" role="region"
+                  aria-label={`${group.title} attempt history`}>
                   <table className="recent-attempt-table recent-attempt-table--cli">
                     <thead>
                       <tr>
@@ -201,7 +228,7 @@ export default function StudentCliHistory({ onRestored }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </DataTableRegion>
               </article>
             )
           })}

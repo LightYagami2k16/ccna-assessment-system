@@ -3,6 +3,11 @@ import { getInstructorCliResults } from '../services/cliLabService'
 import { getInstructorAttempts } from '../services/instructorResultsService'
 import InstructorQuestionAnalytics from './InstructorQuestionAnalytics'
 import InstructorPerformanceTrends from './InstructorPerformanceTrends'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const courseOrder = { ITN: 1, SRWE: 2, ENSA: 3, OTHER: 99 }
 
@@ -99,7 +104,7 @@ function downloadCsv(rows) {
 
 function AssessmentSummary({ title, description, metrics }) {
   return (
-    <article className="overall-results-breakdown__card">
+    <SurfaceCard as="article" subtle className="overall-results-breakdown__card">
       <header>
         <div>
           <h3>{title}</h3>
@@ -115,7 +120,7 @@ function AssessmentSummary({ title, description, metrics }) {
         <div><dt>Average time</dt><dd>{formatDuration(metrics.averageDurationSeconds)}</dd></div>
         <div><dt>Integrity events</dt><dd>{metrics.eventCount}</dd></div>
       </dl>
-    </article>
+    </SurfaceCard>
   )
 }
 
@@ -223,23 +228,22 @@ export default function InstructorOverallResults() {
 
   return (
     <section className="overall-results-panel">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">ASSESSMENT REPORTING</span>
-          <h2>Overall results</h2>
-          <p>Combined performance across quizzes and CLI practicals.</p>
-        </div>
-        <div className="overall-results-panel__actions">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="ASSESSMENT REPORTING"
+        title="Overall results"
+        description="Combined performance across quizzes and CLI practicals."
+        actions={<div className="overall-results-panel__actions">
           <button className="secondary" type="button" disabled={!filteredAttempts.length}
             onClick={exportSummary}>Export summary CSV</button>
           <button className="secondary" type="button"
             disabled={loading} onClick={() => void loadResults()}>
             {loading ? 'Refreshing...' : 'Refresh overview'}
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
-      <div className="overall-results-filters" aria-label="Overall result filters">
+      <ResponsiveGrid className="overall-results-filters" min="12rem" aria-label="Overall result filters">
         <label>
           Course
           <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}>
@@ -254,31 +258,29 @@ export default function InstructorOverallResults() {
             {classes.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
           </select>
         </label>
-      </div>
+      </ResponsiveGrid>
 
-      <div className="results-metrics" aria-label="Overall assessment results">
-        <article><span>Total attempts</span><strong>{overallMetrics.total}</strong></article>
-        <article><span>Completed</span><strong>{overallMetrics.completed}</strong></article>
-        <article><span>Students</span><strong>{overallMetrics.uniqueStudents}</strong></article>
-        <article><span>Pass rate</span><strong>{overallMetrics.passRate.toFixed(1)}%</strong></article>
-        <article><span>Average score</span><strong>{overallMetrics.average.toFixed(1)}%</strong></article>
-        <article><span>Integrity events</span><strong>{overallMetrics.eventCount}</strong></article>
-      </div>
+      <ResponsiveGrid className="results-metrics" min="9rem" aria-label="Overall assessment results">
+        <SurfaceCard as="article" subtle><span>Total attempts</span><strong>{overallMetrics.total}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Completed</span><strong>{overallMetrics.completed}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Students</span><strong>{overallMetrics.uniqueStudents}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Pass rate</span><strong>{overallMetrics.passRate.toFixed(1)}%</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Average score</span><strong>{overallMetrics.average.toFixed(1)}%</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Integrity events</span><strong>{overallMetrics.eventCount}</strong></SurfaceCard>
+      </ResponsiveGrid>
 
-      <div className="overall-results-breakdown">
+      <ResponsiveGrid className="overall-results-breakdown" min="20rem">
         <AssessmentSummary title="Quiz results"
           description="Knowledge and concept assessments" metrics={quizMetrics} />
         <AssessmentSummary title="CLI practical results"
           description="Cisco configuration assessments" metrics={cliMetrics} />
-      </div>
+      </ResponsiveGrid>
 
       <section className="overall-results-course-section">
-        <div className="section-heading section-heading--compact">
-          <div><h3>Performance by course</h3><p>Compare ITN, SRWE, and ENSA outcomes.</p></div>
-        </div>
-        <div className="overall-results-course-grid">
+        <SectionHeader className="section-heading section-heading--compact" title="Performance by course" titleAs="h3" description="Compare ITN, SRWE, and ENSA outcomes." />
+        <ResponsiveGrid className="overall-results-course-grid" min="17rem">
           {courseGroups.map((group) => (
-            <article key={group.key} className="overall-results-course-card">
+            <SurfaceCard as="article" subtle key={group.key} className="overall-results-course-card">
               <span className="course-code">{group.label}</span>
               <strong>{group.metrics.average.toFixed(1)}%</strong>
               <span>Average score</span>
@@ -288,15 +290,13 @@ export default function InstructorOverallResults() {
                 <div><dt>Students</dt><dd>{group.metrics.uniqueStudents}</dd></div>
                 <div><dt>Events</dt><dd>{group.metrics.eventCount}</dd></div>
               </dl>
-            </article>
+            </SurfaceCard>
           ))}
-        </div>
+        </ResponsiveGrid>
       </section>
 
       <section className="overall-results-class-section">
-        <div className="section-heading section-heading--compact">
-          <div><h3>Performance by class</h3><p>Class-level completion, scoring, and integrity summary.</p></div>
-        </div>
+        <SectionHeader className="section-heading section-heading--compact" title="Performance by class" titleAs="h3" description="Class-level completion, scoring, and integrity summary." />
         <div className="results-table-wrapper" role="region" aria-label="Class performance table" tabIndex="0">
           <table className="results-table overall-results-class-table">
             <thead><tr>

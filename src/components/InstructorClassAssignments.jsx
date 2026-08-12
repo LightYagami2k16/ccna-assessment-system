@@ -17,6 +17,12 @@ import {
   saveQuizAccess,
 } from '../services/assignmentService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const courseTitles = {
   ITN: 'Introduction to Networks',
@@ -95,16 +101,12 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
 
   return (
     <section className="class-editor">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">CLASS MANAGEMENT</span>
-          <h2>{classSection ? 'Edit class' : 'Create class'}</h2>
-          <p>
-            Create the class record first. A unique student join code is
-            generated automatically.
-          </p>
-        </div>
-        <div className="class-editor__heading-controls">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="CLASS MANAGEMENT"
+        title={classSection ? 'Edit class' : 'Create class'}
+        description="Create the class record first. A unique student join code is generated automatically."
+        actions={(<div className="class-editor__heading-controls">
           {classSection && (
             <button className="secondary" type="button" onClick={onCancel}>
               Cancel
@@ -124,12 +126,12 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
                 ? 'Show form'
                 : 'Create class'}
           </button>
-        </div>
-      </div>
+        </div>)}
+      />
 
       {expanded && (
       <form id="class-editor-form" onSubmit={handleSubmit}>
-        <div className="form-grid form-grid--three">
+        <ResponsiveGrid min="14rem" className="form-grid form-grid--three">
           <label>
             Class name
             <input
@@ -154,7 +156,7 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
               placeholder="Example: 2026-2027 Semester 1"
             />
           </label>
-        </div>
+        </ResponsiveGrid>
 
         <label className="check-control class-active-control">
           <input
@@ -166,7 +168,7 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
         </label>
 
         {classSection && (
-          <fieldset className="student-picker">
+          <fieldset className="student-picker form-fieldset">
             <legend>Enrolled students ({studentIds.length})</legend>
             {!students.length ? (
               <p>
@@ -195,9 +197,11 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
           </fieldset>
         )}
 
-        <button className="primary" type="submit" disabled={saving}>
-          {saving ? 'Saving class...' : classSection ? 'Save class' : 'Create class'}
-        </button>
+        <ActionBar className="class-editor__actions">
+          <button className="primary" type="submit" disabled={saving}>
+            {saving ? 'Saving class...' : classSection ? 'Save class' : 'Create class'}
+          </button>
+        </ActionBar>
         {message && <p className="form-message form-message--error">{message}</p>}
       </form>
       )}
@@ -924,13 +928,14 @@ export default function InstructorClassAssignments() {
       />
 
       <section className="class-list-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">CLASS SECTIONS</span>
-            <h2>Your classes</h2>
-          </div>
-          <span className="status-chip">{workspace.classes.length} classes</span>
-        </div>
+        <SectionHeader
+          className="section-heading"
+          eyebrow="CLASS SECTIONS"
+          title="Your classes"
+          actions={(
+            <span className="status-chip">{workspace.classes.length} classes</span>
+          )}
+        />
         {!workspace.classes.length ? (
           <div className="empty-state">
             <h3>No classes created yet</h3>
@@ -938,7 +943,7 @@ export default function InstructorClassAssignments() {
           </div>
         ) : (
           <>
-            <div className="bulk-action-bar">
+            <ActionBar className="bulk-action-bar">
               <label className="bulk-select-control">
                 <input
                   type="checkbox"
@@ -969,9 +974,9 @@ export default function InstructorClassAssignments() {
                   {bulkDeleting ? 'Deleting...' : 'Delete selected'}
                 </button>
               </div>
-            </div>
+            </ActionBar>
 
-            <div className="class-card-grid">
+            <ResponsiveGrid className="class-card-grid" min="24rem">
               {workspace.classes.map((classSection) => {
                 const expanded = expandedClassIds.includes(
                   classSection.id,
@@ -989,7 +994,12 @@ export default function InstructorClassAssignments() {
                   .filter(Boolean)
 
                 return (
-                  <article className="class-card" key={classSection.id}>
+                  <SurfaceCard
+                    as="article"
+                    subtle
+                    className="class-card"
+                    key={classSection.id}
+                  >
                     <label className="card-select-control">
                       <input
                         type="checkbox"
@@ -1161,10 +1171,10 @@ export default function InstructorClassAssignments() {
                         </div>
                       </div>
                     )}
-                  </article>
+                  </SurfaceCard>
                 )
               })}
-            </div>
+            </ResponsiveGrid>
           </>
         )}
       </section>
@@ -1176,23 +1186,21 @@ export default function InstructorClassAssignments() {
       />
 
       <section className="quiz-assignment-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">QUIZ ACCESS</span>
-            <h2>Assign quizzes</h2>
-            <p>
-              Every quiz must be assigned to at least one active class before
-              students can see or start it.
-            </p>
-          </div>
-          <button
-            className="secondary"
-            type="button"
-            onClick={() => void loadWorkspace()}
-          >
-            Refresh classes
-          </button>
-        </div>
+        <SectionHeader
+          className="section-heading"
+          eyebrow="QUIZ ACCESS"
+          title="Assign quizzes"
+          description="Every quiz must be assigned to at least one active class before students can see or start it."
+          actions={(
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => void loadWorkspace()}
+            >
+              Refresh classes
+            </button>
+          )}
+        />
         {!workspace.quizzes.length ? (
           <div className="empty-state">
             <h3>No quizzes available</h3>
@@ -1207,7 +1215,9 @@ export default function InstructorClassAssignments() {
               const panelId = `quiz-access-course-${courseGroup.code}`
 
               return (
-                <section
+                <SurfaceCard
+                  as="section"
+                  subtle
                   className="quiz-access-course-group"
                   key={courseGroup.code}
                 >
@@ -1240,7 +1250,11 @@ export default function InstructorClassAssignments() {
                   </header>
 
                   {expanded && (
-                    <div className="quiz-access-grid" id={panelId}>
+                    <ResponsiveGrid
+                      className="quiz-access-grid"
+                      id={panelId}
+                      min="22rem"
+                    >
                       {courseGroup.quizzes.map((quiz) => (
                         <QuizAccessCard
                           key={[
@@ -1260,9 +1274,9 @@ export default function InstructorClassAssignments() {
                           onSaved={loadWorkspace}
                         />
                       ))}
-                    </div>
+                    </ResponsiveGrid>
                   )}
-                </section>
+                </SurfaceCard>
               )
             })}
           </div>

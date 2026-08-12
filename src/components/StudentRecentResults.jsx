@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { History } from 'lucide-react'
 import {
   getStudentQuizArchiveStatuses,
   getStudentRecentResults,
   setStudentQuizArchived,
 } from '../services/quizAttemptService'
+import AssessmentTypeIcon from './AssessmentTypeIcon'
+import LoadingState from './LoadingState'
+import TailwindEmptyState from './TailwindEmptyState'
+import { DataTableRegion } from './LayoutPrimitives'
 
 function formatDate(value) {
   if (!value) return 'Not recorded'
@@ -13,7 +18,11 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function StudentRecentResults({ onRestored }) {
+export default function StudentRecentResults({
+  embedded = false,
+  onRestored,
+  refreshVersion = 0,
+}) {
   const [results, setResults] = useState([])
   const [archiveStatuses, setArchiveStatuses] = useState([])
   const [loading, setLoading] = useState(true)
@@ -39,7 +48,7 @@ export default function StudentRecentResults({ onRestored }) {
 
   useEffect(() => {
     void loadResults()
-  }, [loadResults])
+  }, [loadResults, refreshVersion])
 
   const resultsByQuiz = useMemo(() => {
     const groups = new Map()
@@ -80,24 +89,41 @@ export default function StudentRecentResults({ onRestored }) {
   }
 
   return (
-    <section className="student-recent-results">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">MY PERFORMANCE</span>
-          <h2>Quiz history</h2>
-          <p>
-            Every completed quiz attempt appears here. Archiving only removes
-            a quiz from Available while attempts remain.
-          </p>
+    <section
+      className={
+        embedded
+          ? 'student-recent-results student-recent-results--embedded'
+          : 'student-recent-results'
+      }
+    >
+      {embedded ? (
+        <div className="student-history-section__heading">
+          <AssessmentTypeIcon type="quiz" />
+          <div>
+            <span className="eyebrow">QUIZ RESULTS</span>
+            <h2>Quiz history</h2>
+            <p>Scores and outcomes from every completed quiz attempt.</p>
+          </div>
         </div>
-        <button
-          className="secondary"
-          type="button"
-          onClick={() => void loadResults()}
-        >
-          Refresh results
-        </button>
-      </div>
+      ) : (
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">MY PERFORMANCE</span>
+            <h2>Quiz history</h2>
+            <p>
+              Every completed quiz attempt appears here. Archiving only removes
+              a quiz from Available while attempts remain.
+            </p>
+          </div>
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => void loadResults()}
+          >
+            Refresh results
+          </button>
+        </div>
+      )}
 
       {message && (
         <p className="form-message form-message--error" role="alert">
@@ -105,14 +131,13 @@ export default function StudentRecentResults({ onRestored }) {
         </p>
       )}
       {loading ? (
-        <p>Loading quiz history...</p>
+        <LoadingState label="Loading quiz history..." />
       ) : !resultsByQuiz.length ? (
-        <div className="empty-state">
-          <h3>No quizzes in history</h3>
-          <p>
-            Your quiz results will appear here after you complete an attempt.
-          </p>
-        </div>
+        <TailwindEmptyState
+          icon={History}
+          title="No quizzes in history"
+          description="Your quiz results will appear here after you complete an attempt."
+        />
       ) : (
         <div className="recent-result-groups">
           {resultsByQuiz.map((group) => (
@@ -155,11 +180,10 @@ export default function StudentRecentResults({ onRestored }) {
                 </div>
               </header>
 
-              <div
+              <DataTableRegion
                 className="recent-attempt-table-wrapper"
                 role="region"
                 aria-label={`${group.quizTitle} attempt history`}
-                tabIndex="0"
               >
                 <table className="recent-attempt-table">
                   <thead>
@@ -210,7 +234,7 @@ export default function StudentRecentResults({ onRestored }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTableRegion>
             </article>
           ))}
         </div>

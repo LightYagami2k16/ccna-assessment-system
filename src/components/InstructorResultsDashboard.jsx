@@ -8,6 +8,13 @@ import InstructorAttemptReview from './InstructorAttemptReview'
 import BrowserEventReview from './BrowserEventReview'
 import ResultActionMenu from './ResultActionMenu'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 import {
   getInstructorAttempts,
   resetInstructorAttempts,
@@ -518,14 +525,12 @@ export default function InstructorResultsDashboard() {
   return (
     <section className="instructor-results">
       {confirmationDialog}
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">QUIZ RESULTS</span>
-          <h2>Student Quiz attempts</h2>
-          <p>Review final scores, integrity events, and every grading requirement.</p>
-        </div>
-
-        <div className="results-heading-actions">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="QUIZ RESULTS"
+        title="Student Quiz attempts"
+        description="Review final scores, integrity events, and every grading requirement."
+        actions={<div className="results-heading-actions">
           <div className="results-export-control">
             <label>
               Export class
@@ -559,29 +564,29 @@ export default function InstructorResultsDashboard() {
           >
             Refresh results
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
-      <div className="results-metrics">
-        <article>
+      <ResponsiveGrid className="results-metrics" min="10rem">
+        <SurfaceCard as="article" subtle>
           <span>Total attempts</span>
           <strong>{metrics.total}</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Active now</span>
           <strong>{metrics.active}</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Pass rate</span>
           <strong>{metrics.passRate.toFixed(1)}%</strong>
-        </article>
-        <article>
+        </SurfaceCard>
+        <SurfaceCard as="article" subtle>
           <span>Average score</span>
           <strong>{metrics.average.toFixed(1)}%</strong>
-        </article>
-      </div>
+        </SurfaceCard>
+      </ResponsiveGrid>
 
-      <div className="results-filters results-filters--with-class">
+      <ResponsiveGrid className="results-filters results-filters--with-class" min="11rem">
         <label>
           Search
           <input
@@ -658,10 +663,10 @@ export default function InstructorResultsDashboard() {
             <option value="expired">Expired</option>
           </select>
         </label>
-      </div>
+      </ResponsiveGrid>
 
       {!!visibleAttemptIds.length && (
-        <div className="bulk-action-bar">
+        <ActionBar className="bulk-action-bar">
           <label className="bulk-select-control">
             <input
               type="checkbox"
@@ -709,7 +714,7 @@ export default function InstructorResultsDashboard() {
                 : 'Reset selected'}
             </button>
           </div>
-        </div>
+        </ActionBar>
       )}
 
       {message && (
@@ -725,7 +730,7 @@ export default function InstructorResultsDashboard() {
       )}
 
       {loading ? (
-        <p>Loading student results...</p>
+        <LoadingState label="Loading student results..." />
       ) : !filteredAttempts.length ? (
         <div className="empty-state">
           <h3>No matching attempts</h3>

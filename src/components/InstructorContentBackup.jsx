@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Download, RotateCcw, Upload, X } from 'lucide-react'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import {
   exportInstructorContentBackup,
@@ -9,6 +10,12 @@ import {
   summarizeInstructionalBackup,
   validateInstructionalBackup,
 } from '../services/contentBackupPortability'
+import AppIcon from './AppIcon'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const summaryLabels = {
   modules: 'Modules',
@@ -137,59 +144,67 @@ export default function InstructorContentBackup() {
     <div className="content-backup-workspace">
       {confirmationDialog}
 
-      <section className="content-backup-card">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">CONTENT PROTECTION</span>
-            <h2>Download a complete content backup</h2>
-            <p>
-              Save the shared curriculum library and your own quizzes,
-              practicals, and reusable templates in one portable JSON file.
-            </p>
+      <SurfaceCard className="content-backup-card">
+        <SectionHeader
+          className="section-heading"
+          eyebrow="CONTENT PROTECTION"
+          title="Download a complete content backup"
+          description="Save the shared curriculum library and your own quizzes, practicals, and reusable templates in one portable JSON file."
+          actions={
+            <button
+              className="primary content-backup-header-action"
+              type="button"
+              disabled={exporting || restoring}
+              onClick={() => void handleExport()}
+            >
+              <AppIcon icon={Download} aria-hidden="true" />
+              {exporting ? 'Preparing backup...' : 'Download backup'}
+            </button>
+          }
+        />
+
+        <ResponsiveGrid min="20rem" className="content-backup-scope">
+          <SurfaceCard as="div" subtle className="content-backup-scope__item">
+            <strong>Included</strong>
+            <p>Courses, modules, questions and answers, quizzes, CLI practicals, topologies, grading criteria, and templates.</p>
+          </SurfaceCard>
+          <SurfaceCard as="div" subtle className="content-backup-scope__item">
+            <strong>Always excluded</strong>
+            <p>Accounts, classes, enrollments, assignments, schedules, attempts, answers, scores, commands, and monitoring events.</p>
+          </SurfaceCard>
+        </ResponsiveGrid>
+      </SurfaceCard>
+
+      <SurfaceCard className="content-backup-card">
+        <SectionHeader
+          className="section-heading"
+          eyebrow="SAFE RESTORE"
+          title="Restore instructional content"
+          description="Restore additively without replacing live content. Imported assessments remain drafts until you review and publish them."
+        />
+
+        <SurfaceCard as="div" subtle className="content-backup-upload">
+          <div className="content-backup-upload__heading">
+            <AppIcon icon={Upload} size="lg" aria-hidden="true" />
+            <div>
+              <strong>Select a backup file</strong>
+              <span>JSON format, up to 25 MB</span>
+            </div>
           </div>
-          <button
-            className="primary"
-            type="button"
-            disabled={exporting || restoring}
-            onClick={() => void handleExport()}
-          >
-            {exporting ? 'Preparing backup...' : 'Download backup'}
-          </button>
-        </div>
-
-        <div className="content-backup-scope">
-          <strong>Included</strong>
-          <p>Courses, modules, questions and answers, quizzes, CLI practicals, topologies, grading criteria, and templates.</p>
-          <strong>Always excluded</strong>
-          <p>Accounts, classes, enrollments, assignments, schedules, attempts, answers, scores, commands, and monitoring events.</p>
-        </div>
-      </section>
-
-      <section className="content-backup-card">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">SAFE RESTORE</span>
-            <h2>Restore instructional content</h2>
-            <p>
-              Restore additively without replacing live content. Imported
-              assessments remain drafts until you review and publish them.
-            </p>
-          </div>
-        </div>
-
-        <label className="content-backup-file">
-          Backup JSON file
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/json,.json"
-            disabled={exporting || restoring}
-            onChange={(event) => void handleFileSelection(event)}
-          />
-        </label>
+          <label className="content-backup-file">
+            Backup JSON file
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/json,.json"
+              disabled={exporting || restoring}
+              onChange={(event) => void handleFileSelection(event)}
+            />
+          </label>
+        </SurfaceCard>
 
         {summary && (
-          <div className="content-backup-preview" role="status">
+          <SurfaceCard subtle className="content-backup-preview" role="status">
             <div className="content-backup-preview__heading">
               <div>
                 <strong>{filename}</strong>
@@ -201,18 +216,19 @@ export default function InstructorContentBackup() {
                 disabled={restoring}
                 onClick={clearFile}
               >
+                <AppIcon icon={X} aria-hidden="true" />
                 Clear file
               </button>
             </div>
 
-            <div className="content-backup-summary">
+            <ResponsiveGrid min="8.5rem" className="content-backup-summary">
               {Object.entries(summaryLabels).map(([key, label]) => (
-                <div key={key}>
+                <SurfaceCard as="div" subtle key={key}>
                   <span>{label}</span>
                   <strong>{summary[key]}</strong>
-                </div>
+                </SurfaceCard>
               ))}
-            </div>
+            </ResponsiveGrid>
 
             <button
               className="primary content-backup-restore"
@@ -220,11 +236,12 @@ export default function InstructorContentBackup() {
               disabled={restoring}
               onClick={() => void handleRestore()}
             >
+              <AppIcon icon={RotateCcw} aria-hidden="true" />
               {restoring ? 'Restoring content...' : 'Restore validated backup'}
             </button>
-          </div>
+          </SurfaceCard>
         )}
-      </section>
+      </SurfaceCard>
 
       {message && (
         <p className={`form-message form-message--${messageTone}`} role="status">
@@ -234,4 +251,3 @@ export default function InstructorContentBackup() {
     </div>
   )
 }
-

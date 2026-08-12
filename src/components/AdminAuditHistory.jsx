@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ShieldCheck } from 'lucide-react'
 import { getAdminAuditEvents } from '../services/adminService'
+import LoadingState from './LoadingState'
+import TailwindEmptyState from './TailwindEmptyState'
+import { FilterBar } from './LayoutPrimitives'
 
 const eventLabels = {
   role_changed: 'Role changes',
@@ -229,7 +233,7 @@ export default function AdminAuditHistory({
         <article><span>Access changes</span><strong>{metrics.accessChanges}</strong></article>
       </div>
 
-      <div className="admin-audit-filters">
+      <FilterBar className="admin-audit-filters" aria-label="Security history filters">
         <label>
           Event category
           <select value={eventFilter} onChange={(event) => setEventFilter(event.target.value)}>
@@ -254,7 +258,7 @@ export default function AdminAuditHistory({
           <input value={search} placeholder="Name, email, or event details"
             onChange={(event) => setSearch(event.target.value)} />
         </label>
-      </div>
+      </FilterBar>
 
       {message && (
         <p className="form-message form-message--error" role="alert">
@@ -263,19 +267,19 @@ export default function AdminAuditHistory({
       )}
 
       {loading ? (
-        <div className="admin-users-empty">
-          <strong>Loading security history...</strong>
-        </div>
+        <LoadingState label="Loading security history..." />
       ) : events.length === 0 ? (
-        <div className="admin-users-empty">
-          <strong>No administrator events yet</strong>
-          <span>Account and role changes will appear here.</span>
-        </div>
+        <TailwindEmptyState
+          icon={ShieldCheck}
+          title="No administrator events yet"
+          description="Account and role changes will appear here."
+        />
       ) : filteredEvents.length === 0 ? (
-        <div className="admin-users-empty">
-          <strong>No matching security events</strong>
-          <span>Adjust the category, date range, or search text.</span>
-        </div>
+        <TailwindEmptyState
+          icon={ShieldCheck}
+          title="No matching security events"
+          description="Adjust the category, date range, or search text."
+        />
       ) : (
         <div className="admin-audit-groups">
           {groupedEvents.map((group) => {

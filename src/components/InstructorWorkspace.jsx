@@ -1,4 +1,16 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import {
+  Archive,
+  ChartNoAxesColumn,
+  ClipboardList,
+  Library,
+  MonitorCheck,
+  PanelLeftOpen,
+  SquareTerminal,
+  Users,
+  X,
+} from 'lucide-react'
+import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
 
 const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
@@ -34,36 +46,43 @@ const instructorSections = new Set([
 const instructorNavigation = [
   {
     id: 'questions',
+    icon: Library,
     label: 'Question bank',
     description: 'Modules and reusable questions',
   },
   {
     id: 'quizzes',
+    icon: ClipboardList,
     label: 'Quizzes',
     description: 'Build and publish assessments',
   },
   {
     id: 'cli-practicals',
+    icon: SquareTerminal,
     label: 'CLI practicals',
     description: 'Create Cisco configuration exams',
   },
   {
     id: 'assignments',
+    icon: Users,
     label: 'Classes & assignments',
     description: 'Enrollment and quiz access',
   },
   {
     id: 'exam-controls',
+    icon: MonitorCheck,
     label: 'Exam controls',
     description: 'Schedules and live monitoring',
   },
   {
     id: 'results',
+    icon: ChartNoAxesColumn,
     label: 'Student results',
     description: 'Review attempts and browser events',
   },
   {
     id: 'content-backup',
+    icon: Archive,
     label: 'Content backup',
     description: 'Protect and restore instructional content',
   },
@@ -133,7 +152,11 @@ export default function InstructorWorkspace({ user }) {
           aria-controls="instructor-navigation"
           onClick={() => setNavigationOpen((current) => !current)}
         >
-          {navigationOpen ? 'Close menu' : 'Open menu'}
+          <AppIcon
+            icon={navigationOpen ? X : PanelLeftOpen}
+            aria-hidden="true"
+          />
+          <span>{navigationOpen ? 'Close menu' : 'Open menu'}</span>
         </button>
       </header>
 
@@ -171,7 +194,10 @@ export default function InstructorWorkspace({ user }) {
                   aria-current={active ? 'page' : undefined}
                   onClick={() => selectSection(item.id)}
                 >
-                  <span>{item.label}</span>
+                  <span className="workspace-tab__label">
+                    <AppIcon icon={item.icon} aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </span>
                   <small>{item.description}</small>
                 </button>
               )

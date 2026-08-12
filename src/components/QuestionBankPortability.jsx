@@ -8,6 +8,7 @@ import {
   questionBankFilename,
   validationReportFilename,
 } from '../services/questionBankPortability'
+import { ActionBar, SectionHeader, SurfaceCard } from './LayoutPrimitives'
 
 function downloadJson(payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -119,26 +120,24 @@ export default function QuestionBankPortability({ questions, onImported }) {
   }
 
   return (
-    <section className="question-portability-panel">
+    <SurfaceCard as="section" subtle className="question-portability-panel">
       {confirmationDialog}
-      <div className="section-heading question-portability-panel__heading">
-        <div>
-          <span className="eyebrow">CONTENT PORTABILITY</span>
-          <h2>Question bank import and export</h2>
-          <p>
-            Download a reusable JSON backup or import questions into matching
-            course and module codes.
-          </p>
-        </div>
-        <button
-          className="secondary"
-          type="button"
-          disabled={!questions.length}
-          onClick={() => downloadJson(createQuestionBankPackage(questions))}
-        >
-          Export question bank
-        </button>
-      </div>
+      <SectionHeader
+        className="section-heading question-portability-panel__heading"
+        eyebrow="CONTENT PORTABILITY"
+        title="Question bank import and export"
+        description="Download a reusable JSON backup or import questions into matching course and module codes."
+        actions={(
+          <button
+            className="secondary"
+            type="button"
+            disabled={!questions.length}
+            onClick={() => downloadJson(createQuestionBankPackage(questions))}
+          >
+            Export question bank
+          </button>
+        )}
+      />
 
       <div className="question-portability-panel__import">
         <label>
@@ -208,7 +207,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
           </div>
         )}
 
-        <div className="question-portability-panel__actions">
+        <ActionBar className="question-portability-panel__actions">
           <button
             className="primary"
             type="button"
@@ -227,7 +226,7 @@ export default function QuestionBankPortability({ questions, onImported }) {
               Clear file
             </button>
           )}
-        </div>
+        </ActionBar>
       </div>
 
       {message && (
@@ -235,6 +234,6 @@ export default function QuestionBankPortability({ questions, onImported }) {
           {message}
         </p>
       )}
-    </section>
+    </SurfaceCard>
   )
 }

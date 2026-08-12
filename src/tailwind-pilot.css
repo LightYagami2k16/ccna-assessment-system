@@ -1,0 +1,14 @@
+/*
+ * Controlled Tailwind migration layer.
+ *
+ * Preflight remains excluded so Tailwind cannot reset the established UI.
+ * The `tw:` prefix isolates utilities from the existing CSS design system.
+ */
+@layer theme, utilities;
+
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw);
+
+@source "./components/TailwindEmptyState.jsx";
+@source "./components/LayoutPrimitives.jsx";
+@source "./components/LoadingState.jsx";

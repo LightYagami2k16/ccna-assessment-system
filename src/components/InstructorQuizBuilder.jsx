@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import InstructorQuizList from './InstructorQuizList'
 import QuizEditor from './QuizEditor'
 import QuizTemplateManager from './QuizTemplateManager'
+import { Plus } from 'lucide-react'
+import AppIcon from './AppIcon'
+import LoadingState from './LoadingState'
+import { SectionHeader, SurfaceCard } from './LayoutPrimitives'
 import { getCourses, getModules } from '../services/questionService'
 import {
   getInstructorQuizzes,
@@ -90,21 +94,22 @@ export default function InstructorQuizBuilder() {
   }
 
   return (
-    <section className="instructor-quiz-builder">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">ASSESSMENT CONTENT</span>
-          <h2>Quiz builder</h2>
-          <p>Create, configure, publish, and maintain CCNA assessments.</p>
-        </div>
-        <button className="primary create-quiz-button" type="button" onClick={startCreating}>
-          Create quiz
-        </button>
-      </div>
+    <SurfaceCard as="section" className="instructor-quiz-builder">
+      <SectionHeader
+        eyebrow="ASSESSMENT CONTENT"
+        title="Quiz builder"
+        description="Create, configure, publish, and maintain CCNA assessments."
+        actions={(
+          <button className="primary create-quiz-button" type="button" onClick={startCreating}>
+            <AppIcon icon={Plus} aria-hidden="true" />
+            <span>Create quiz</span>
+          </button>
+        )}
+      />
 
       {message && <p className="form-message form-message--error">{message}</p>}
       {loading ? (
-        <p>Loading quizzes…</p>
+        <LoadingState label="Loading quizzes..." />
       ) : (
         <>
           <QuizTemplateManager templates={templates} onChanged={loadData} />
@@ -115,6 +120,6 @@ export default function InstructorQuizBuilder() {
           />
         </>
       )}
-    </section>
+    </SurfaceCard>
   )
 }

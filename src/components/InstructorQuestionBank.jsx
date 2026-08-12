@@ -3,6 +3,7 @@ import QuestionEditor from './QuestionEditor'
 import QuestionList from './QuestionList'
 import InstructorModuleManager from './InstructorModuleManager'
 import QuestionBankPortability from './QuestionBankPortability'
+import LoadingState from './LoadingState'
 import { getInstructorQuestions } from '../services/questionService'
 
 export default function InstructorQuestionBank({ user }) {
@@ -50,9 +51,7 @@ export default function InstructorQuestionBank({ user }) {
         onImported={loadQuestions}
       />
       {loading ? (
-        <section className="question-list">
-          <p>Loading question bank...</p>
-        </section>
+        <LoadingState label="Loading question bank..." />
       ) : (
         <QuestionList
           questions={questions}

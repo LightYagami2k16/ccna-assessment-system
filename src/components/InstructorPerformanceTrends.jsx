@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getInstructorPerformanceTrends } from '../services/instructorResultsService'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const courseOrder = { ITN: 1, SRWE: 2, ENSA: 3 }
 
@@ -54,7 +59,7 @@ function downloadLearningAreaCsv(areas) {
 function TrendChart({ title, rows, type }) {
   const values = rows.filter((row) => row.assessmentType === type)
   return (
-    <article className="performance-trend-card">
+    <SurfaceCard as="article" subtle className="performance-trend-card">
       <header>
         <div><h3>{title}</h3><p>Weekly completed-attempt average</p></div>
         <span className="status-chip">{values.reduce((sum, row) => sum + Number(row.attemptCount || 0), 0)} attempts</span>
@@ -77,7 +82,7 @@ function TrendChart({ title, rows, type }) {
           })}
         </div>
       )}
-    </article>
+    </SurfaceCard>
   )
 }
 
@@ -168,24 +173,27 @@ export default function InstructorPerformanceTrends() {
 
   return (
     <section className="performance-trends-panel">
-      <div className="section-heading">
-        <div><span className="eyebrow">PERFORMANCE TRENDS</span><h2>Progress and learning areas</h2><p>Track weekly outcomes and identify course modules that need reinforcement.</p></div>
-        <div className="performance-trends-panel__actions">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="PERFORMANCE TRENDS"
+        title="Progress and learning areas"
+        description="Track weekly outcomes and identify course modules that need reinforcement."
+        actions={<div className="performance-trends-panel__actions">
           <button className="secondary" type="button" disabled={!filteredAreas.length}
             onClick={() => downloadLearningAreaCsv(filteredAreas)}>Export learning areas</button>
           <button className="secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? 'Refreshing...' : 'Refresh trends'}</button>
-        </div>
-      </div>
-      <div className="performance-trends-filters">
+        </div>}
+      />
+      <ResponsiveGrid className="performance-trends-filters" min="12rem">
         <label>Course<select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}><option value="all">All courses</option>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
         <label>Trend period<select value={range} onChange={(event) => setRange(event.target.value)}><option value="4">Last 4 weeks</option><option value="8">Last 8 weeks</option><option value="12">Last 12 weeks</option><option value="52">Last year</option></select></label>
-      </div>
-      <div className="performance-trend-grid">
+      </ResponsiveGrid>
+      <ResponsiveGrid className="performance-trend-grid" min="20rem">
         <TrendChart title="Quiz score trend" rows={filteredTrends} type="quiz" />
         <TrendChart title="CLI score trend" rows={filteredTrends} type="cli" />
-      </div>
+      </ResponsiveGrid>
       <section className="learning-area-section">
-        <div className="section-heading section-heading--compact"><div><h3>Mastery by learning area</h3><p>Modules combine quiz correctness and CLI practical scores when both are available.</p></div></div>
+        <SectionHeader className="section-heading section-heading--compact" title="Mastery by learning area" titleAs="h3" description="Modules combine quiz correctness and CLI practical scores when both are available." />
         <div className="learning-area-list">
           {groups.map(([courseCode, courseAreas]) => <LearningAreaCourse key={courseCode} courseCode={courseCode} areas={courseAreas} />)}
         </div>

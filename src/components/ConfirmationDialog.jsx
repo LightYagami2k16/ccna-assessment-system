@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
+import { AlertTriangle, CircleHelp, X } from 'lucide-react'
+import AppIcon from './AppIcon'
 
 export default function ConfirmationDialog({
   open,
@@ -43,12 +45,30 @@ export default function ConfirmationDialog({
       onClick={handleBackdropClick}
     >
       <div className="confirmation-dialog__content">
-        <div>
-          <span className="eyebrow">
-            {tone === 'danger' ? 'CONFIRM ACTION' : 'PLEASE CONFIRM'}
+        <div className="confirmation-dialog__heading">
+          <span
+            className={`confirmation-dialog__icon confirmation-dialog__icon--${tone}`}
+          >
+            <AppIcon
+              icon={tone === 'danger' ? AlertTriangle : CircleHelp}
+              size="lg"
+            />
           </span>
-          <h2 id={titleId}>{title}</h2>
-          <p id={descriptionId}>{message}</p>
+          <div className="confirmation-dialog__copy">
+            <span className="eyebrow">
+              {tone === 'danger' ? 'CONFIRM ACTION' : 'PLEASE CONFIRM'}
+            </span>
+            <h2 id={titleId}>{title}</h2>
+            <p id={descriptionId}>{message}</p>
+          </div>
+          <button
+            className="confirmation-dialog__close"
+            type="button"
+            aria-label="Close confirmation"
+            onClick={onCancel}
+          >
+            <AppIcon icon={X} size="sm" />
+          </button>
         </div>
 
         <div className="confirmation-dialog__actions">

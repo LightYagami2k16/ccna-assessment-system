@@ -11,6 +11,13 @@ import {
   saveCliLab,
 } from '../services/cliLabService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 import {
   criterionTypesForDevice,
   defaultCriterionTarget,
@@ -666,7 +673,9 @@ export default function InstructorCliLabBuilder() {
   const [selectedPreset, setSelectedPreset] = useState('')
   const [selectedLabIds, setSelectedLabIds] = useState([])
   const [bulkLabAction, setBulkLabAction] = useState('')
+  const [rowLabActions, setRowLabActions] = useState({})
   const [bulkManaging, setBulkManaging] = useState(false)
+  const [managingLabId, setManagingLabId] = useState(null)
   const [duplicatingLabId, setDuplicatingLabId] = useState(null)
   const [templatingLabId, setTemplatingLabId] = useState(null)
   const [answerKeyLabId, setAnswerKeyLabId] = useState(null)
@@ -1258,36 +1267,66 @@ export default function InstructorCliLabBuilder() {
     }
   }
 
+  async function handleRowLabAction(item) {
+    const action = rowLabActions[item.id]
+    if (!action) return
+
+    setManagingLabId(item.id)
+    setMessage('')
+    try {
+      if (action === 'delete') {
+        await handleDelete(item)
+      } else {
+        await bulkManageCliLabs([item.id], action)
+        await loadData()
+        setMessage(
+          `“${item.title}” was ${action === 'publish' ? 'published' : 'unpublished'}.`,
+        )
+      }
+      setRowLabActions((current) => ({
+        ...current,
+        [item.id]: '',
+      }))
+    } catch (error) {
+      setMessage(
+        `${error.message} Run migration 028_bulk_cli_lab_management.sql if it has not been applied.`,
+      )
+    } finally {
+      setManagingLabId(null)
+    }
+  }
+
   return (
     <div className="cli-lab-builder">
       {confirmationDialog}
       <section className="cli-lab-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">CLI CONTENT</span>
-            <h2>CLI practical builder</h2>
-            <p>Create single-device or topology-based Cisco IOS exams and grade final configuration state.</p>
-          </div>
-          <button
-            className="primary"
-            type="button"
-            onClick={() => {
-              const emptyLab = blankLab()
-              setLab(emptyLab)
-              setModules([])
-              setExpandedCriterionIndex(0)
-              setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
-              setSelectedPreset('')
-              setShowEditor((current) => !current)
-            }}
-          >
-            {showEditor ? 'Close builder' : 'Create CLI practical'}
-          </button>
-        </div>
+        <SectionHeader
+          className="section-heading"
+          eyebrow="CLI CONTENT"
+          title="CLI practical builder"
+          description="Create single-device or topology-based Cisco IOS exams and grade final configuration state."
+          actions={(
+            <button
+              className="primary"
+              type="button"
+              onClick={() => {
+                const emptyLab = blankLab()
+                setLab(emptyLab)
+                setModules([])
+                setExpandedCriterionIndex(0)
+                setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
+                setSelectedPreset('')
+                setShowEditor((current) => !current)
+              }}
+            >
+              {showEditor ? 'Close builder' : 'Create CLI practical'}
+            </button>
+          )}
+        />
 
         {showEditor && (
           <form className="cli-lab-editor" onSubmit={handleSave}>
-            <div className="form-grid form-grid--two">
+            <ResponsiveGrid min="15rem" className="form-grid form-grid--two">
               <label>
                 Course
                 <select
@@ -1319,9 +1358,9 @@ export default function InstructorCliLabBuilder() {
                   ))}
                 </select>
               </label>
-            </div>
+            </ResponsiveGrid>
 
-            <div className="form-grid form-grid--two">
+            <ResponsiveGrid min="15rem" className="form-grid form-grid--two">
               <label>
                 Practical title
                 <input required value={lab.title} onChange={(event) =>
@@ -1337,9 +1376,9 @@ export default function InstructorCliLabBuilder() {
                   <option value="published">Published</option>
                 </select>
               </label>
-            </div>
+            </ResponsiveGrid>
 
-            <fieldset className="cli-topology-builder">
+            <fieldset className="cli-topology-builder form-fieldset">
               <legend>Devices and topology</legend>
               <div className="cli-topology-builder__heading">
                 <div>
@@ -1525,16 +1564,16 @@ export default function InstructorCliLabBuilder() {
               } />
             </label>
 
-            <div className="form-grid form-grid--three">
+            <ResponsiveGrid min="14rem" className="form-grid form-grid--three">
               <label>Duration (minutes)<input type="number" min="1" max="480" value={lab.durationMinutes}
                 onChange={(event) => setLab((current) => ({ ...current, durationMinutes: event.target.value }))} /></label>
               <label>Maximum attempts<input type="number" min="1" max="100" value={lab.maxAttempts}
                 onChange={(event) => setLab((current) => ({ ...current, maxAttempts: event.target.value }))} /></label>
               <label>Passing score (%)<input type="number" min="0" max="100" value={lab.passingScore}
                 onChange={(event) => setLab((current) => ({ ...current, passingScore: event.target.value }))} /></label>
-            </div>
+            </ResponsiveGrid>
 
-            <fieldset className="cli-criteria-editor">
+            <fieldset className="cli-criteria-editor form-fieldset">
               <legend>Grading criteria</legend>
               <div className="cli-criteria-overview">
                 <div>
@@ -1839,7 +1878,7 @@ export default function InstructorCliLabBuilder() {
               </div>
             </fieldset>
 
-            <fieldset className="cli-class-assignments">
+            <fieldset className="cli-class-assignments form-fieldset">
               <legend>Assign to classes</legend>
               {!workspace.classes.length ? <p>Create an active class first.</p> :
                 workspace.classes.map((item) => (
@@ -1851,12 +1890,12 @@ export default function InstructorCliLabBuilder() {
                 ))}
             </fieldset>
 
-            <div className="form-actions">
+            <ActionBar className="form-actions">
               <button className="primary" type="submit" disabled={saving}>
                 {saving ? 'Saving...' : lab.id ? 'Save practical' : 'Create practical'}
               </button>
               <button className="secondary" type="button" onClick={() => setShowEditor(false)}>Cancel</button>
-            </div>
+            </ActionBar>
           </form>
         )}
       </section>
@@ -1867,15 +1906,19 @@ export default function InstructorCliLabBuilder() {
       />
 
       <section className="cli-lab-panel">
-        <div className="section-heading">
-          <div><span className="eyebrow">CLI CONTENT</span><h2>Practical library</h2></div>
-          <span className="status-chip">{workspace.labs.length} practicals</span>
-        </div>
-        {loading ? <p>Loading CLI practicals...</p> : !workspace.labs.length ? (
+        <SectionHeader
+          className="section-heading"
+          eyebrow="CLI CONTENT"
+          title="Practical library"
+          actions={(
+            <span className="status-chip">{workspace.labs.length} practicals</span>
+          )}
+        />
+        {loading ? <LoadingState label="Loading CLI practicals..." /> : !workspace.labs.length ? (
           <div className="empty-state"><h3>No CLI practicals yet</h3><p>Create the first single-device lab.</p></div>
         ) : (
           <div className="cli-library-content">
-            <div className="cli-library-bulk-toolbar">
+            <ActionBar className="cli-library-bulk-toolbar">
               <label className="cli-library-select-all">
                 <input
                   type="checkbox"
@@ -1890,7 +1933,7 @@ export default function InstructorCliLabBuilder() {
               <span className="cli-library-selected-count">
                 {selectedLabIds.length} selected
               </span>
-              <div className="cli-library-bulk-actions">
+              <div className="cli-library-bulk-actions cli-library-action-control">
                 <select
                   aria-label="Bulk practical action"
                   value={bulkLabAction}
@@ -1907,10 +1950,10 @@ export default function InstructorCliLabBuilder() {
                   disabled={!selectedLabIds.length || !bulkLabAction || bulkManaging}
                   onClick={() => void handleBulkLabAction()}
                 >
-                  {bulkManaging ? 'Applying...' : 'Apply'}
+                  {bulkManaging ? 'Applying...' : 'OK'}
                 </button>
               </div>
-            </div>
+            </ActionBar>
             <div className="cli-practical-course-groups">
             {practicalCourseGroups.map((course) => {
               const courseExpanded = expandedCourseIds.includes(course.id)
@@ -1921,7 +1964,12 @@ export default function InstructorCliLabBuilder() {
                 && courseLabIds.every((id) => selectedLabIds.includes(id))
 
               return (
-                <section className="cli-practical-course-group" key={course.id}>
+                <SurfaceCard
+                  as="section"
+                  subtle
+                  className="cli-practical-course-group"
+                  key={course.id}
+                >
                   <header className="cli-practical-course-group__header">
                     <div className="cli-practical-course-group__summary">
                       <div className="cli-practical-course-group__identity">
@@ -1964,11 +2012,17 @@ export default function InstructorCliLabBuilder() {
                     </button>
                   </header>
                   {courseExpanded && (
-                    <div className="cli-lab-grid" id={coursePanelId}>
+                    <ResponsiveGrid
+                      className="cli-lab-grid"
+                      id={coursePanelId}
+                      min="24rem"
+                    >
             {course.labs.map((item) => {
               const isExpanded = expandedLabIds.includes(item.id)
               return (
-              <article
+              <SurfaceCard
+                as="article"
+                subtle
                 className={`cli-lab-card${
                   isExpanded ? ' cli-lab-card--expanded' : ''
                 }`}
@@ -2052,7 +2106,40 @@ export default function InstructorCliLabBuilder() {
                       : 'Show answer key'}
                   </button>
                   <button className="primary" type="button" onClick={() => void editLab(item)}>Edit</button>
-                  <button className="danger-button" type="button" onClick={() => void handleDelete(item)}>Delete</button>
+                </div>
+                <div className="cli-library-action-control">
+                  <select
+                    aria-label={`Action for ${item.title}`}
+                    value={rowLabActions[item.id] ?? ''}
+                    disabled={managingLabId === item.id || bulkManaging}
+                    onChange={(event) =>
+                      setRowLabActions((current) => ({
+                        ...current,
+                        [item.id]: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Choose action</option>
+                    <option value="publish">Publish</option>
+                    <option value="unpublish">Unpublish</option>
+                    <option value="delete">Delete</option>
+                  </select>
+                  <button
+                    className={
+                      rowLabActions[item.id] === 'delete'
+                        ? 'danger-button'
+                        : 'primary'
+                    }
+                    type="button"
+                    disabled={
+                      managingLabId === item.id
+                      || bulkManaging
+                      || !rowLabActions[item.id]
+                    }
+                    onClick={() => void handleRowLabAction(item)}
+                  >
+                    {managingLabId === item.id ? 'Working...' : 'OK'}
+                  </button>
                 </div>
                 {answerKeyLabId === item.id && (
                   <section className="cli-answer-key">
@@ -2125,18 +2212,22 @@ export default function InstructorCliLabBuilder() {
                 )}
                   </div>
                 )}
-              </article>
+              </SurfaceCard>
               )
             })}
-                    </div>
+                    </ResponsiveGrid>
                   )}
-                </section>
+                </SurfaceCard>
               )
             })}
             </div>
           </div>
         )}
-        {message && <p className="form-message">{message}</p>}
+        {message && (
+          <p className="form-message" role="status" aria-live="polite">
+            {message}
+          </p>
+        )}
       </section>
     </div>
   )

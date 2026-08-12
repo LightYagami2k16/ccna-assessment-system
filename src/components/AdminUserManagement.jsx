@@ -4,7 +4,11 @@ import {
   useMemo,
   useState,
 } from 'react'
+import { Users } from 'lucide-react'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import TailwindEmptyState from './TailwindEmptyState'
+import { FilterBar } from './LayoutPrimitives'
 import {
   deleteUserAccount,
   getUserAccounts,
@@ -456,7 +460,7 @@ export default function AdminUserManagement({
         ))}
       </div>
 
-      <div className="admin-user-filters">
+      <FilterBar className="admin-user-filters" aria-label="Account filters">
         <label>
           Search accounts
           <input
@@ -479,7 +483,7 @@ export default function AdminUserManagement({
             <option value="administrator">Administrators</option>
           </select>
         </label>
-      </div>
+      </FilterBar>
 
       {message && (
         <p
@@ -495,14 +499,13 @@ export default function AdminUserManagement({
       )}
 
       {loading ? (
-        <div className="admin-users-empty">
-          <strong>Loading accounts...</strong>
-        </div>
+        <LoadingState label="Loading accounts..." />
       ) : visibleAccounts.length === 0 ? (
-        <div className="admin-users-empty">
-          <strong>No matching accounts</strong>
-          <span>Try a different name, email, or role filter.</span>
-        </div>
+        <TailwindEmptyState
+          icon={Users}
+          title="No matching accounts"
+          description="Try a different name, email, or role filter."
+        />
       ) : (
         <div className="admin-user-list">
           {visibleAccounts.map((account) => {

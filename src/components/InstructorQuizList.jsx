@@ -8,6 +8,11 @@ import {
   setInstructorQuizzesStatus,
 } from '../services/quizBuilderService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 function formatDate(value) {
   if (!value) return 'No limit'
@@ -254,7 +259,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
       {confirmationDialog}
       {message && <p className="form-message form-message--error">{message}</p>}
       {!!quizzes.length && (
-        <div className="bulk-action-bar">
+        <ActionBar className="bulk-action-bar">
           <label className="bulk-select-control">
             <input
               type="checkbox"
@@ -310,7 +315,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                 : 'Delete selected'}
             </button>
           </div>
-        </div>
+        </ActionBar>
       )}
 
       {!quizzes.length ? (
@@ -333,7 +338,12 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
               )
 
             return (
-              <section className="quiz-course-group" key={course.id}>
+              <SurfaceCard
+                as="section"
+                subtle
+                className="quiz-course-group"
+                key={course.id}
+              >
                 <header className="quiz-course-group__header">
                   <div className="quiz-course-group__summary">
                     <div className="quiz-course-group__identity">
@@ -381,12 +391,15 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                 </header>
 
                 {expanded && (
-                  <div
+                  <ResponsiveGrid
                     className="instructor-quiz-grid"
                     id={panelId}
+                    min="22rem"
                   >
                     {course.quizzes.map((quiz) => (
-                      <article
+                      <SurfaceCard
+                        as="article"
+                        subtle
                         className="instructor-quiz-card"
                         key={quiz.id}
                       >
@@ -510,11 +523,11 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                               : 'Delete draft'}
                           </button>
                         </div>
-                      </article>
+                      </SurfaceCard>
                     ))}
-                  </div>
+                  </ResponsiveGrid>
                 )}
-              </section>
+              </SurfaceCard>
             )
           })}
         </div>

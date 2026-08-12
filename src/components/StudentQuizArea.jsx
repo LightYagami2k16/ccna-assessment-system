@@ -5,15 +5,16 @@ import {
   useEffect,
   useState,
 } from 'react'
+import { ClipboardList, History, SquareTerminal } from 'lucide-react'
+import AppIcon from './AppIcon'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentQuizList from './StudentQuizList'
 import WorkspaceLoading from './WorkspaceLoading'
 import { getStudentActiveAssessmentSession } from '../services/assessmentAttemptService'
 
 const QuizPlayer = lazy(() => import('./QuizPlayer'))
-const StudentRecentResults = lazy(() => import('./StudentRecentResults'))
 const StudentCliArea = lazy(() => import('./StudentCliArea'))
-const StudentCliHistory = lazy(() => import('./StudentCliHistory'))
+const StudentAssessmentHistory = lazy(() => import('./StudentAssessmentHistory'))
 
 const studentSections = new Set(['available', 'history', 'cli'])
 const studentSectionOrder = ['available', 'cli', 'history']
@@ -297,7 +298,10 @@ export default function StudentQuizArea({
           tabIndex={activeSection === 'available' ? 0 : -1}
           onClick={() => setActiveSection('available')}
         >
-          <strong>Available</strong>
+          <strong className="student-assessment-tab__label">
+            <AppIcon icon={ClipboardList} size="sm" />
+            <span>Available</span>
+          </strong>
           <small>Assigned quizzes</small>
         </button>
         <button
@@ -314,7 +318,10 @@ export default function StudentQuizArea({
           tabIndex={activeSection === 'cli' ? 0 : -1}
           onClick={() => setActiveSection('cli')}
         >
-          <strong>CLI practicals</strong>
+          <strong className="student-assessment-tab__label">
+            <AppIcon icon={SquareTerminal} size="sm" />
+            <span>CLI practicals</span>
+          </strong>
           <small>Cisco configuration</small>
         </button>
         <button
@@ -331,7 +338,10 @@ export default function StudentQuizArea({
           tabIndex={activeSection === 'history' ? 0 : -1}
           onClick={() => setActiveSection('history')}
         >
-          <strong>History</strong>
+          <strong className="student-assessment-tab__label">
+            <AppIcon icon={History} size="sm" />
+            <span>History</span>
+          </strong>
           <small>Quiz and CLI results</small>
         </button>
       </nav>
@@ -356,22 +366,17 @@ export default function StudentQuizArea({
               }}
             />
           ) : activeSection === 'history' ? (
-            <>
-              <StudentRecentResults
-                key={resultsVersion}
-                onRestored={() => {
-                  setResultsVersion((current) => current + 1)
-                  setActiveSection('available')
-                }}
-              />
-              <StudentCliHistory
-                key={`cli-${resultsVersion}`}
-                onRestored={() => {
-                  setResultsVersion((current) => current + 1)
-                  setActiveSection('cli')
-                }}
-              />
-            </>
+            <StudentAssessmentHistory
+              key={resultsVersion}
+              onQuizRestored={() => {
+                setResultsVersion((current) => current + 1)
+                setActiveSection('available')
+              }}
+              onCliRestored={() => {
+                setResultsVersion((current) => current + 1)
+                setActiveSection('cli')
+              }}
+            />
           ) : (
             <StudentCliArea
               userId={userId}

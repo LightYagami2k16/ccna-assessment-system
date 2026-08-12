@@ -2,6 +2,7 @@ import { lazy, Suspense, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 import AccountSettings from './AccountSettings';
+import BrandMark from './BrandMark';
 import WorkspaceLoading from './WorkspaceLoading';
 
 const InstructorWorkspace = lazy(() => import('./InstructorWorkspace'));
@@ -104,11 +105,7 @@ export default function Dashboard({
       {!studentExamMode && (
       <header className="topbar">
         <div className="topbar__brand">
-          <span className="brand-mark" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+          <BrandMark />
 
           <span className="topbar__brand-copy">
             <strong>CCNA Assessment System</strong>

@@ -8,6 +8,13 @@ import {
   saveStudentQuizAccommodation,
 } from '../services/examControlService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import LoadingState from './LoadingState'
+import {
+  ActionBar,
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const courseTitles = {
   ITN: 'Introduction to Networks',
@@ -90,7 +97,7 @@ function AssignmentScheduleCard({ assignment, onSaved }) {
   }
 
   return (
-    <article className="schedule-card">
+    <SurfaceCard as="article" subtle className="schedule-card">
       <span className="course-code">QUIZ SCHEDULE</span>
       <h3>{assignment.quizTitle}</h3>
       <label>
@@ -113,7 +120,7 @@ function AssignmentScheduleCard({ assignment, onSaved }) {
         {saving ? 'Saving...' : 'Save schedule'}
       </button>
       {message && <p className="form-message">{message}</p>}
-    </article>
+    </SurfaceCard>
   )
 }
 
@@ -571,19 +578,17 @@ export default function ExamControlsDashboard() {
     }
   }
 
-  if (loading) return <section className="exam-controls">Loading exam controls...</section>
+  if (loading) return <LoadingState label="Loading exam controls..." />
 
   return (
     <div className="exam-controls">
       {confirmationDialog}
-      <section className="exam-control-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">CLASS SCHEDULING</span>
-            <h2>Assignment schedules</h2>
-            <p>Set a separate opening and closing time for each assigned class.</p>
-          </div>
-        </div>
+      <SurfaceCard className="exam-control-panel">
+        <SectionHeader
+          eyebrow="CLASS SCHEDULING"
+          title="Assignment schedules"
+          description="Set a separate opening and closing time for each assigned class."
+        />
         {!workspace.assignments.length ? (
           <div className="empty-state">
             <h3>No class assignments</h3>
@@ -675,7 +680,7 @@ export default function ExamControlsDashboard() {
                             </header>
                             {expanded && (
                               <div id={panelId}>
-                                <div className="schedule-card-grid">
+                                <ResponsiveGrid min="17.5rem" className="schedule-card-grid">
                                   {classGroup.assignments.map((assignment) => (
                                     <AssignmentScheduleCard
                                       key={`${assignment.id}-${assignment.availableFrom}-${assignment.availableUntil}`}
@@ -683,7 +688,7 @@ export default function ExamControlsDashboard() {
                                       onSaved={loadWorkspace}
                                     />
                                   ))}
-                                </div>
+                                </ResponsiveGrid>
                               </div>
                             )}
                           </section>
@@ -696,34 +701,27 @@ export default function ExamControlsDashboard() {
             })}
           </div>
         )}
-      </section>
+      </SurfaceCard>
 
-      <section className="exam-control-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">INTEGRITY ENFORCEMENT</span>
-            <h2>Assessment policies</h2>
-            <p>
-              Choose whether browser incidents are monitored, shown as student
-              warnings, or used to submit an attempt automatically.
-            </p>
-          </div>
-        </div>
+      <SurfaceCard className="exam-control-panel">
+        <SectionHeader
+          eyebrow="INTEGRITY ENFORCEMENT"
+          title="Assessment policies"
+          description="Choose whether browser incidents are monitored, shown as student warnings, or used to submit an attempt automatically."
+        />
         <IntegrityPolicyEditor
           policies={workspace.integrityPolicies}
           available={workspace.integrityPoliciesAvailable}
           onSaved={loadWorkspace}
         />
-      </section>
+      </SurfaceCard>
 
-      <section className="exam-control-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">ACCOMMODATIONS</span>
-            <h2>Individual student controls</h2>
-            <p>Grant extra time, extra attempts, or an individual availability window.</p>
-          </div>
-        </div>
+      <SurfaceCard className="exam-control-panel">
+        <SectionHeader
+          eyebrow="ACCOMMODATIONS"
+          title="Individual student controls"
+          description="Grant extra time, extra attempts, or an individual availability window."
+        />
         <AccommodationEditor
           students={workspace.students}
           quizzes={workspace.quizzes}
@@ -763,7 +761,8 @@ export default function ExamControlsDashboard() {
                       </small>
                     </td>
                     <td>
-                      <div className="exam-control-actions">
+                      <ActionBar className="exam-control-actions tw:my-0 tw:border-0 tw:bg-transparent tw:p-0" actions={
+                        <>
                         <button
                           className="primary"
                           type="button"
@@ -780,7 +779,8 @@ export default function ExamControlsDashboard() {
                         >
                           Remove
                         </button>
-                      </div>
+                        </>
+                      } />
                     </td>
                   </tr>
                 ))}
@@ -788,19 +788,19 @@ export default function ExamControlsDashboard() {
             </table>
           </div>
         )}
-      </section>
+      </SurfaceCard>
 
-      <section className="exam-control-panel">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">LIVE MONITORING</span>
-            <h2>Active attempts</h2>
-            <p>Updates automatically every 10 seconds. Events are indicators for review.</p>
-          </div>
-          <button className="secondary" type="button" onClick={() => void loadWorkspace()}>
-            Refresh now
-          </button>
-        </div>
+      <SurfaceCard className="exam-control-panel">
+        <SectionHeader
+          eyebrow="LIVE MONITORING"
+          title="Active attempts"
+          description="Updates automatically every 10 seconds. Events are indicators for review."
+          actions={
+            <button className="secondary" type="button" onClick={() => void loadWorkspace()}>
+              Refresh now
+            </button>
+          }
+        />
         {!workspace.activeAttempts.length ? (
           <div className="empty-state">
             <h3>No active attempts</h3>
@@ -879,9 +879,11 @@ export default function ExamControlsDashboard() {
                       className="monitor-student-attempts"
                       id={panelId}
                     >
-                      <div className="monitor-card-grid">
+                      <ResponsiveGrid min="17.5rem" className="monitor-card-grid">
                         {studentGroup.attempts.map((attempt) => (
-                          <article
+                          <SurfaceCard
+                            as="article"
+                            subtle
                             className="monitor-card"
                             key={attempt.attemptId}
                           >
@@ -954,9 +956,9 @@ export default function ExamControlsDashboard() {
                                 </div>
                               )}
                             </dl>
-                          </article>
+                          </SurfaceCard>
                         ))}
-                      </div>
+                      </ResponsiveGrid>
                     </div>
                   )}
                 </section>
@@ -969,7 +971,7 @@ export default function ExamControlsDashboard() {
             })}
           </div>
         )}
-      </section>
+      </SurfaceCard>
 
       {message && <p className="form-message form-message--error">{message}</p>}
     </div>

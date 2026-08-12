@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Archive, Play, RefreshCw } from 'lucide-react'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
+import AppIcon from './AppIcon'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 import WorkspaceLoading from './WorkspaceLoading'
 import {
   getAvailableQuizzes,
@@ -103,37 +110,33 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
     }
   }
 
+  if (loading) {
+    return <WorkspaceLoading label="Loading assessments..." />
+  }
+
   return (
-    <section className="student-quiz-list">
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">STUDENT ASSESSMENTS</span>
-          <h2>Available quizzes</h2>
-          <p>
-            Start or resume an assigned quiz. Completed quizzes stay here
-            while attempts remain unless you archive them.
-          </p>
-        </div>
-        <button
+    <SurfaceCard className="student-quiz-list">
+      <SectionHeader
+        className="section-heading"
+        eyebrow="STUDENT ASSESSMENTS"
+        title="Available quizzes"
+        description="Start or resume an assigned quiz. Completed quizzes stay here while attempts remain unless you archive them."
+        actions={<button
           className="secondary"
           type="button"
-          disabled={loading}
           onClick={() => void loadData()}
         >
-          {loading ? 'Refreshing...' : 'Refresh'}
-        </button>
-      </div>
+          <AppIcon icon={RefreshCw} size="sm" />
+          Refresh
+        </button>}
+      />
 
       {message && (
         <p className="form-message form-message--error" role="alert">
           {message}
         </p>
       )}
-      {loading ? (
-        <div className="student-assessment-loading">
-          <WorkspaceLoading label="Loading available quizzes..." />
-        </div>
-      ) : !availableQuizzes.length ? (
+      {!availableQuizzes.length ? (
         <div className="empty-state student-assessment-empty">
           <AssessmentTypeIcon type="quiz" />
           <h3>No quizzes available</h3>
@@ -143,7 +146,7 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
           </p>
         </div>
       ) : (
-        <div className="quiz-card-grid">
+        <ResponsiveGrid className="quiz-card-grid">
           {availableQuizzes.map((quiz) => {
             const quizAttempts = attemptsByQuiz[quiz.id] ?? []
             const lifecycle = archiveStatusByQuiz[quiz.id]
@@ -163,7 +166,12 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
             )
 
             return (
-              <article className="student-quiz-card" key={quiz.id}>
+              <SurfaceCard
+                as="article"
+                subtle
+                className="student-quiz-card"
+                key={quiz.id}
+              >
                 <header className="student-assessment-card__header">
                   <AssessmentTypeIcon type="quiz" />
                   <div className="student-assessment-card__identity">
@@ -217,6 +225,7 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
                         : void handleStart(quiz.id)
                     }
                   >
+                    <AppIcon icon={Play} size="sm" />
                     {startingQuizId === quiz.id
                       ? 'Starting...'
                       : activeAttempt
@@ -235,17 +244,18 @@ export default function StudentQuizList({ onOpenAttempt, onArchived }) {
                         disabled={archivingQuizId === quiz.id}
                         onClick={() => void handleArchive(quiz.id)}
                       >
+                        <AppIcon icon={Archive} size="sm" />
                         {archivingQuizId === quiz.id
                           ? 'Archiving...'
                           : 'Archive to history'}
                       </button>
                     )}
                 </div>
-              </article>
+              </SurfaceCard>
             )
           })}
-        </div>
+        </ResponsiveGrid>
       )}
-    </section>
+    </SurfaceCard>
   )
 }

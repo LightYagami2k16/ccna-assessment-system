@@ -1,11 +1,12 @@
 import { defineConfig, loadEnv } from 'vite'
 import { cwd } from 'node:process'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { createBrowserSecurityPolicy } from './scripts/browser-security-policy.mjs'
 
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, cwd(), '')
-  const plugins = [react()]
+  const plugins = [react(), tailwindcss()]
 
   if (command === 'build' && env.VITE_SUPABASE_URL) {
     plugins.push({
