@@ -45,7 +45,7 @@ export function SectionHeader({
     {
       ...props,
       className: classNames(
-        'tw:mb-4 tw:flex tw:min-w-0 tw:flex-wrap tw:items-start tw:justify-between tw:gap-4',
+        'shared-section-header tw:mb-4 tw:flex tw:min-w-0 tw:flex-wrap tw:items-start tw:justify-between tw:gap-4',
         className,
       ),
     },
@@ -61,7 +61,7 @@ export function SectionHeader({
         {children}
       </div>
       {actions && (
-        <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
+        <div className="shared-section-header__actions tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
           {actions}
         </div>
       )}
@@ -79,14 +79,14 @@ export function ActionBar({
   return (
     <div
       className={classNames(
-        'tw:my-4 tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-between tw:gap-4 tw:rounded-xl tw:border tw:border-[#c9d9e7] tw:bg-[var(--color-surface-subtle)] tw:px-4 tw:py-3',
+        'shared-action-bar tw:my-4 tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-between tw:gap-4 tw:rounded-xl tw:border tw:border-[#c9d9e7] tw:bg-[var(--color-surface-subtle)] tw:px-4 tw:py-3',
         className,
       )}
       {...props}
     >
       {selection}
       {actions && (
-        <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2.5">
+        <div className="shared-action-bar__actions tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2.5">
           {actions}
         </div>
       )}
@@ -170,7 +170,7 @@ export function FormSection({
     {
       ...props,
       className: classNames(
-        'tw:grid tw:min-w-0 tw:gap-4 tw:rounded-[var(--radius-panel)] tw:border tw:border-[var(--color-border)] tw:bg-[var(--color-surface-subtle)] tw:p-4',
+        'shared-form-section tw:grid tw:min-w-0 tw:gap-4 tw:rounded-[var(--radius-panel)] tw:border tw:border-[var(--color-border)] tw:bg-[var(--color-surface-subtle)] tw:p-4',
         className,
       ),
     },

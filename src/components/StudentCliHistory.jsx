@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { SquareTerminal } from 'lucide-react'
+import { RotateCcw, SquareTerminal } from 'lucide-react'
 import {
   getStudentCliArchiveStatuses,
   getStudentCliHistory,
   setStudentCliLabArchived,
 } from '../services/cliLabService'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
+import AppIcon from './AppIcon'
 import LoadingState from './LoadingState'
 import TailwindEmptyState from './TailwindEmptyState'
 import { DataTableRegion } from './LayoutPrimitives'
@@ -164,9 +165,10 @@ export default function StudentCliHistory({
                     </div>
 
                     {canRestore && (
-                      <button className="secondary" type="button"
+                      <button className="secondary button-with-icon" type="button"
                         disabled={restoringId === group.labId}
                         onClick={() => void restoreLab(group.labId)}>
+                        <AppIcon icon={RotateCcw} size="sm" />
                         {restoringId === group.labId
                           ? 'Restoring...'
                           : 'Restore to available'}

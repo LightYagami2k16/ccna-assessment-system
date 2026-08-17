@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { History } from 'lucide-react'
+import { History, RotateCcw } from 'lucide-react'
 import {
   getStudentQuizArchiveStatuses,
   getStudentRecentResults,
   setStudentQuizArchived,
 } from '../services/quizAttemptService'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
+import AppIcon from './AppIcon'
 import LoadingState from './LoadingState'
 import TailwindEmptyState from './TailwindEmptyState'
 import { DataTableRegion } from './LayoutPrimitives'
@@ -167,11 +168,12 @@ export default function StudentRecentResults({
                     group.lifecycle?.attemptsRemaining > 0 &&
                     !group.lifecycle?.hasActiveAttempt && (
                       <button
-                        className="secondary"
+                        className="secondary button-with-icon"
                         type="button"
                         disabled={restoringQuizId === group.quizId}
                         onClick={() => void handleRestore(group.quizId)}
                       >
+                        <AppIcon icon={RotateCcw} size="sm" />
                         {restoringQuizId === group.quizId
                           ? 'Restoring...'
                           : 'Restore to available'}

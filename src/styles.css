@@ -6834,6 +6834,80 @@ pre,
 .admin-health-event-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .8rem; padding: .8rem; border: 1px solid #dce6ef; border-radius: 10px; background: #fff; }
 .admin-health-event-list article > div { display: grid; min-width: 0; gap: .2rem; }
 .admin-health-event-list article > div span { overflow-wrap: anywhere; color: #637286; font-size: .82rem; }
+
+/* =======================================================
+   Redesign Phase 6: shared responsive and accessibility hardening
+   ======================================================= */
+
+:where(
+  .shared-section-header,
+  .shared-section-header__actions,
+  .shared-action-bar,
+  .shared-action-bar__actions,
+  .shared-form-section,
+  .form-section__header,
+  .form-section__actions
+) > * {
+  min-width: 0;
+}
+
+:where(
+  .shared-section-header,
+  .shared-action-bar,
+  .shared-form-section
+) :is(h1, h2, h3, h4, p, strong, small, label) {
+  overflow-wrap: anywhere;
+}
+
+:where(
+  .shared-section-header__actions,
+  .shared-action-bar__actions,
+  .form-section__actions
+) :is(button, select, input, a) {
+  max-width: 100%;
+}
+
+:where(
+  .shared-section-header__actions,
+  .shared-action-bar__actions,
+  .form-section__actions
+) .button-with-icon {
+  white-space: normal;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .shared-section-header__actions,
+  .shared-action-bar__actions,
+  .form-section__actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+}
+
+@media (max-width: 520px) {
+  .shared-section-header,
+  .shared-action-bar,
+  .form-section__header {
+    align-items: stretch;
+  }
+
+  .shared-section-header__actions,
+  .shared-action-bar__actions,
+  .form-section__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(
+    .shared-section-header__actions,
+    .shared-action-bar__actions,
+    .form-section__actions
+  ) :is(button, select, input, a) {
+    width: 100%;
+    min-width: 0;
+  }
+}
 .admin-health-empty { margin-top: 1rem; padding: 1.25rem; border: 1px dashed #b7c7d6; border-radius: 10px; color: #637286; text-align: center; background: #fff; }
 
 @media (max-width: 900px) {

@@ -153,7 +153,11 @@ export async function getStudentClassEnrollment() {
   )
   if (error) throw error
   return {
-    classes: data?.classes ?? [],
-    requests: data?.requests ?? [],
+    classes: (data?.classes ?? []).filter(
+      (classSection) => classSection.isActive !== false,
+    ),
+    requests: (data?.requests ?? []).filter(
+      (request) => request.isActive !== false,
+    ),
   }
 }

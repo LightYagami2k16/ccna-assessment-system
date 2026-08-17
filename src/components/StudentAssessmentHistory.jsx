@@ -1,7 +1,14 @@
 import { useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
+import AppIcon from './AppIcon'
 import StudentCliHistory from './StudentCliHistory'
 import StudentRecentResults from './StudentRecentResults'
+import {
+  ResponsiveGrid,
+  SectionHeader,
+  SurfaceCard,
+} from './LayoutPrimitives'
 
 const historyViews = [
   { id: 'all', label: 'All results', description: 'Quiz and CLI attempts' },
@@ -17,26 +24,30 @@ export default function StudentAssessmentHistory({
   const [refreshVersion, setRefreshVersion] = useState(0)
 
   return (
-    <section className="student-assessment-history">
-      <div className="section-heading student-assessment-history__heading">
-        <div>
-          <span className="eyebrow">MY PERFORMANCE</span>
-          <h2>Assessment history</h2>
-          <p>
-            Review every completed quiz and CLI practical attempt from one
-            organized results workspace.
-          </p>
-        </div>
-        <button
-          className="secondary"
-          type="button"
-          onClick={() => setRefreshVersion((current) => current + 1)}
-        >
-          Refresh history
-        </button>
-      </div>
+    <SurfaceCard className="student-assessment-history">
+      <SectionHeader
+        className="section-heading student-assessment-history__heading"
+        eyebrow="MY PERFORMANCE"
+        title="Assessment history"
+        description="Review every completed quiz and CLI practical attempt from one organized results workspace."
+        actions={(
+          <button
+            className="secondary button-with-icon"
+            type="button"
+            onClick={() => setRefreshVersion((current) => current + 1)}
+          >
+            <AppIcon icon={RefreshCw} size="sm" />
+            Refresh history
+          </button>
+        )}
+      />
 
-      <nav className="student-history-filters" aria-label="History result type">
+      <ResponsiveGrid
+        as="nav"
+        min="13rem"
+        className="student-history-filters"
+        aria-label="History result type"
+      >
         {historyViews.map((view) => (
           <button
             className={
@@ -58,7 +69,7 @@ export default function StudentAssessmentHistory({
             </span>
           </button>
         ))}
-      </nav>
+      </ResponsiveGrid>
 
       <div className="student-history-content">
         {(activeView === 'all' || activeView === 'quiz') && (
@@ -77,6 +88,6 @@ export default function StudentAssessmentHistory({
           />
         )}
       </div>
-    </section>
+    </SurfaceCard>
   )
 }

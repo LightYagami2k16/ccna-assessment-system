@@ -121,7 +121,27 @@ region, empty-state treatment, and error placement. The icons are code-native
 SVGs that inherit current colors, add no image payload, and remain decorative to
 assistive technology because the surrounding headings carry the meaning.
 
+Redesign Phase 5 is now complete. The combined assessment history uses the
+shared surface, section-header, and responsive-grid primitives; quiz and CLI
+results retain a consistent hierarchy and responsive table treatment; and
+refresh and restore actions use the shared Lucide icon language. Quiz and CLI
+assessment focus modes remain isolated from the surrounding dashboard so the
+student sees only assessment-related controls while an attempt is active.
+
 ## Next recommended design task
 
-Continue Redesign Phase 5 with the combined quiz and CLI history experience,
-followed by real-attempt visual QA for quiz and CLI focus modes.
+Begin Redesign Phase 6 with the final cross-role responsive and accessibility
+regression pass. Prioritize compact-width action bars, long localized labels,
+keyboard-only navigation, reduced-motion behavior, and real-data visual QA for
+the densest instructor result and content-management screens.
+
+### Redesign Phase 6 progress
+
+- Shared section headers, action bars, and form-section actions now expose
+  stable component classes for cross-role responsive behavior.
+- Action clusters become full-width, single-column controls at compact phone
+  widths without changing their desktop hierarchy.
+- Long headings, labels, helper text, and icon-button labels wrap inside their
+  own surfaces instead of widening the page.
+- Automated responsive coverage now includes a 320 px compact-phone viewport
+  and verifies a visible keyboard focus indicator in the instructor workspace.

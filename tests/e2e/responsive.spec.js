@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 const viewports = [
+  { name: 'compact phone', width: 320, height: 720 },
   { name: 'phone', width: 360, height: 800 },
   { name: 'tablet', width: 768, height: 1024 },
   { name: 'desktop', width: 1440, height: 900 },
@@ -53,6 +54,35 @@ for (const viewport of viewports) {
     }
   })
 }
+
+test('shared actions remain reachable with long labels at compact width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/?uat-role=instructor')
+
+  const menuButton = page.getByRole('button', { name: 'Open menu' })
+  if (await menuButton.isVisible()) await menuButton.click()
+
+  const questionBankButton = page.getByRole('button', {
+    name: /^Question bank/,
+  })
+  await questionBankButton.focus()
+
+  const focusStyle = await questionBankButton.evaluate((element) => {
+    const style = window.getComputedStyle(element)
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    }
+  })
+
+  expect(focusStyle.outlineStyle).not.toBe('none')
+  expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThan(0)
+
+  const overflow = await page.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )
+  expect(overflow).toBeLessThanOrEqual(1)
+})
 
 for (const viewport of viewports) {
   test(`student workspace fits a ${viewport.name} viewport`, async ({ page }) => {
