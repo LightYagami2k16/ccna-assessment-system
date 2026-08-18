@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { getPublicAppUrl } from '../config/publicAppUrl'
 import { supabase } from '../lib/supabase'
 
-export default function AuthForm({ initialMessage = '' }) {
+export default function AuthForm({
+  initialMessage = '',
+  onSignedIn = () => {},
+}) {
   const [mode, setMode] = useState('sign-in')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -30,6 +33,7 @@ export default function AuthForm({ initialMessage = '' }) {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        onSignedIn()
       }
     } catch (error) {
       setMessage(error.message || 'Authentication failed.')

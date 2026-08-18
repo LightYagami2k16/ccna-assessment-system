@@ -1,5 +1,8 @@
 # CCNA Assessment System
 
+Current sprint status and remaining work are tracked in
+[docs/PROJECT_ROADMAP.md](docs/PROJECT_ROADMAP.md).
+
 Student exam onboarding, recovery behavior, and offline-continuation limits are documented in [docs/student-exam-and-offline-guide.md](docs/student-exam-and-offline-guide.md).
 
 React/Vite assessment platform for GitHub Pages with a Supabase backend. The

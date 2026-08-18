@@ -1,16 +1,19 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense } from 'react'
 import {
   Activity,
   ClipboardList,
+  LayoutDashboard,
   ShieldCheck,
   Users,
 } from 'lucide-react'
 import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
+import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
 
 const AdminUserManagement = lazy(
   () => import('./AdminUserManagement'),
 )
+const AdminOverview = lazy(() => import('./AdminOverview'))
 const InstructorWorkspace = lazy(
   () => import('./InstructorWorkspace'),
 )
@@ -22,6 +25,7 @@ const AdminSystemHealth = lazy(
 )
 
 const adminSections = new Set([
+  'overview',
   'accounts',
   'security-history',
   'system-health',
@@ -29,6 +33,12 @@ const adminSections = new Set([
 ])
 
 const adminNavigation = [
+  {
+    id: 'overview',
+    icon: LayoutDashboard,
+    label: 'Overview',
+    description: 'Platform priorities and shortcuts',
+  },
   {
     id: 'accounts',
     icon: Users,
@@ -56,7 +66,7 @@ const adminNavigation = [
 ]
 
 function getStoredAdminSection(userId) {
-  if (!userId) return 'accounts'
+  if (!userId) return 'overview'
 
   try {
     const storedSection = window.localStorage.getItem(
@@ -65,9 +75,9 @@ function getStoredAdminSection(userId) {
 
     return adminSections.has(storedSection)
       ? storedSection
-      : 'accounts'
+      : 'overview'
   } catch {
-    return 'accounts'
+    return 'overview'
   }
 }
 
@@ -75,25 +85,16 @@ export default function AdminWorkspace({
   user,
   previewMode = false,
 }) {
-  const [activeSection, setActiveSection] = useState(() =>
-    getStoredAdminSection(user?.id),
-  )
+  const [activeSection, setActiveSection] = useWorkspaceRoute({
+    role: 'administrator',
+    initialSection: getStoredAdminSection(user?.id),
+    storageKey: user?.id
+      ? `ccna-admin-active-section:${user.id}`
+      : null,
+  })
   const activeItem =
     adminNavigation.find((item) => item.id === activeSection) ??
     adminNavigation[0]
-
-  useEffect(() => {
-    if (!user?.id) return
-
-    try {
-      window.localStorage.setItem(
-        `ccna-admin-active-section:${user.id}`,
-        activeSection,
-      )
-    } catch {
-      // Navigation remains usable without browser storage.
-    }
-  }, [activeSection, user?.id])
 
   return (
     <div className="admin-workspace">
@@ -149,6 +150,10 @@ export default function AdminWorkspace({
           />
         }
       >
+        {activeSection === 'overview' && (
+          <AdminOverview onNavigate={setActiveSection} />
+        )}
+
         {activeSection === 'accounts' && (
           <AdminUserManagement
             currentUser={user}

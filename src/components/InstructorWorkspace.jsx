@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import {
   Archive,
   ChartNoAxesColumn,
   ClipboardList,
+  LayoutDashboard,
   Library,
   MonitorCheck,
   PanelLeftOpen,
@@ -12,8 +13,11 @@ import {
 } from 'lucide-react'
 import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
+import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
+import { administratorAssessmentToolPaths } from '../routing/workspaceRoutes'
 
 const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
+const InstructorOverview = lazy(() => import('./InstructorOverview'))
 const InstructorQuizBuilder = lazy(() => import('./InstructorQuizBuilder'))
 const InstructorResultsDashboard = lazy(
   () => import('./InstructorResultsDashboard'),
@@ -34,6 +38,7 @@ const InstructorContentBackup = lazy(
 )
 
 const instructorSections = new Set([
+  'overview',
   'questions',
   'quizzes',
   'cli-practicals',
@@ -44,6 +49,12 @@ const instructorSections = new Set([
 ])
 
 const instructorNavigation = [
+  {
+    id: 'overview',
+    icon: LayoutDashboard,
+    label: 'Overview',
+    description: 'Teaching priorities and shortcuts',
+  },
   {
     id: 'questions',
     icon: Library,
@@ -89,7 +100,7 @@ const instructorNavigation = [
 ]
 
 function getStoredSection(userId) {
-  if (!userId) return 'questions'
+  if (!userId) return 'overview'
 
   try {
     const storedSection = window.localStorage.getItem(
@@ -98,9 +109,9 @@ function getStoredSection(userId) {
 
     return instructorSections.has(storedSection)
       ? storedSection
-      : 'questions'
+      : 'overview'
   } catch {
-    return 'questions'
+    return 'overview'
   }
 }
 
@@ -108,26 +119,27 @@ export default function InstructorWorkspace({
   user,
   administratorMode = false,
 }) {
-  const [activeSection, setActiveSection] = useState(() =>
-    getStoredSection(user?.id),
-  )
+  const [activeSection, setActiveSection] = useWorkspaceRoute({
+    role: administratorMode ? 'administrator' : 'instructor',
+    initialSection: getStoredSection(user?.id),
+    storageKey: user?.id
+      ? `ccna-instructor-active-section:${user.id}`
+      : null,
+    sectionPaths: administratorMode
+      ? administratorAssessmentToolPaths
+      : undefined,
+    defaultSection: administratorMode ? 'questions' : undefined,
+    defaultPath: administratorMode
+      ? administratorAssessmentToolPaths.questions
+      : undefined,
+  })
   const [navigationOpen, setNavigationOpen] = useState(false)
+  const availableNavigation = administratorMode
+    ? instructorNavigation.filter((item) => item.id !== 'overview')
+    : instructorNavigation
   const activeNavigationItem =
-    instructorNavigation.find((item) => item.id === activeSection) ??
-    instructorNavigation[0]
-
-  useEffect(() => {
-    if (!user?.id) return
-
-    try {
-      window.localStorage.setItem(
-        `ccna-instructor-active-section:${user.id}`,
-        activeSection,
-      )
-    } catch {
-      // The workspace still works when browser storage is unavailable.
-    }
-  }, [activeSection, user?.id])
+    availableNavigation.find((item) => item.id === activeSection) ??
+    availableNavigation[0]
 
   function selectSection(sectionId) {
     setActiveSection(sectionId)
@@ -141,7 +153,7 @@ export default function InstructorWorkspace({
           <small>Instructor tools</small>
           <strong>
             {
-              instructorNavigation.find(
+              availableNavigation.find(
                 (item) => item.id === activeSection,
               )?.label
             }
@@ -182,7 +194,7 @@ export default function InstructorWorkspace({
           </div>
 
           <nav className="workspace-tabs" aria-label="Instructor tools">
-            {instructorNavigation.map((item) => {
+            {availableNavigation.map((item) => {
               const active = activeSection === item.id
 
               return (
@@ -218,11 +230,11 @@ export default function InstructorWorkspace({
 
             <span className="workspace-page-header__position">
               {String(
-                instructorNavigation.findIndex(
+                availableNavigation.findIndex(
                   (item) => item.id === activeSection,
                 ) + 1,
               ).padStart(2, '0')}
-              <small>of {String(instructorNavigation.length).padStart(2, '0')}</small>
+              <small>of {String(availableNavigation.length).padStart(2, '0')}</small>
             </span>
           </header>
 
@@ -233,6 +245,9 @@ export default function InstructorWorkspace({
               />
             }
           >
+            {activeSection === 'overview' && !administratorMode && (
+              <InstructorOverview onNavigate={selectSection} />
+            )}
             {activeSection === 'questions' && (
               <InstructorQuestionBank user={user} />
             )}

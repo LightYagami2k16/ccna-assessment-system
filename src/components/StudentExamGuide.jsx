@@ -20,8 +20,8 @@ function readDismissed() {
   }
 }
 
-export default function StudentExamGuide() {
-  const [open, setOpen] = useState(() => !readDismissed())
+export default function StudentExamGuide({ standalone = false }) {
+  const [open, setOpen] = useState(() => standalone || !readDismissed())
 
   function setGuideOpen(nextOpen) {
     setOpen(nextOpen)

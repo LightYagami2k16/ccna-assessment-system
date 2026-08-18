@@ -1496,6 +1496,93 @@ input[type="radio"] {
 }
 .workspace-mobile-header strong { color: var(--color-primary-strong); }
 
+.instructor-overview {
+  display: grid;
+  min-width: 0;
+  gap: 1.25rem;
+}
+.instructor-overview__intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+.instructor-overview__intro > div {
+  min-width: 0;
+}
+.instructor-overview__intro h2 {
+  margin: .3rem 0;
+  color: var(--color-primary-strong);
+}
+.instructor-overview__intro p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+.instructor-overview__courses {
+  display: grid;
+  flex: 0 0 auto;
+  gap: .2rem;
+  padding: .8rem 1rem;
+  border: 1px solid #cfe0ec;
+  border-radius: var(--radius-panel);
+  color: var(--color-primary-strong);
+  background: var(--color-surface-subtle);
+  text-align: right;
+}
+.instructor-overview__courses small {
+  color: var(--color-text-secondary);
+}
+.instructor-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.instructor-overview-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  gap: .9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-small);
+}
+.instructor-overview-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--color-primary);
+  background: #e8f5fc;
+}
+.instructor-overview-card > div {
+  min-width: 0;
+}
+.instructor-overview-card h3 {
+  margin: 0 0 .3rem;
+  color: var(--color-primary-strong);
+}
+.instructor-overview-card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.instructor-overview-card > button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .workspace-content {
   display: grid;
   min-width: 0;
@@ -2737,6 +2824,77 @@ legend {
 }
 .student-workspace-header__track strong { font-size: 1.15rem; letter-spacing: .1em; }
 .student-workspace-header__track small { color: var(--color-text-secondary); white-space: nowrap; }
+.student-workspace {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 1rem;
+}
+.student-workspace__layout,
+.student-workspace__content,
+.student-overview {
+  min-width: 0;
+}
+.student-workspace__content,
+.student-overview {
+  display: grid;
+  gap: 1.25rem;
+}
+.student-overview__ready {
+  display: grid;
+  gap: .25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid #bfe5d0;
+  border-radius: var(--radius-panel);
+  color: #14532d;
+  background: #f0fdf4;
+}
+.student-overview__ready span {
+  color: #3f6650;
+}
+.student-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.student-overview-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  gap: .9rem;
+  padding: 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-small);
+}
+.student-overview-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--color-primary);
+  background: #e8f5fc;
+}
+.student-overview-card > div {
+  min-width: 0;
+}
+.student-overview-card h3 {
+  margin: 0 0 .3rem;
+  color: var(--color-primary-strong);
+}
+.student-overview-card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.student-overview-card > button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
 .dashboard-role-content--student {
   margin-top: var(--space-5);
 }
@@ -2844,6 +3002,10 @@ legend {
 .quiz-access-course-group > .quiz-access-grid { padding: 1rem; border-top: 1px solid #d5e3ee; background: #fff; }
 
 @media (max-width: 760px) {
+  .student-overview__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .student-workspace-header {
     align-items: stretch;
     flex-direction: column;
@@ -4768,6 +4930,20 @@ pre,
 }
 
 @media (max-width: 760px) {
+  .instructor-overview__intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .instructor-overview__courses {
+    width: 100%;
+    text-align: left;
+  }
+
+  .instructor-overview__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .dashboard {
     padding: 1.25rem 1rem 2rem;
   }

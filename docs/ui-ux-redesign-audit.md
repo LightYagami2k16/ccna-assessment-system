@@ -130,10 +130,14 @@ student sees only assessment-related controls while an attempt is active.
 
 ## Next recommended design task
 
-Begin Redesign Phase 6 with the final cross-role responsive and accessibility
-regression pass. Prioritize compact-width action bars, long localized labels,
-keyboard-only navigation, reduced-motion behavior, and real-data visual QA for
-the densest instructor result and content-management screens.
+UX1 information architecture, F1.1 routing, F1.2 student pages, and F1.3A
+instructor Overview are complete. The instructor now lands on a focused,
+addressable Overview with shortcuts to all seven tools, while the redundant
+course catalogue has been removed. The next implementation task is F1.3B:
+organize the dense Classes, Exam Controls, and Student Results pages into the
+approved internal subsections without changing their business logic. Continue
+Redesign Phase 6 responsive and accessibility checks as each page is migrated
+rather than postponing those checks until the end.
 
 ### Redesign Phase 6 progress
 

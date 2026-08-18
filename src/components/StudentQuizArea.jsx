@@ -5,20 +5,80 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { ClipboardList, History, SquareTerminal } from 'lucide-react'
+import {
+  BookOpenCheck,
+  ClipboardList,
+  History,
+  LayoutDashboard,
+  PanelLeftOpen,
+  SquareTerminal,
+  Users,
+  X,
+} from 'lucide-react'
 import AppIcon from './AppIcon'
 import StudentClassEnrollment from './StudentClassEnrollment'
 import StudentExamGuide from './StudentExamGuide'
+import StudentOverview from './StudentOverview'
 import StudentQuizList from './StudentQuizList'
 import WorkspaceLoading from './WorkspaceLoading'
 import { getStudentActiveAssessmentSession } from '../services/assessmentAttemptService'
+import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
+import {
+  pushWorkspacePath,
+  replaceWorkspacePath,
+} from '../routing/workspaceRoutes'
 
 const QuizPlayer = lazy(() => import('./QuizPlayer'))
 const StudentCliArea = lazy(() => import('./StudentCliArea'))
 const StudentAssessmentHistory = lazy(() => import('./StudentAssessmentHistory'))
 
-const studentSections = new Set(['available', 'history', 'cli'])
-const studentSectionOrder = ['available', 'cli', 'history']
+const studentSections = new Set([
+  'overview',
+  'available',
+  'cli',
+  'history',
+  'classes',
+  'guide',
+])
+
+const studentNavigation = [
+  {
+    id: 'overview',
+    icon: LayoutDashboard,
+    label: 'Overview',
+    description: 'Current priorities and shortcuts',
+  },
+  {
+    id: 'available',
+    icon: ClipboardList,
+    label: 'Quizzes',
+    description: 'Assigned assessments',
+  },
+  {
+    id: 'cli',
+    icon: SquareTerminal,
+    label: 'CLI practicals',
+    description: 'Cisco configuration',
+  },
+  {
+    id: 'history',
+    icon: History,
+    label: 'Results & history',
+    description: 'Quiz and CLI outcomes',
+  },
+  {
+    id: 'classes',
+    icon: Users,
+    label: 'My classes',
+    description: 'Enrollment and memberships',
+  },
+  {
+    id: 'guide',
+    icon: BookOpenCheck,
+    label: 'Exam guide',
+    description: 'Preparation and recovery',
+  },
+]
 
 function readStoredValue(key, fallback = null) {
   if (!key) return fallback
@@ -79,10 +139,18 @@ export default function StudentQuizArea({
   const [activeSession, setActiveSession] = useState(null)
   const [sessionLoading, setSessionLoading] = useState(true)
   const [sessionMessage, setSessionMessage] = useState('')
-  const [activeSection, setActiveSection] = useState(() => {
-    const storedSection = readStoredValue(sectionStorageKey, 'available')
-    return studentSections.has(storedSection) ? storedSection : 'available'
+  const [navigationOpen, setNavigationOpen] = useState(false)
+  const storedSection = readStoredValue(sectionStorageKey)
+  const [activeSection, setActiveSection] = useWorkspaceRoute({
+    role: 'student',
+    initialSection: studentSections.has(storedSection)
+      ? storedSection
+      : 'overview',
+    storageKey: sectionStorageKey,
   })
+  const activeNavigationItem =
+    studentNavigation.find((item) => item.id === activeSection) ??
+    studentNavigation[0]
 
   const loadActiveSession = useCallback(async () => {
     try {
@@ -116,10 +184,6 @@ export default function StudentQuizArea({
   }, [loadActiveSession])
 
   useEffect(() => {
-    storeValue(sectionStorageKey, activeSection)
-  }, [activeSection, sectionStorageKey])
-
-  useEffect(() => {
     storeValue(attemptStorageKey, activeAttemptId)
   }, [activeAttemptId, attemptStorageKey])
 
@@ -133,42 +197,40 @@ export default function StudentQuizArea({
     return () => onExamModeChange(false)
   }, [examModeActive, onExamModeChange])
 
-  function handleTabKeyDown(event) {
-    const currentIndex = studentSectionOrder.indexOf(activeSection)
-    let nextIndex = currentIndex
-
-    if (event.key === 'ArrowRight') {
-      nextIndex = (currentIndex + 1) % studentSectionOrder.length
-    } else if (event.key === 'ArrowLeft') {
-      nextIndex =
-        (currentIndex - 1 + studentSectionOrder.length) %
-        studentSectionOrder.length
-    } else if (event.key === 'Home') {
-      nextIndex = 0
-    } else if (event.key === 'End') {
-      nextIndex = studentSectionOrder.length - 1
-    } else {
-      return
+  useEffect(() => {
+    if (activeAttemptId) {
+      replaceWorkspacePath(`/student/quiz/${activeAttemptId}`)
+    } else if (activeCliAttemptId) {
+      replaceWorkspacePath(`/student/practical/${activeCliAttemptId}`)
     }
+  }, [activeAttemptId, activeCliAttemptId])
 
-    event.preventDefault()
-    const nextSection = studentSectionOrder[nextIndex]
-    setActiveSection(nextSection)
-    window.requestAnimationFrame(() => {
-      document.getElementById(`student-tab-${nextSection}`)?.focus()
-    })
+  function openQuizAttempt(attemptId) {
+    setActiveAttemptId(attemptId)
+    pushWorkspacePath(`/student/quiz/${attemptId}`)
+  }
+
+  function updateCliAttempt(attemptId) {
+    setActiveCliAttemptId(attemptId)
+    if (attemptId) {
+      pushWorkspacePath(`/student/practical/${attemptId}`)
+    }
+  }
+
+  function selectSection(sectionId) {
+    setActiveSection(sectionId)
+    setNavigationOpen(false)
   }
 
   function resumeActiveSession() {
     if (!activeSession) return
 
     if (activeSession.type === 'quiz') {
-      setActiveAttemptId(activeSession.attemptId)
+      openQuizAttempt(activeSession.attemptId)
       return
     }
 
-    setActiveCliAttemptId(activeSession.attemptId)
-    setActiveSection('cli')
+    updateCliAttempt(activeSession.attemptId)
   }
 
   if (sessionLoading && (activeAttemptId || activeCliAttemptId)) {
@@ -208,7 +270,7 @@ export default function StudentQuizArea({
           <StudentCliArea
             userId={userId}
             activeAttemptId={activeCliAttemptId}
-            onActiveAttemptChange={setActiveCliAttemptId}
+            onActiveAttemptChange={updateCliAttempt}
             onActiveSessionChanged={loadActiveSession}
             onAttemptSubmitted={() => {
               storeValue(sectionStorageKey, 'history')
@@ -229,195 +291,161 @@ export default function StudentQuizArea({
   }
 
   return (
-    <div className="student-quiz-area">
-      <header className="student-workspace-header">
-        <div>
-          <span className="eyebrow">ASSESSMENT CENTER</span>
-          <h2>My assessments</h2>
-          <p>
-            Join a class, complete assigned assessments, and review your
-            results from one workspace.
-          </p>
-        </div>
-        <span className="student-workspace-header__track">
-          <strong>CCNA</strong>
-          <small>ITN · SRWE · ENSA</small>
+    <div className="student-workspace">
+      <header className="workspace-mobile-header">
+        <span>
+          <small>Student center</small>
+          <strong>{activeNavigationItem.label}</strong>
         </span>
+        <button
+          className="workspace-menu-button"
+          type="button"
+          aria-expanded={navigationOpen}
+          aria-controls="student-navigation"
+          onClick={() => setNavigationOpen((current) => !current)}
+        >
+          <AppIcon
+            icon={navigationOpen ? X : PanelLeftOpen}
+            aria-hidden="true"
+          />
+          <span>{navigationOpen ? 'Close menu' : 'Open menu'}</span>
+        </button>
       </header>
 
-      <StudentClassEnrollment
-        onEnrollmentChanged={() =>
-          setEnrollmentVersion((current) => current + 1)
-        }
-      />
-
-      <StudentExamGuide />
-
-      {activeSession && (
-        <section
-          className="student-active-session"
-          aria-labelledby="student-active-session-title"
+      <div className="instructor-workspace__layout student-workspace__layout">
+        <aside
+          id="student-navigation"
+          className={
+            navigationOpen
+              ? 'workspace-sidebar workspace-sidebar--open'
+              : 'workspace-sidebar'
+          }
         >
-          <div>
-            <span className="eyebrow">ACTIVE ASSESSMENT</span>
-            <h3 id="student-active-session-title">
-              {activeSession.title}
-            </h3>
-            <p>
-              {activeSession.type === 'quiz'
-                ? 'Quiz'
-                : 'CLI practical'}
-              {' · '}
-              Ends {formatSessionExpiration(activeSession.expiresAt)}
-            </p>
-            <small>
-              Finish or submit this assessment before starting another one.
-            </small>
+          <div className="workspace-sidebar__heading">
+            <span className="eyebrow">STUDENT CENTER</span>
+            <h2>Learning workspace</h2>
+            <p>Open one focused area for assessments, classes, or results.</p>
           </div>
-          <button
-            className="primary"
-            type="button"
-            onClick={resumeActiveSession}
-          >
-            {activeSession.type === 'quiz'
-              ? 'Resume quiz'
-              : 'Resume CLI practical'}
-          </button>
-        </section>
-      )}
 
-      {sessionMessage && (
-        <p className="form-message form-message--error" role="alert">
-          {sessionMessage}
-        </p>
-      )}
+          <nav className="workspace-tabs" aria-label="Student workspace">
+            {studentNavigation.map((item) => {
+              const isActive = activeSection === item.id
 
-      <nav
-        className="student-assessment-tabs"
-        aria-label="Student assessments"
-        role="tablist"
-        onKeyDown={handleTabKeyDown}
-      >
-        <button
-          className={
-            activeSection === 'available'
-              ? 'student-assessment-tab student-assessment-tab--active'
-              : 'student-assessment-tab'
-          }
-          type="button"
-          id="student-tab-available"
-          role="tab"
-          aria-selected={activeSection === 'available'}
-          aria-controls="student-panel-available"
-          tabIndex={activeSection === 'available' ? 0 : -1}
-          onClick={() => setActiveSection('available')}
-        >
-          <strong className="student-assessment-tab__label">
-            <AppIcon icon={ClipboardList} size="sm" />
-            <span>Available</span>
-          </strong>
-          <small>Assigned quizzes</small>
-        </button>
-        <button
-          className={
-            activeSection === 'cli'
-              ? 'student-assessment-tab student-assessment-tab--active'
-              : 'student-assessment-tab'
-          }
-          type="button"
-          id="student-tab-cli"
-          role="tab"
-          aria-selected={activeSection === 'cli'}
-          aria-controls="student-panel-cli"
-          tabIndex={activeSection === 'cli' ? 0 : -1}
-          onClick={() => setActiveSection('cli')}
-        >
-          <strong className="student-assessment-tab__label">
-            <AppIcon icon={SquareTerminal} size="sm" />
-            <span>CLI practicals</span>
-          </strong>
-          <small>Cisco configuration</small>
-        </button>
-        <button
-          className={
-            activeSection === 'history'
-              ? 'student-assessment-tab student-assessment-tab--active'
-              : 'student-assessment-tab'
-          }
-          type="button"
-          id="student-tab-history"
-          role="tab"
-          aria-selected={activeSection === 'history'}
-          aria-controls="student-panel-history"
-          tabIndex={activeSection === 'history' ? 0 : -1}
-          onClick={() => setActiveSection('history')}
-        >
-          <strong className="student-assessment-tab__label">
-            <AppIcon icon={History} size="sm" />
-            <span>History</span>
-          </strong>
-          <small>Quiz and CLI results</small>
-        </button>
-      </nav>
+              return (
+                <button
+                  key={item.id}
+                  className={
+                    isActive
+                      ? 'workspace-tab workspace-tab--active'
+                      : 'workspace-tab'
+                  }
+                  type="button"
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={() => selectSection(item.id)}
+                >
+                  <span className="workspace-tab__label">
+                    <AppIcon icon={item.icon} aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </span>
+                  <small>{item.description}</small>
+                </button>
+              )
+            })}
+          </nav>
+        </aside>
 
-      <section
-        className="student-assessment-panel"
-        id={`student-panel-${activeSection}`}
-        role="tabpanel"
-        aria-labelledby={`student-tab-${activeSection}`}
-        tabIndex="-1"
-      >
-        <Suspense
-          fallback={<WorkspaceLoading label="Loading assessments..." />}
-        >
-          {activeSection === 'available' ? (
-            <StudentQuizList
-              key={`${enrollmentVersion}-${resultsVersion}`}
-              onOpenAttempt={setActiveAttemptId}
-              onArchived={() => {
-                setResultsVersion((current) => current + 1)
-                setActiveSection('history')
-              }}
-            />
-          ) : activeSection === 'history' ? (
-            <StudentAssessmentHistory
-              key={resultsVersion}
-              onQuizRestored={() => {
-                setResultsVersion((current) => current + 1)
-                setActiveSection('available')
-              }}
-              onCliRestored={() => {
-                setResultsVersion((current) => current + 1)
-                setActiveSection('cli')
-              }}
-            />
-          ) : (
-            <StudentCliArea
-              userId={userId}
-              activeAttemptId={activeCliAttemptId}
-              onActiveAttemptChange={setActiveCliAttemptId}
-              resumeAttemptId={
-                activeSession?.type === 'cli'
-                  ? activeSession.attemptId
-                  : null
-              }
-              onActiveSessionChanged={loadActiveSession}
-              onAttemptSubmitted={() => {
-                storeValue(sectionStorageKey, 'history')
-              }}
-              onCompletedAttempt={() => {
-                setResultsVersion((current) => current + 1)
-                setActiveSection('history')
-                void loadActiveSession()
-              }}
-              onArchived={() => {
-                setResultsVersion((current) => current + 1)
-                setActiveSection('history')
-              }}
-            />
+        <section className="workspace-content student-workspace__content">
+          {sessionMessage && (
+            <p className="form-message form-message--error" role="alert">
+              {sessionMessage}
+            </p>
           )}
-        </Suspense>
-      </section>
+
+          <Suspense
+            fallback={
+              <WorkspaceLoading
+                label={`Loading ${activeNavigationItem.label.toLowerCase()}...`}
+              />
+            }
+          >
+            {activeSection === 'overview' && (
+              <StudentOverview
+                activeSession={activeSession}
+                formattedExpiration={
+                  activeSession
+                    ? formatSessionExpiration(activeSession.expiresAt)
+                    : ''
+                }
+                onNavigate={selectSection}
+                onResume={resumeActiveSession}
+              />
+            )}
+
+            {activeSection === 'classes' && (
+              <StudentClassEnrollment
+                onEnrollmentChanged={() =>
+                  setEnrollmentVersion((current) => current + 1)
+                }
+              />
+            )}
+
+            {activeSection === 'guide' && (
+              <StudentExamGuide standalone />
+            )}
+
+            {activeSection === 'available' && (
+              <StudentQuizList
+                key={`${enrollmentVersion}-${resultsVersion}`}
+                onOpenAttempt={openQuizAttempt}
+                onArchived={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('history')
+                }}
+              />
+            )}
+
+            {activeSection === 'history' && (
+              <StudentAssessmentHistory
+                key={resultsVersion}
+                onQuizRestored={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('available')
+                }}
+                onCliRestored={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('cli')
+                }}
+              />
+            )}
+
+            {activeSection === 'cli' && (
+              <StudentCliArea
+                userId={userId}
+                activeAttemptId={activeCliAttemptId}
+                onActiveAttemptChange={updateCliAttempt}
+                resumeAttemptId={
+                  activeSession?.type === 'cli'
+                    ? activeSession.attemptId
+                    : null
+                }
+                onActiveSessionChanged={loadActiveSession}
+                onAttemptSubmitted={() => {
+                  storeValue(sectionStorageKey, 'history')
+                }}
+                onCompletedAttempt={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('history')
+                  void loadActiveSession()
+                }}
+                onArchived={() => {
+                  setResultsVersion((current) => current + 1)
+                  setActiveSection('history')
+                }}
+              />
+            )}
+          </Suspense>
+        </section>
+      </div>
     </div>
   )
 }

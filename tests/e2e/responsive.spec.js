@@ -16,10 +16,16 @@ const instructorTools = [
   'Student results',
 ]
 
-const studentTabs = [
-  'Available Assigned quizzes',
-  'CLI practicals Cisco configuration',
-  'History Quiz and CLI results',
+const studentPages = [
+  { path: '/student/overview', heading: 'Student overview' },
+  { path: '/student/assessments', heading: 'Available quizzes' },
+  { path: '/student/practicals', heading: 'Available CLI practicals' },
+  { path: '/student/history', heading: 'Assessment history' },
+  {
+    path: '/student/classes',
+    heading: /My class enrollment|Join your class/,
+  },
+  { path: '/student/guide', heading: 'How to take an exam' },
 ]
 
 for (const viewport of viewports) {
@@ -29,6 +35,9 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('heading', { name: 'Welcome back, UAT Instructor' }),
     ).toBeVisible()
+    await expect(page.locator('.workspace-page-header h1')).toHaveText(
+      'Overview',
+    )
     const overflow = await page.evaluate(() =>
       document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
@@ -88,7 +97,7 @@ test('quiz and CLI history values stay inside compact result cards', async ({ pa
   await page.setViewportSize({ width: 320, height: 720 })
   await page.goto('/?uat-role=student')
   await expect(
-    page.getByRole('heading', { name: 'My assessments' }),
+    page.getByRole('heading', { name: 'Student overview' }),
   ).toBeVisible()
 
   await page.evaluate(() => {
@@ -255,7 +264,7 @@ for (const viewport of viewports) {
       page.getByRole('heading', { name: 'Welcome back, UAT Student' }),
     ).toBeVisible()
     await expect(
-      page.getByRole('heading', { name: 'My assessments' }),
+      page.getByRole('heading', { name: 'Student overview' }),
     ).toBeVisible()
 
     if (viewport.width <= 800) {
@@ -277,31 +286,38 @@ for (const viewport of viewports) {
     const workspacePosition = await page
       .locator('.dashboard-role-content--student')
       .boundingBox()
-    const catalogPosition = await page.locator('.dashboard-section').boundingBox()
 
     expect(workspacePosition?.y).toBeGreaterThan(welcomePosition?.y ?? 0)
-    expect(catalogPosition?.y).toBeGreaterThan(workspacePosition?.y ?? 0)
 
-    for (const tabName of studentTabs) {
-      const tab = page.getByRole('tab', { name: tabName })
-      await tab.click()
-      await expect(tab).toHaveAttribute('aria-selected', 'true')
+    if (viewport.width <= 760) {
+      const menuButton = page.getByRole('button', { name: 'Open menu' })
+      await expect(menuButton).toBeVisible()
+      await menuButton.click()
+      await expect(page.locator('#student-navigation')).toBeVisible()
+      await page.getByRole('button', { name: /^Overview/ }).click()
+    }
 
-      if (tabName.startsWith('Available')) {
+    for (const studentPage of studentPages) {
+      await page.evaluate((path) => {
+        window.location.hash = path
+      }, studentPage.path)
+      await expect(
+        page.getByRole('heading', { name: studentPage.heading }),
+      ).toBeVisible()
+
+      if (studentPage.path === '/student/assessments') {
         await expect(page.locator('.assessment-type-icon--quiz')).toBeVisible()
       }
 
-      if (tabName.startsWith('CLI practicals')) {
+      if (studentPage.path === '/student/practicals') {
         await expect(page.locator('.assessment-type-icon--cli')).toBeVisible()
       }
 
-      if (tabName.startsWith('History')) {
-        await expect(
-          page.getByRole('heading', { name: 'Assessment history' }),
-        ).toBeVisible()
-
+      if (studentPage.path === '/student/history') {
         for (const filterName of ['All results', 'Quizzes', 'CLI practicals']) {
-          const filter = page.getByRole('button', { name: new RegExp(`^${filterName}`) })
+          const filter = page
+            .locator('.student-history-filters')
+            .getByRole('button', { name: new RegExp(`^${filterName}`) })
           await filter.click()
           await expect(filter).toHaveAttribute('aria-pressed', 'true')
         }
@@ -311,7 +327,7 @@ for (const viewport of viewports) {
         document.documentElement.scrollWidth - document.documentElement.clientWidth,
       )
 
-      expect(overflow, `${tabName} must fit the ${viewport.name} viewport`)
+      expect(overflow, `${studentPage.path} must fit the ${viewport.name} viewport`)
         .toBeLessThanOrEqual(1)
     }
   })

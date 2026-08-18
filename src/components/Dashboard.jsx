@@ -1,36 +1,19 @@
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 import AccountSettings from './AccountSettings';
 import BrandMark from './BrandMark';
 import WorkspaceLoading from './WorkspaceLoading';
+import {
+  getWorkspaceRoute,
+  normalizeWorkspaceRole,
+  replaceWorkspacePath,
+  workspaceDefaultPathForRole
+} from '../routing/workspaceRoutes';
 
 const InstructorWorkspace = lazy(() => import('./InstructorWorkspace'));
 const StudentQuizArea = lazy(() => import('./StudentQuizArea'));
 const AdminWorkspace = lazy(() => import('./AdminWorkspace'));
-
-const courses = [
-  {
-    code: 'ITN',
-    title: 'Introduction to Networks',
-    note:
-      'Foundations, addressing, Ethernet, and basic configuration'
-  },
-  {
-    code: 'SRWE',
-    title:
-      'Switching, Routing, and Wireless Essentials',
-    note:
-      'VLANs, STP, EtherChannel, WLANs, and routing'
-  },
-  {
-    code: 'ENSA',
-    title:
-      'Enterprise Networking, Security, and Automation',
-    note:
-      'OSPF, ACLs, NAT, security, and automation'
-  }
-];
 
 export default function Dashboard({
   profile,
@@ -40,6 +23,7 @@ export default function Dashboard({
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [studentExamMode, setStudentExamMode] = useState(false);
+  const [routeNotice, setRouteNotice] = useState('');
   const settingsButtonRef = useRef(null);
   const role = profile?.role ?? 'student';
   const displayName =
@@ -56,11 +40,27 @@ export default function Dashboard({
 
   const isStudent = role === 'student';
 
+  useEffect(() => {
+    const normalizedRole = normalizeWorkspaceRole(role);
+
+    function guardWorkspaceRoute() {
+      const route = getWorkspaceRoute();
+      if (!route?.role || route.role === normalizedRole) return;
+
+      setRouteNotice(
+        'That page is not available for your account. Your workspace home page is shown instead.'
+      );
+      replaceWorkspacePath(workspaceDefaultPathForRole(normalizedRole));
+    }
+
+    guardWorkspaceRoute();
+    window.addEventListener('hashchange', guardWorkspaceRoute);
+    return () => window.removeEventListener('hashchange', guardWorkspaceRoute);
+  }, [role]);
+
   async function handleSignOut() {
     if (previewMode) {
-      window.location.assign(
-        `${window.location.pathname}${window.location.hash}`
-      );
+      window.location.assign(window.location.pathname);
       return;
     }
 
@@ -175,6 +175,19 @@ export default function Dashboard({
           />
         )}
 
+        {!studentExamMode && routeNotice && (
+          <div className="form-message form-message--warning" role="status">
+            <span>{routeNotice}</span>
+            <button
+              className="button-link"
+              type="button"
+              onClick={() => setRouteNotice('')}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {!studentExamMode && (
         <section className="welcome">
           <div>
@@ -234,54 +247,6 @@ export default function Dashboard({
                 onExamModeChange={setStudentExamMode}
               />
             </Suspense>
-          </section>
-        )}
-
-        {!studentExamMode && !isAdministrator && (
-          <section className="dashboard-section">
-            <div className="dashboard-section__heading">
-              <div>
-                <span className="eyebrow">
-                  COURSE CATALOG
-                </span>
-                <h2>CCNA courses</h2>
-                <p>
-                  Content and assessments are organized across
-                  the three CCNA curriculum areas.
-                </p>
-              </div>
-
-              <span className="status-chip">
-                {courses.length} courses
-              </span>
-            </div>
-
-            <div className="course-grid">
-              {courses.map((course) => (
-                <article
-                  className="course-card"
-                  key={course.code}
-                >
-                  <span className="course-code">
-                    {course.code}
-                  </span>
-
-                  <h3>{course.title}</h3>
-
-                  <p>{course.note}</p>
-
-                  <button
-                    className="secondary"
-                    type="button"
-                    disabled
-                  >
-                    {isInstructor
-                      ? 'Manage course (next step)'
-                      : 'View course'}
-                  </button>
-                </article>
-              ))}
-            </div>
           </section>
         )}
 

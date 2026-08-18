@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/?uat-role=student')
+  await page.goto('/?uat-role=student#/student/guide')
 })
 
 test('student exam guide can be hidden and reopened', async ({ page }) => {

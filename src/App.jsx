@@ -10,6 +10,11 @@ import InvitationPasswordSetup from './components/InvitationPasswordSetup'
 import WorkspaceLoading from './components/WorkspaceLoading'
 import useInactivityLogout from './hooks/useInactivityLogout'
 import { supabase } from './lib/supabase'
+import {
+  clearWorkspacePath,
+  replaceWorkspacePath,
+  workspaceDefaultPathForRole,
+} from './routing/workspaceRoutes'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 
@@ -131,6 +136,8 @@ export default function App() {
   )
   const [passwordRecoveryActive, setPasswordRecoveryActive] =
     useState(getStoredPasswordRecoveryState)
+  const [overviewRedirectPending, setOverviewRedirectPending] =
+    useState(false)
   const userId = session?.user?.id ?? null
   const requiresInvitationPassword = userNeedsInvitationPassword(
     session?.user,
@@ -141,7 +148,7 @@ export default function App() {
 
   const handleInactivityLogout = useCallback(async () => {
     setSessionMessage(
-      'You were signed out after 5 minutes without activity. Sign in again to continue.',
+      'You were signed out after 15 minutes without activity. Sign in again to continue.',
     )
 
     const { error } = await supabase.auth.signOut({ scope: 'local' })
@@ -207,6 +214,34 @@ export default function App() {
       listener.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (activeUatRole || loading || session) return
+    clearWorkspacePath()
+  }, [loading, session])
+
+  useEffect(() => {
+    if (
+      !overviewRedirectPending ||
+      !session ||
+      !profile ||
+      requiresInvitationPassword ||
+      passwordRecoveryActive ||
+      requiresPasswordChange
+    ) {
+      return
+    }
+
+    replaceWorkspacePath(workspaceDefaultPathForRole(profile.role))
+    setOverviewRedirectPending(false)
+  }, [
+    overviewRedirectPending,
+    passwordRecoveryActive,
+    profile,
+    requiresInvitationPassword,
+    requiresPasswordChange,
+    session,
+  ])
 
   useEffect(() => {
     if (activeUatRole) return undefined
@@ -354,6 +389,7 @@ export default function App() {
     return (
       <AuthForm
         initialMessage={authenticationLinkError || sessionMessage}
+        onSignedIn={() => setOverviewRedirectPending(true)}
       />
     )
   }
