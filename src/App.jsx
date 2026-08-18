@@ -1,7 +1,14 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 import AuthForm from './components/AuthForm'
 import InvitationPasswordSetup from './components/InvitationPasswordSetup'
 import WorkspaceLoading from './components/WorkspaceLoading'
+import useInactivityLogout from './hooks/useInactivityLogout'
 import { supabase } from './lib/supabase'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -116,6 +123,7 @@ export default function App() {
   )
   const [profile, setProfile] = useState(null)
   const [profileError, setProfileError] = useState('')
+  const [sessionMessage, setSessionMessage] = useState('')
   const [profileLoadVersion, setProfileLoadVersion] = useState(0)
   const [loading, setLoading] = useState(!activeUatRole)
   const [authenticationLinkError] = useState(
@@ -130,6 +138,26 @@ export default function App() {
   const requiresPasswordChange =
     session?.user?.user_metadata?.password_change_required === true ||
     profile?.password_change_required === true
+
+  const handleInactivityLogout = useCallback(async () => {
+    setSessionMessage(
+      'You were signed out after 5 minutes without activity. Sign in again to continue.',
+    )
+
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+
+    if (error) {
+      setSession(null)
+      setProfile(null)
+      setLoading(false)
+    }
+  }, [])
+
+  useInactivityLogout({
+    userId,
+    enabled: Boolean(userId) && !activeUatRole,
+    onInactive: handleInactivityLogout,
+  })
 
   useEffect(() => {
     if (activeUatRole) return undefined
@@ -154,6 +182,10 @@ export default function App() {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
         setSession(nextSession)
+
+        if (nextSession && event === 'SIGNED_IN') {
+          setSessionMessage('')
+        }
 
         if (event === 'PASSWORD_RECOVERY' && nextSession) {
           setPasswordRecoveryActive(true)
@@ -319,7 +351,11 @@ export default function App() {
     )
   }
   if (!session) {
-    return <AuthForm initialMessage={authenticationLinkError} />
+    return (
+      <AuthForm
+        initialMessage={authenticationLinkError || sessionMessage}
+      />
+    )
   }
   if (
     requiresInvitationPassword ||

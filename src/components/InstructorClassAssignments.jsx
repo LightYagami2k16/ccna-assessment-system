@@ -731,7 +731,9 @@ function QuizAccessCard({ quiz, classes, onSaved }) {
   )
 }
 
-export default function InstructorClassAssignments() {
+export default function InstructorClassAssignments({
+  administratorMode = false,
+}) {
   const [workspace, setWorkspace] = useState({
     students: [],
     classes: [],
@@ -1156,6 +1158,20 @@ export default function InstructorClassAssignments() {
                       </div>
                     </header>
                     <h3>{classSection.name}</h3>
+                    {administratorMode && (
+                      <div className="class-card__owner">
+                        <span>Teacher</span>
+                        <strong>
+                          {classSection.teacherName ||
+                            classSection.teacherEmail ||
+                            'Instructor account unavailable'}
+                        </strong>
+                        {classSection.teacherName &&
+                          classSection.teacherEmail && (
+                            <small>{classSection.teacherEmail}</small>
+                          )}
+                      </div>
+                    )}
                     <p>
                       {classSection.academicTerm || 'No academic term'}
                     </p>

@@ -157,7 +157,10 @@ export default function AdminWorkspace({
         )}
 
         {activeSection === 'assessment-tools' && (
-          <InstructorWorkspace user={user} />
+          <InstructorWorkspace
+            user={user}
+            administratorMode
+          />
         )}
 
         {activeSection === 'security-history' && (

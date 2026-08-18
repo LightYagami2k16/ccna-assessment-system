@@ -104,7 +104,10 @@ function getStoredSection(userId) {
   }
 }
 
-export default function InstructorWorkspace({ user }) {
+export default function InstructorWorkspace({
+  user,
+  administratorMode = false,
+}) {
   const [activeSection, setActiveSection] = useState(() =>
     getStoredSection(user?.id),
   )
@@ -238,7 +241,9 @@ export default function InstructorWorkspace({ user }) {
               <InstructorCliLabBuilder />
             )}
             {activeSection === 'assignments' && (
-              <InstructorClassAssignments />
+              <InstructorClassAssignments
+                administratorMode={administratorMode}
+              />
             )}
             {activeSection === 'exam-controls' && (
               <ExamControlsDashboard />
