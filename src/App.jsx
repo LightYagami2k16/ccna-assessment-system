@@ -13,6 +13,48 @@ const activeUatRole = ['administrator', 'instructor', 'student'].includes(uatRol
   ? uatRole
   : null
 
+function getCachedSupabaseSession() {
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+      if (!key?.startsWith('sb-') || !key.endsWith('-auth-token')) continue
+      const stored = JSON.parse(window.localStorage.getItem(key))
+      const session = stored?.currentSession ?? stored
+      if (session?.access_token && session?.user) return session
+    }
+  } catch {
+    // A sign-in screen is used when cached authentication is unavailable.
+  }
+  return null
+}
+
+function profileCacheKey(userId) {
+  return `ccna-profile:${userId}`
+}
+
+function getCachedProfile(userId) {
+  if (!userId) return null
+  try {
+    return JSON.parse(
+      window.localStorage.getItem(profileCacheKey(userId)),
+    )
+  } catch {
+    return null
+  }
+}
+
+function cacheProfile(profile) {
+  if (!profile?.id) return
+  try {
+    window.localStorage.setItem(
+      profileCacheKey(profile.id),
+      JSON.stringify(profile),
+    )
+  } catch {
+    // Online profile loading remains available without local storage.
+  }
+}
+
 function getAuthenticationLinkError() {
   const hashParameters = new URLSearchParams(
     window.location.hash.replace(/^#/, ''),
@@ -67,7 +109,11 @@ function storePasswordRecoveryState(active) {
 }
 
 export default function App() {
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(() =>
+    !activeUatRole && !navigator.onLine
+      ? getCachedSupabaseSession()
+      : null,
+  )
   const [profile, setProfile] = useState(null)
   const [profileError, setProfileError] = useState('')
   const [profileLoadVersion, setProfileLoadVersion] = useState(0)
@@ -91,7 +137,14 @@ export default function App() {
     let active = true
 
     async function loadSession() {
-      const { data } = await supabase.auth.getSession()
+      const request = supabase.auth.getSession()
+      const timeout = new Promise((resolve) => {
+        window.setTimeout(
+          () => resolve({ data: { session: getCachedSupabaseSession() } }),
+          navigator.onLine ? 8_000 : 750,
+        )
+      })
+      const { data } = await Promise.race([request, timeout])
       if (!active) return
       setSession(data.session)
       if (!data.session) setLoading(false)
@@ -160,11 +213,22 @@ export default function App() {
 
       if (active) {
         if (error) {
-          setProfileError(
-            'We could not load your account profile. Check your connection and try again.',
-          )
+          const cachedProfile = getCachedProfile(userId)
+          if (cachedProfile) {
+            setProfile(cachedProfile)
+            setProfileError(
+              navigator.onLine
+                ? 'A saved profile is shown while the server reconnects.'
+                : 'Offline continuation is using the profile saved on this device.',
+            )
+          } else {
+            setProfileError(
+              'We could not load your account profile. Check your connection and try again.',
+            )
+          }
         } else {
           setProfile(data)
+          cacheProfile(data)
         }
         setLoading(false)
       }

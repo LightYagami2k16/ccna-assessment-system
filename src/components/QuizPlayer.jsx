@@ -18,8 +18,10 @@ import {
   clearAttemptCache,
   getAttemptSnapshot,
   getPendingAnswers,
+  hasPendingSubmission,
   markPendingAnswerSynced,
   saveAttemptSnapshot,
+  setPendingSubmission,
   updateSnapshotAnswer
 } from '../services/quizAnswerCache';
 
@@ -389,10 +391,19 @@ export default function QuizPlayer({
         setSubmitting(true);
         setPageMessage('');
 
+        if (!navigator.onLine) {
+          setPendingSubmission(attemptId, true);
+          setPageMessage(
+            'Submission is queued on this device. Keep this attempt open; it will submit automatically after reconnection.'
+          );
+          return;
+        }
+
         const answersSynchronized =
           await syncPendingAnswers();
 
         if (!answersSynchronized) {
+          setPendingSubmission(attemptId, true);
           setPageMessage(
             'Your answers are saved on this device, but submission must wait until they synchronize.'
           );
@@ -407,6 +418,7 @@ export default function QuizPlayer({
             clientSession.clientId
           );
 
+        setPendingSubmission(attemptId, false);
         clearAttemptCache(attemptId);
         setResult(submissionResult);
         onSubmitted?.(submissionResult);
@@ -425,7 +437,10 @@ export default function QuizPlayer({
 
           await loadAttempt();
         } else {
-          setPageMessage(errorMessage);
+          setPendingSubmission(attemptId, true);
+          setPageMessage(
+            `${errorMessage} Submission remains queued and will retry after reconnection.`
+          );
         }
       } finally {
         setSubmitting(false);
@@ -441,6 +456,22 @@ export default function QuizPlayer({
       syncPendingAnswers
     ]
   );
+
+  useEffect(() => {
+    function submitQueuedAttempt() {
+      if (
+        navigator.onLine &&
+        hasPendingSubmission(attemptId) &&
+        attemptData?.attempt?.status === 'in_progress'
+      ) {
+        void performSubmission();
+      }
+    }
+
+    window.addEventListener('online', submitQueuedAttempt);
+    submitQueuedAttempt();
+    return () => window.removeEventListener('online', submitQueuedAttempt);
+  }, [attemptData?.attempt?.status, attemptId, performSubmission]);
 
   const handleTimeExpired = useCallback(() => {
     if (submitting || result) {

@@ -13,6 +13,7 @@ import {
   getAssignmentWorkspace,
   resetClassStudentPassword,
   reviewClassJoinRequest,
+  reviewClassJoinRequestsBulk,
   saveClassSection,
   saveQuizAccess,
 } from '../services/assignmentService'
@@ -386,8 +387,11 @@ function ClassEnrollmentTools({ classSection, onChanged }) {
 
 function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
   const [reviewingId, setReviewingId] = useState(null)
+  const [selectedRequestIds, setSelectedRequestIds] = useState([])
+  const [bulkApproving, setBulkApproving] = useState(false)
   const [message, setMessage] = useState('')
   const [expandedCourseCodes, setExpandedCourseCodes] = useState([])
+  const { confirm, confirmationDialog } = useConfirmationDialog()
 
   useEffect(() => {
     const availableCodes = courseGroups.map((group) => group.code)
@@ -395,6 +399,13 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
       current.filter((code) => availableCodes.includes(code)),
     )
   }, [courseGroups])
+
+  useEffect(() => {
+    const availableRequestIds = new Set(requests.map((request) => request.id))
+    setSelectedRequestIds((current) =>
+      current.filter((requestId) => availableRequestIds.has(requestId)),
+    )
+  }, [requests])
 
   function toggleCourse(code) {
     setExpandedCourseCodes((current) =>
@@ -417,6 +428,9 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
           ? `${request.studentName || request.studentEmail} was enrolled.`
           : 'The enrollment request was rejected.',
       )
+      setSelectedRequestIds((current) =>
+        current.filter((requestId) => requestId !== request.id),
+      )
       await onChanged()
     } catch (error) {
       setMessage(error.message)
@@ -425,8 +439,69 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
     }
   }
 
+  function toggleRequest(requestId) {
+    setSelectedRequestIds((current) =>
+      current.includes(requestId)
+        ? current.filter((id) => id !== requestId)
+        : [...current, requestId],
+    )
+  }
+
+  function toggleAllRequests(checked) {
+    setSelectedRequestIds(
+      checked ? requests.map((request) => request.id) : [],
+    )
+  }
+
+  async function handleBulkApprove() {
+    if (!selectedRequestIds.length || bulkApproving) return
+
+    const selectedRequests = requests.filter((request) =>
+      selectedRequestIds.includes(request.id),
+    )
+    const confirmed = await confirm({
+      title: `Approve ${selectedRequests.length} enrollment ${
+        selectedRequests.length === 1 ? 'request' : 'requests'
+      }?`,
+      message:
+        'Each selected student will be enrolled in the class they requested. Requests that are no longer valid will be reported and left unapproved.',
+      confirmLabel: 'Approve selected',
+      tone: 'primary',
+    })
+    if (!confirmed) return
+
+    setBulkApproving(true)
+    setMessage('')
+    try {
+      const result = await reviewClassJoinRequestsBulk({
+        requestIds: selectedRequests.map((request) => request.id),
+      })
+      setSelectedRequestIds((current) =>
+        current.filter((id) => !result.successfulIds.includes(id)),
+      )
+
+      if (result.failures.length) {
+        setMessage(
+          `${result.successfulIds.length} approved; ${result.failures.length} could not be approved. ${result.failures[0].message}`,
+        )
+      } else {
+        setMessage(
+          `${result.successfulIds.length} ${
+            result.successfulIds.length === 1 ? 'student was' : 'students were'
+          } enrolled.`,
+        )
+      }
+      await onChanged()
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setBulkApproving(false)
+    }
+  }
+
   return (
     <section className="enrollment-approval-panel">
+      {confirmationDialog}
       <div className="section-heading">
         <div>
           <span className="eyebrow">ENROLLMENT APPROVALS</span>
@@ -447,6 +522,32 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
         </div>
       ) : (
         <div className="approval-course-groups">
+          <div className="approval-bulk-toolbar">
+            <label className="bulk-select-control">
+              <input
+                type="checkbox"
+                checked={
+                  requests.length > 0 &&
+                  selectedRequestIds.length === requests.length
+                }
+                onChange={(event) =>
+                  toggleAllRequests(event.target.checked)
+                }
+              />
+              <span>Select all pending requests</span>
+            </label>
+            <div className="approval-bulk-toolbar__actions">
+              <span>{selectedRequestIds.length} selected</span>
+              <button
+                className="primary"
+                type="button"
+                disabled={!selectedRequestIds.length || bulkApproving}
+                onClick={() => void handleBulkApprove()}
+              >
+                {bulkApproving ? 'Approving...' : 'Approve selected'}
+              </button>
+            </div>
+          </div>
           {courseGroups.map((courseGroup) => {
             const expanded = expandedCourseCodes.includes(courseGroup.code)
             const panelId = `approval-course-${courseGroup.code}`
@@ -479,21 +580,32 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
                 <div className="approval-request-list" id={panelId}>
                 {courseGroup.requests.map((request) => (
             <article className="approval-request-card" key={request.id}>
-              <div>
-                <span className="course-code">{request.classCode}</span>
-                <h3>{request.studentName || 'Unnamed student'}</h3>
-                <p>{request.studentEmail}</p>
-                <small>
-                  Requested {new Date(request.requestedAt).toLocaleString()}
-                  {' · '}
-                  {request.className}
-                </small>
+              <div className="approval-request-card__main">
+                <label className="approval-request-card__selection">
+                  <input
+                    type="checkbox"
+                    checked={selectedRequestIds.includes(request.id)}
+                    disabled={bulkApproving || reviewingId === request.id}
+                    onChange={() => toggleRequest(request.id)}
+                  />
+                  <span>Select student</span>
+                </label>
+                <div className="approval-request-card__identity">
+                  <span className="course-code">{request.classCode}</span>
+                  <h3>{request.studentName || 'Unnamed student'}</h3>
+                  <p>{request.studentEmail}</p>
+                  <small>
+                    Requested {new Date(request.requestedAt).toLocaleString()}
+                    {' · '}
+                    {request.className}
+                  </small>
+                </div>
               </div>
               <div className="approval-request-card__actions">
                 <button
                   className="primary"
                   type="button"
-                  disabled={reviewingId === request.id}
+                  disabled={bulkApproving || reviewingId === request.id}
                   onClick={() =>
                     void handleDecision(request, 'approved')
                   }
@@ -503,7 +615,7 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
                 <button
                   className="secondary"
                   type="button"
-                  disabled={reviewingId === request.id}
+                  disabled={bulkApproving || reviewingId === request.id}
                   onClick={() =>
                     void handleDecision(request, 'rejected')
                   }
@@ -1031,7 +1143,7 @@ export default function InstructorClassAssignments() {
                           {classSection.isActive ? 'active' : 'inactive'}
                         </span>
                         <button
-                          className="module-collapse-button"
+                          className="module-collapse-button class-card__details-toggle"
                           type="button"
                           aria-expanded={expanded}
                           aria-controls={detailsId}

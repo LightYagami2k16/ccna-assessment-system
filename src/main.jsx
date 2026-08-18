@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import ApplicationErrorBoundary from './components/ApplicationErrorBoundary.jsx'
 import { installGlobalErrorMonitoring } from './services/operationalMonitoringService.js'
+import { registerOfflineSupport } from './services/offlineService.js'
 import './styles.css'
 import './tailwind-pilot.css'
 
@@ -13,6 +14,8 @@ const stopErrorMonitoring = installGlobalErrorMonitoring({
 if (import.meta.hot) {
   import.meta.hot.dispose(stopErrorMonitoring)
 }
+
+registerOfflineSupport()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

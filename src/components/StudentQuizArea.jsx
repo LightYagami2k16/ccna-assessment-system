@@ -8,6 +8,7 @@ import {
 import { ClipboardList, History, SquareTerminal } from 'lucide-react'
 import AppIcon from './AppIcon'
 import StudentClassEnrollment from './StudentClassEnrollment'
+import StudentExamGuide from './StudentExamGuide'
 import StudentQuizList from './StudentQuizList'
 import WorkspaceLoading from './WorkspaceLoading'
 import { getStudentActiveAssessmentSession } from '../services/assessmentAttemptService'
@@ -63,11 +64,16 @@ export default function StudentQuizArea({
   const attemptStorageKey = userId
     ? `ccna-student-active-quiz-attempt:${userId}`
     : null
+  const cliAttemptStorageKey = userId
+    ? `ccna-student-active-cli-attempt:${userId}`
+    : null
 
   const [activeAttemptId, setActiveAttemptId] = useState(() =>
     readStoredValue(attemptStorageKey),
   )
-  const [activeCliAttemptId, setActiveCliAttemptId] = useState(null)
+  const [activeCliAttemptId, setActiveCliAttemptId] = useState(() =>
+    readStoredValue(cliAttemptStorageKey),
+  )
   const [resultsVersion, setResultsVersion] = useState(0)
   const [enrollmentVersion, setEnrollmentVersion] = useState(0)
   const [activeSession, setActiveSession] = useState(null)
@@ -92,12 +98,18 @@ export default function StudentQuizArea({
           : null
       })
     } catch (error) {
-      setSessionMessage(error.message)
-      setActiveAttemptId(null)
+      if (!navigator.onLine && (activeAttemptId || activeCliAttemptId)) {
+        setSessionMessage(
+          'Offline continuation is active. Your open assessment will synchronize when the connection returns.',
+        )
+      } else {
+        setSessionMessage(error.message)
+        setActiveAttemptId(null)
+      }
     } finally {
       setSessionLoading(false)
     }
-  }, [])
+  }, [activeAttemptId, activeCliAttemptId])
 
   useEffect(() => {
     void loadActiveSession()
@@ -159,7 +171,7 @@ export default function StudentQuizArea({
     setActiveSection('cli')
   }
 
-  if (sessionLoading && activeAttemptId) {
+  if (sessionLoading && (activeAttemptId || activeCliAttemptId)) {
     return <WorkspaceLoading label="Validating saved assessment..." />
   }
 
@@ -238,6 +250,8 @@ export default function StudentQuizArea({
           setEnrollmentVersion((current) => current + 1)
         }
       />
+
+      <StudentExamGuide />
 
       {activeSession && (
         <section

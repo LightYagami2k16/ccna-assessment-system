@@ -145,3 +145,9 @@ the densest instructor result and content-management screens.
   own surfaces instead of widening the page.
 - Automated responsive coverage now includes a 320 px compact-phone viewport
   and verifies a visible keyboard focus indicator in the instructor workspace.
+- The student Available, CLI practicals, History, enrollment, and account-dialog
+  surfaces have completed their 320 px, 390 px, 768 px, 1024 px, and 1440 px
+  containment review with no horizontal page overflow.
+- On phones and tablets, the application header now returns to normal document
+  flow instead of covering assessment content while scrolling. Compact-phone
+  account actions remain aligned in one row with readable touch targets.

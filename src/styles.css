@@ -2553,12 +2553,39 @@ legend {
 }
 .approval-request-list { display: grid; gap: .75rem; }
 .approval-request-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #dce6ef; border-radius: 12px; background: #f8fbfd; }
+.approval-bulk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; border: 1px solid #c9ddeb; border-radius: 12px; background: #f2f8fc; }
+.approval-bulk-toolbar .bulk-select-control { margin: 0; }
+.approval-bulk-toolbar__actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; }
+.approval-bulk-toolbar__actions > span { color: #637286; font-size: .82rem; font-weight: 800; white-space: nowrap; }
+.approval-bulk-toolbar__actions button { min-width: 150px; }
+.approval-request-card__main { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: .85rem; min-width: 0; }
+.approval-request-card__selection { display: flex; align-items: center; gap: .45rem; margin: .15rem 0 0; color: #526982; font-size: .78rem; white-space: nowrap; }
+.approval-request-card__identity { min-width: 0; }
 .approval-request-card h3 { margin: .35rem 0 .15rem; }
 .approval-request-card p, .approval-request-card small { display: block; margin: 0; color: #637286; }
 
 @media (max-width: 560px) {
   .enrollment-approval-panel {
     padding: 1rem;
+  }
+
+  .approval-bulk-toolbar,
+  .approval-bulk-toolbar__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .approval-bulk-toolbar__actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .approval-request-card__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .approval-request-card__selection {
+    width: fit-content;
   }
 }
 
@@ -2861,6 +2888,26 @@ legend {
   }
   .class-editor__heading-controls, .class-card__header-controls, .quiz-access-course-group__header { align-items: stretch; flex-direction: column; }
   .class-editor__heading-controls button, .class-card__header-controls button, .quiz-access-course-group__header button { width: 100%; }
+  .class-card header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .class-card header > .course-code {
+    width: fit-content;
+  }
+  .class-card__header-controls {
+    width: auto;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .class-card__header-controls .class-card__details-toggle {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 102px;
+    min-height: 38px;
+  }
   .quiz-access-course-group__identity { align-items: flex-start; }
 }
 
@@ -3817,7 +3864,16 @@ legend {
 
   .recent-attempt-table,
   .cli-history-table {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
     min-width: 0;
+  }
+
+  .recent-attempt-table-wrapper,
+  .cli-history-table-wrapper {
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .recent-attempt-table thead,
@@ -3834,6 +3890,8 @@ legend {
   .recent-attempt-table tbody,
   .cli-history-table tbody {
     display: grid;
+    box-sizing: border-box;
+    width: 100%;
     gap: .75rem;
     padding: .75rem;
   }
@@ -3841,6 +3899,8 @@ legend {
   .recent-attempt-table tr,
   .cli-history-table tr {
     display: grid;
+    box-sizing: border-box;
+    width: 100%;
     overflow: hidden;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-control);
@@ -3853,7 +3913,8 @@ legend {
     grid-template-columns: minmax(90px, .4fr) minmax(0, 1fr);
     align-items: center;
     gap: .75rem;
-    width: 100%;
+    box-sizing: border-box;
+    width: auto;
     padding: .7rem .8rem;
     border-bottom: 1px solid #edf1f5;
     text-align: left;
@@ -3879,6 +3940,53 @@ legend {
   }
 }
 
+@media (max-width: 480px) {
+  .student-assessment-history,
+  .student-recent-results--embedded {
+    padding: .75rem;
+  }
+
+  .recent-result-group {
+    gap: .75rem;
+    padding: .75rem;
+  }
+
+  .recent-attempt-table tbody,
+  .cli-history-table tbody {
+    gap: .6rem;
+    padding: .5rem;
+  }
+
+  .recent-attempt-table td,
+  .cli-history-table td {
+    grid-template-columns: minmax(64px, .32fr) minmax(0, 1fr);
+    gap: .5rem;
+    padding: .65rem;
+  }
+
+  .recent-attempt-table td > *,
+  .cli-history-table td > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .recent-attempt-number strong,
+  .recent-attempt-score small,
+  .recent-attempt-table time,
+  .cli-history-table time {
+    overflow-wrap: anywhere;
+  }
+
+  .recent-attempt-table .quiz-result__status,
+  .cli-history-table .quiz-result__status {
+    width: fit-content;
+    min-width: 0;
+    max-width: 100%;
+    padding: .42rem .65rem;
+    white-space: normal;
+  }
+}
+
 /* Shared alignment and responsive normalization */
 table th,
 table td {
@@ -3896,11 +4004,20 @@ footer {
 
 @media (max-width: 800px) {
   .topbar {
+    position: static;
     height: auto;
     min-height: 72px;
     flex-wrap: wrap;
     gap: .75rem;
     padding-block: .75rem;
+  }
+
+  .uat-preview-banner {
+    position: static;
+  }
+
+  .uat-preview-shell .topbar {
+    top: auto;
   }
 
   .section-heading {
@@ -4722,6 +4839,19 @@ pre,
     flex: 1 1 160px;
   }
 
+  .class-card__header-controls {
+    width: auto;
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .class-card__header-controls .class-card__details-toggle {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 102px;
+  }
+
   .question-selection-tools {
     display: grid;
     align-items: stretch;
@@ -4808,7 +4938,8 @@ pre,
   }
 
   .result-group__controls button {
-    flex: 1 1 140px;
+    flex: 0 0 auto;
+    min-height: 40px;
   }
 
   .monitor-card header {
@@ -5734,6 +5865,76 @@ pre,
   }
 }
 
+@media (max-width: 480px) {
+  .question-analytics-course-group__toggle {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.85rem;
+    padding: 0.9rem;
+  }
+
+  .question-analytics-course-group__identity {
+    grid-column: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .question-analytics-course-group__identity > span:last-child {
+    display: grid;
+    align-items: start;
+    gap: 0.15rem;
+  }
+
+  .question-analytics-course-group__identity small {
+    line-height: 1.35;
+  }
+
+  .question-analytics-course-group__summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  .question-analytics-course-group__summary > span {
+    min-width: 0;
+    padding: 0.65rem;
+    border-radius: 0.65rem;
+    background: #fff;
+  }
+
+  .question-analytics-course-group__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #bdd8ea;
+    border-radius: 0.65rem;
+    background: #fff;
+    text-align: center;
+  }
+
+  .question-analytics-row__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    padding: 0.85rem;
+  }
+
+  .question-analytics-row__identity {
+    grid-column: 1 / -1;
+  }
+
+  .question-analytics-row__toggle {
+    align-self: center;
+    justify-self: end;
+  }
+}
+
 @media (max-width: 600px) {
   .integrity-warning {
     grid-template-columns: minmax(0, 1fr);
@@ -5805,7 +6006,14 @@ pre,
   }
 
   .topbar__actions {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .topbar__account-settings,
+  .topbar__sign-out {
+    padding-inline: .45rem;
+    font-size: .8rem;
+    white-space: nowrap;
   }
 
   .topbar__sign-out {
@@ -6782,6 +6990,15 @@ pre,
 .recent-attempt-table--cli th:nth-child(3) { width: 18%; }
 .recent-attempt-table--cli th:nth-child(4) { width: 14%; }
 .recent-attempt-table--cli th:nth-child(5) { width: 28%; }
+
+@media (max-width: 700px) {
+  .recent-attempt-table--cli,
+  .cli-history-table {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .account-settings-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -6935,4 +7152,97 @@ pre,
     max-height: calc(100dvh - 1rem);
     border-radius: 16px;
   }
+}
+/* Student exam onboarding */
+.student-exam-guide {
+  overflow: hidden;
+  border: 1px solid #cfe0ee;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.35rem 1rem rgba(15, 55, 88, 0.05);
+}
+
+.student-exam-guide__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+}
+
+.student-exam-guide__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.student-exam-guide__identity h3,
+.student-exam-guide__identity p { margin: 0.15rem 0 0; }
+.student-exam-guide__identity p { color: #587087; }
+
+.student-exam-guide__icon {
+  display: grid;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: #e4f4ff;
+  color: #0875b7;
+}
+
+.student-exam-guide__toggle { flex: 0 0 auto; }
+
+.student-exam-guide__content {
+  padding: 0 1.25rem 1.25rem;
+  border-top: 1px solid #e1ebf3;
+}
+
+.student-exam-guide__steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-exam-guide__steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  background: #f5f9fc;
+  color: #38536c;
+  line-height: 1.5;
+}
+
+.student-exam-guide__steps svg,
+.student-exam-guide__note svg {
+  margin-top: 0.15rem;
+  color: #0875b7;
+}
+
+.student-exam-guide__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-left: 0.25rem solid #1683c5;
+  border-radius: 0.55rem;
+  background: #eaf6fd;
+  color: #244d69;
+}
+
+@media (max-width: 560px) {
+  .student-exam-guide__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-exam-guide__toggle { width: 100%; }
+  .student-exam-guide__steps { grid-template-columns: 1fr; }
 }

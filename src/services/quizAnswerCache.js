@@ -9,9 +9,9 @@ function readCache(attemptId) {
     const value = window.localStorage.getItem(cacheKey(attemptId))
     return value
       ? JSON.parse(value)
-      : { snapshot: null, pendingAnswers: {}, updatedAt: null }
+      : { snapshot: null, pendingAnswers: {}, pendingSubmission: false, updatedAt: null }
   } catch {
-    return { snapshot: null, pendingAnswers: {}, updatedAt: null }
+    return { snapshot: null, pendingAnswers: {}, pendingSubmission: false, updatedAt: null }
   }
 }
 
@@ -93,6 +93,18 @@ export function markPendingAnswerSynced(attemptId, attemptQuestionId) {
     ...cache,
     pendingAnswers,
   })
+}
+
+export function setPendingSubmission(attemptId, pending = true) {
+  const cache = readCache(attemptId)
+  return writeCache(attemptId, {
+    ...cache,
+    pendingSubmission: Boolean(pending),
+  })
+}
+
+export function hasPendingSubmission(attemptId) {
+  return Boolean(readCache(attemptId).pendingSubmission)
 }
 
 export function clearAttemptCache(attemptId) {

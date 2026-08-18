@@ -11,6 +11,16 @@ import {
   submitCliAttempt,
 } from '../services/cliLabService'
 import {
+  clearCliAttemptCache,
+  getCliAttemptSnapshot,
+  getPendingCliCommands,
+  hasCliPendingSubmission,
+  queueCliCommand,
+  removePendingCliCommand,
+  saveCliAttemptSnapshot,
+  setCliPendingSubmission,
+} from '../services/cliAttemptCache'
+import {
   configurePcState,
   createDeviceState,
   executeCiscoCommand,
@@ -81,7 +91,7 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
       fullscreen_exited:
         'Fullscreen was exited. This event was recorded for instructor review.',
       connection_lost:
-        'Your connection was lost. Return online before entering another command.',
+        'Your connection was lost. Commands will be saved on this device and synchronized after reconnection.',
     }
     setIntegrityWarning(
       messages[eventType] ?? 'An exam integrity event was recorded.',
@@ -161,8 +171,26 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
       setActiveDeviceId(restoredActiveDeviceId)
       setState(restoredDeviceStates[restoredActiveDeviceId])
       setLinesByDevice(restoredLines)
+      saveCliAttemptSnapshot(attemptId, {
+        data: attemptData,
+        deviceStates: restoredDeviceStates,
+        activeDeviceId: restoredActiveDeviceId,
+        linesByDevice: restoredLines,
+      })
     } catch (error) {
-      setMessage(error.message)
+      const cached = getCliAttemptSnapshot(attemptId)
+      if (!cached) {
+        setMessage(error.message)
+        return
+      }
+      setData(cached.data)
+      setDeviceStates(cached.deviceStates)
+      setActiveDeviceId(cached.activeDeviceId)
+      setState(cached.deviceStates[cached.activeDeviceId])
+      setLinesByDevice(cached.linesByDevice)
+      setMessage(
+        'Offline continuation restored this practical from the last saved state on this device.',
+      )
     }
   }, [attemptId, clientSession.clientId, clientSession.status])
 
@@ -204,6 +232,38 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
       alternateDns: state.dnsServers?.[1] ?? '',
     })
   }, [activeDeviceId, state])
+
+  const syncPendingCommands = useCallback(async () => {
+    if (!navigator.onLine || !clientSession.clientId) return false
+
+    for (const queued of getPendingCliCommands(attemptId)) {
+      try {
+        await saveCliCommand({
+          ...queued.payload,
+          attemptId,
+          clientId: clientSession.clientId,
+        })
+        removePendingCliCommand(attemptId, queued.id)
+      } catch {
+        setMessage(
+          'Some practical changes are still stored on this device and will retry automatically.',
+        )
+        return false
+      }
+    }
+
+    setMessage('All locally saved practical changes are synchronized.')
+    return true
+  }, [attemptId, clientSession.clientId])
+
+  useEffect(() => {
+    function handleOnline() {
+      void syncPendingCommands()
+    }
+    window.addEventListener('online', handleOnline)
+    if (navigator.onLine) void syncPendingCommands()
+    return () => window.removeEventListener('online', handleOnline)
+  }, [syncPendingCommands])
 
   async function handleCommand(event) {
     event.preventDefault()
@@ -261,29 +321,40 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
     setBusy(true)
     setCommand('')
     setMessage('')
+    const payload = {
+      attemptId,
+      clientId: clientSession.clientId,
+      deviceId: activeDeviceId,
+      command: entered,
+      ...outcome,
+      state: persistedState,
+    }
+    const nextLinesByDevice = {
+      ...linesByDevice,
+      [activeDeviceId]: [
+        ...(linesByDevice[activeDeviceId] ?? []),
+        `${prompt} ${entered}`,
+        ...(outcome.output ? outcome.output.split('\n') : []),
+      ],
+    }
     try {
-      await saveCliCommand({
-        attemptId,
-        clientId: clientSession.clientId,
-        deviceId: activeDeviceId,
-        command: entered,
-        ...outcome,
-        state: persistedState,
-      })
+      if (!navigator.onLine) throw new Error('offline')
+      await saveCliCommand(payload)
+    } catch {
+      queueCliCommand(attemptId, payload)
+      setMessage(
+        'Offline: this command is saved on this device and will synchronize automatically.',
+      )
+    } finally {
       setDeviceStates(nextDeviceStates)
       setState(nextDeviceStates[activeDeviceId])
-      setLinesByDevice((current) => ({
-        ...current,
-        [activeDeviceId]: [
-          ...(current[activeDeviceId] ?? []),
-          `${prompt} ${entered}`,
-          ...(outcome.output ? outcome.output.split('\n') : []),
-        ],
-      }))
-    } catch (error) {
-      setMessage(error.message)
-      setCommand(entered)
-    } finally {
+      setLinesByDevice(nextLinesByDevice)
+      saveCliAttemptSnapshot(attemptId, {
+        data,
+        deviceStates: nextDeviceStates,
+        activeDeviceId,
+        linesByDevice: nextLinesByDevice,
+      })
       setBusy(false)
     }
   }
@@ -319,36 +390,51 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
     setBusy(true)
     setMessage('')
     setPcSettingsMessage('')
+    const displayLine = `[IPv4 settings updated through ${
+      pcAddressMode === 'dhcp' ? 'DHCP' : 'IP Configuration'
+    }]`
+    const nextLinesByDevice = {
+      ...linesByDevice,
+      [activeDeviceId]: [
+        ...(linesByDevice[activeDeviceId] ?? []),
+        displayLine,
+      ],
+    }
+    const payload = {
+      attemptId,
+      clientId: clientSession.clientId,
+      deviceId: activeDeviceId,
+      command: pcAddressMode === 'dhcp'
+        ? 'Obtained IPv4 settings through DHCP'
+        : 'Applied static IPv4 settings',
+      ...outcome,
+      state: persistedState,
+    }
     try {
-      await saveCliCommand({
-        attemptId,
-        clientId: clientSession.clientId,
-        deviceId: activeDeviceId,
-        command: pcAddressMode === 'dhcp'
-          ? 'Obtained IPv4 settings through DHCP'
-          : 'Applied static IPv4 settings',
-        ...outcome,
-        state: persistedState,
-      })
+      if (!navigator.onLine) throw new Error('offline')
+      await saveCliCommand(payload)
+    } catch {
+      queueCliCommand(attemptId, payload)
+      setPcSettingsMessage(
+        'Offline: these IPv4 settings are saved on this device and will synchronize automatically.',
+      )
+    } finally {
       setDeviceStates(nextDeviceStates)
       setState(outcome.state)
-      setPcSettingsMessage(
-        pcAddressMode === 'dhcp'
-          ? outcome.output
-          : 'IPv4 settings saved successfully.',
-      )
-      setLinesByDevice((current) => ({
-        ...current,
-        [activeDeviceId]: [
-          ...(current[activeDeviceId] ?? []),
-          `[IPv4 settings updated through ${
-            pcAddressMode === 'dhcp' ? 'DHCP' : 'IP Configuration'
-          }]`,
-        ],
-      }))
-    } catch (error) {
-      setPcSettingsMessage(error.message)
-    } finally {
+      if (navigator.onLine) {
+        setPcSettingsMessage(
+          pcAddressMode === 'dhcp'
+            ? outcome.output
+            : 'IPv4 settings saved successfully.',
+        )
+      }
+      setLinesByDevice(nextLinesByDevice)
+      saveCliAttemptSnapshot(attemptId, {
+        data,
+        deviceStates: nextDeviceStates,
+        activeDeviceId,
+        linesByDevice: nextLinesByDevice,
+      })
       setBusy(false)
     }
   }
@@ -357,18 +443,52 @@ export default function CliTerminal({ attemptId, onSubmitted, onExit }) {
     if (busy || result) return
     setBusy(true)
     try {
+      if (!navigator.onLine) {
+        setCliPendingSubmission(attemptId, true)
+        setMessage(
+          'Submission is queued on this device and will complete automatically after reconnection.',
+        )
+        return
+      }
+      const synchronized = await syncPendingCommands()
+      if (!synchronized) {
+        setCliPendingSubmission(attemptId, true)
+        return
+      }
       const submissionResult = await submitCliAttempt(
         attemptId,
         clientSession.clientId,
       )
+      setCliPendingSubmission(attemptId, false)
+      clearCliAttemptCache(attemptId)
       setResult(submissionResult)
       onSubmitted?.(submissionResult)
     } catch (error) {
-      setMessage(error.message)
+      setCliPendingSubmission(attemptId, true)
+      setMessage(
+        `${error.message} Submission remains queued and will retry after reconnection.`,
+      )
     } finally {
       setBusy(false)
     }
-  }, [attemptId, busy, clientSession.clientId, onSubmitted, result])
+  }, [attemptId, busy, clientSession.clientId, onSubmitted, result, syncPendingCommands])
+
+  useEffect(() => {
+    function submitQueuedAttempt() {
+      if (
+        navigator.onLine &&
+        hasCliPendingSubmission(attemptId) &&
+        data?.attempt?.status === 'in_progress' &&
+        !busy &&
+        !result
+      ) {
+        void handleSubmit()
+      }
+    }
+    window.addEventListener('online', submitQueuedAttempt)
+    submitQueuedAttempt()
+    return () => window.removeEventListener('online', submitQueuedAttempt)
+  }, [attemptId, busy, data?.attempt?.status, handleSubmit, result])
 
   if (clientSession.status === 'claiming') {
     return (

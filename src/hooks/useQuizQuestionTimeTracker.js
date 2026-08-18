@@ -3,6 +3,37 @@ import { recordQuizQuestionTime } from '../services/quizAttemptService'
 
 const SYNC_INTERVAL_MS = 5_000
 
+function storageKey(attemptId) {
+  return `ccna-quiz-question-time:${attemptId}`
+}
+
+function readPendingTime(attemptId) {
+  if (!attemptId) return new Map()
+  try {
+    const value = JSON.parse(
+      window.localStorage.getItem(storageKey(attemptId)) ?? '{}',
+    )
+    return new Map(Object.entries(value).map(([id, milliseconds]) => [
+      id,
+      Number(milliseconds) || 0,
+    ]))
+  } catch {
+    return new Map()
+  }
+}
+
+function persistPendingTime(attemptId, pending) {
+  if (!attemptId) return
+  try {
+    window.localStorage.setItem(
+      storageKey(attemptId),
+      JSON.stringify(Object.fromEntries(pending)),
+    )
+  } catch {
+    // Timing continues in memory if local storage is unavailable.
+  }
+}
+
 export default function useQuizQuestionTimeTracker({
   attemptId,
   attemptQuestionId,
@@ -11,7 +42,7 @@ export default function useQuizQuestionTimeTracker({
 }) {
   const activeQuestionIdRef = useRef(null)
   const lastCheckpointRef = useRef(Date.now())
-  const pendingMillisecondsRef = useRef(new Map())
+  const pendingMillisecondsRef = useRef(readPendingTime(attemptId))
   const syncingRef = useRef(false)
 
   const accumulateActiveTime = useCallback(() => {
@@ -28,10 +59,11 @@ export default function useQuizQuestionTimeTracker({
         questionId,
         (pendingMillisecondsRef.current.get(questionId) ?? 0) + elapsed,
       )
+      persistPendingTime(attemptId, pendingMillisecondsRef.current)
     }
 
     lastCheckpointRef.current = now
-  }, [enabled])
+  }, [attemptId, enabled])
 
   const flush = useCallback(async () => {
     accumulateActiveTime()
@@ -67,6 +99,7 @@ export default function useQuizQuestionTimeTracker({
           entry.questionId,
           Math.max(0, milliseconds - sentMilliseconds),
         )
+        persistPendingTime(attemptId, pendingMillisecondsRef.current)
 
         try {
           await recordQuizQuestionTime({
@@ -81,9 +114,12 @@ export default function useQuizQuestionTimeTracker({
             (pendingMillisecondsRef.current.get(entry.questionId) ?? 0) +
               sentMilliseconds,
           )
+          persistPendingTime(attemptId, pendingMillisecondsRef.current)
           throw error
         }
       }
+
+      persistPendingTime(attemptId, pendingMillisecondsRef.current)
 
       return true
     } catch {
@@ -92,6 +128,10 @@ export default function useQuizQuestionTimeTracker({
       syncingRef.current = false
     }
   }, [accumulateActiveTime, attemptId, clientId, enabled])
+
+  useEffect(() => {
+    pendingMillisecondsRef.current = readPendingTime(attemptId)
+  }, [attemptId])
 
   useEffect(() => {
     accumulateActiveTime()

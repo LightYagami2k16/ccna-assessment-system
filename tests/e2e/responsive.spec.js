@@ -84,6 +84,168 @@ test('shared actions remain reachable with long labels at compact width', async 
   expect(overflow).toBeLessThanOrEqual(1)
 })
 
+test('quiz and CLI history values stay inside compact result cards', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/?uat-role=student')
+  await expect(
+    page.getByRole('heading', { name: 'My assessments' }),
+  ).toBeVisible()
+
+  await page.evaluate(() => {
+    const fixture = document.createElement('div')
+    fixture.id = 'compact-history-fixture'
+    fixture.style.width = '260px'
+    fixture.innerHTML = `
+      <div class="recent-attempt-table-wrapper">
+        <table class="recent-attempt-table recent-attempt-table--cli">
+          <thead><tr><th>Attempt</th><th>Score</th><th>Result</th><th>Commands</th><th>Completed</th></tr></thead>
+          <tbody><tr>
+            <td data-label="Attempt"><div class="recent-attempt-number"><strong>Attempt #2</strong><span>Latest</span></div></td>
+            <td data-label="Score"><div class="recent-attempt-score"><strong>0.00%</strong><small>0 of 95 points</small></div></td>
+            <td data-label="Result"><span class="quiz-result__status quiz-result__status--failed">Not passed</span></td>
+            <td data-label="Commands"><strong>2</strong></td>
+            <td data-label="Completed"><time>Aug 10, 2026, 3:32 PM</time></td>
+          </tr></tbody>
+        </table>
+      </div>`
+    document.querySelector('#main-workspace-content').append(fixture)
+  })
+
+  const dimensions = await page.locator('#compact-history-fixture').evaluate((fixture) => {
+    const wrapper = fixture.querySelector('.recent-attempt-table-wrapper')
+    const cells = [...fixture.querySelectorAll('td')]
+    const wrapperBox = wrapper.getBoundingClientRect()
+    return {
+      scrollWidth: wrapper.scrollWidth,
+      clientWidth: wrapper.clientWidth,
+      cellsInside: cells.every((cell) => {
+        const box = cell.getBoundingClientRect()
+        return box.left >= wrapperBox.left - 1 && box.right <= wrapperBox.right + 1
+      }),
+    }
+  })
+
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1)
+  expect(dimensions.cellsInside).toBe(true)
+})
+
+test('question analytics course cards stack cleanly at compact width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/?uat-role=instructor')
+  await expect(
+    page.getByRole('heading', { name: 'Welcome back, UAT Instructor' }),
+  ).toBeVisible()
+
+  await page.evaluate(() => {
+    const fixture = document.createElement('section')
+    fixture.id = 'compact-question-analytics-fixture'
+    fixture.style.width = '280px'
+    fixture.innerHTML = `
+      <section class="question-analytics-course-group">
+        <button class="question-analytics-course-group__toggle" type="button">
+          <span class="question-analytics-course-group__identity">
+            <span class="course-code">ITN</span>
+            <span><strong>4 questions</strong><small>Question performance and response details</small></span>
+          </span>
+          <span class="question-analytics-course-group__summary">
+            <span><small>Average accuracy</small><strong>29.2%</strong></span>
+            <span><small>Need review</small><strong>3</strong></span>
+          </span>
+          <span class="question-analytics-course-group__action">Show questions</span>
+        </button>
+      </section>`
+    document.querySelector('#main-workspace-content').append(fixture)
+  })
+
+  const layout = await page
+    .locator('#compact-question-analytics-fixture')
+    .evaluate((fixture) => {
+      const toggle = fixture.querySelector('.question-analytics-course-group__toggle')
+      const identity = fixture.querySelector('.question-analytics-course-group__identity')
+      const summary = fixture.querySelector('.question-analytics-course-group__summary')
+      const action = fixture.querySelector('.question-analytics-course-group__action')
+      const toggleBox = toggle.getBoundingClientRect()
+      const identityBox = identity.getBoundingClientRect()
+      const summaryBox = summary.getBoundingClientRect()
+      const actionBox = action.getBoundingClientRect()
+
+      return {
+        contained:
+          identityBox.left >= toggleBox.left &&
+          summaryBox.left >= toggleBox.left &&
+          actionBox.left >= toggleBox.left &&
+          identityBox.right <= toggleBox.right &&
+          summaryBox.right <= toggleBox.right &&
+          actionBox.right <= toggleBox.right,
+        stacked:
+          identityBox.bottom <= summaryBox.top &&
+          summaryBox.bottom <= actionBox.top,
+      }
+    })
+
+  expect(layout.contained).toBe(true)
+  expect(layout.stacked).toBe(true)
+})
+
+test('result-card collapse controls keep normal height at compact width', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  await page.goto('/?uat-role=instructor')
+  await expect(
+    page.getByRole('heading', { name: 'Welcome back, UAT Instructor' }),
+  ).toBeVisible()
+
+  await page.evaluate(() => {
+    const fixture = document.createElement('div')
+    fixture.id = 'compact-result-controls-fixture'
+    fixture.style.width = '300px'
+    fixture.innerHTML = `
+      <section class="class-result-group">
+        <header class="class-result-group__header">
+          <label class="bulk-select-control">
+            <input type="checkbox">
+            <span><span class="eyebrow">SRWE</span><strong>CCNA 2</strong><small>No academic term</small></span>
+          </label>
+          <div class="result-group__controls">
+            <span class="status-chip">1 student</span>
+            <button class="result-collapse-button" type="button">Hide students</button>
+          </div>
+        </header>
+        <div class="class-result-group__students">
+          <article class="student-result-group">
+            <header class="student-result-group__header">
+              <label class="bulk-select-control student-result-group__identity">
+                <input type="checkbox"><span class="student-result-group__avatar">S</span>
+                <span><strong>Student2</strong><small>student@example.com</small></span>
+              </label>
+              <div class="result-group__controls">
+                <span class="student-result-group__count">2 attempts</span>
+                <button class="module-collapse-button" type="button">Show records</button>
+              </div>
+            </header>
+          </article>
+        </div>
+      </section>`
+    document.querySelector('#main-workspace-content').append(fixture)
+  })
+
+  const layout = await page
+    .locator('#compact-result-controls-fixture')
+    .evaluate((fixture) => {
+      const fixtureBox = fixture.getBoundingClientRect()
+      const buttons = [...fixture.querySelectorAll('.result-group__controls button')]
+      return {
+        normalHeight: buttons.every((button) => button.getBoundingClientRect().height <= 56),
+        contained: buttons.every((button) => {
+          const box = button.getBoundingClientRect()
+          return box.left >= fixtureBox.left - 1 && box.right <= fixtureBox.right + 1
+        }),
+      }
+    })
+
+  expect(layout.normalHeight).toBe(true)
+  expect(layout.contained).toBe(true)
+})
+
 for (const viewport of viewports) {
   test(`student workspace fits a ${viewport.name} viewport`, async ({ page }) => {
     await page.setViewportSize(viewport)
@@ -95,6 +257,21 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('heading', { name: 'My assessments' }),
     ).toBeVisible()
+
+    if (viewport.width <= 800) {
+      await expect(page.locator('.topbar')).toHaveCSS('position', 'static')
+    }
+
+    if (viewport.width <= 360) {
+      const accountSettings = await page
+        .getByRole('button', { name: 'Account settings' })
+        .boundingBox()
+      const exitPreview = await page
+        .getByRole('button', { name: 'Exit preview' })
+        .boundingBox()
+
+      expect(accountSettings?.y).toBe(exitPreview?.y)
+    }
 
     const welcomePosition = await page.locator('.welcome').boundingBox()
     const workspacePosition = await page

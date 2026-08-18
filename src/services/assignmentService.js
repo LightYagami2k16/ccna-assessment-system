@@ -139,6 +139,29 @@ export async function reviewClassJoinRequest({ requestId, decision }) {
   return data
 }
 
+export async function reviewClassJoinRequestsBulk({
+  requestIds,
+  decision = 'approved',
+}) {
+  const uniqueRequestIds = [...new Set(requestIds)].filter(Boolean)
+  const successfulIds = []
+  const failures = []
+
+  for (const requestId of uniqueRequestIds) {
+    try {
+      await reviewClassJoinRequest({ requestId, decision })
+      successfulIds.push(requestId)
+    } catch (error) {
+      failures.push({
+        requestId,
+        message: error?.message || 'Unable to review this request.',
+      })
+    }
+  }
+
+  return { successfulIds, failures }
+}
+
 export async function requestClassJoin(joinCode) {
   const { data, error } = await supabase.rpc('request_class_join', {
     p_join_code: joinCode,

@@ -138,25 +138,37 @@ export default function useAssessmentClientSession({
       claimInFlight = true
 
       try {
-        const tabLock = await acquireAssessmentTabLock({
-          assessmentType,
-          attemptId,
-        })
+        if (!releaseTabLock) {
+          const tabLock = await acquireAssessmentTabLock({
+            assessmentType,
+            attemptId,
+          })
 
-        if (cancelled) {
-          tabLock.release()
-          return
+          if (cancelled) {
+            tabLock.release()
+            return
+          }
+
+          if (!tabLock.acquired) {
+            block(
+              'This assessment is already open in another tab in this browser.',
+            )
+            return
+          }
+
+          releaseTabLock = tabLock.release
+          tabLockReleaseRef.current = tabLock.release
         }
 
-        if (!tabLock.acquired) {
-          block(
-            'This assessment is already open in another tab in this browser.',
+        if (!navigator.onLine) {
+          setStatus('active')
+          setConnectionStatus('offline')
+          setMessage(
+            'Offline continuation is active. Work is stored on this device and will synchronize after reconnection.',
           )
+          schedule(() => void claim(), RECONNECT_INTERVAL_MS)
           return
         }
-
-        releaseTabLock = tabLock.release
-        tabLockReleaseRef.current = tabLock.release
 
         const claimResult = await claimAssessmentClientSession({
           assessmentType,
@@ -175,9 +187,11 @@ export default function useAssessmentClientSession({
         schedule(() => void heartbeat(), HEARTBEAT_INTERVAL_MS)
       } catch (error) {
         if (cancelled) return
-        releaseTabLock?.()
-        releaseTabLock = null
-        tabLockReleaseRef.current = null
+        if (navigator.onLine) {
+          releaseTabLock?.()
+          releaseTabLock = null
+          tabLockReleaseRef.current = null
+        }
 
         if (isOwnershipError(error)) {
           block(
