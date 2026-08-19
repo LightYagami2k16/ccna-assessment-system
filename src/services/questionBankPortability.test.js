@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
+  applyQuestionImportDestination,
   analyzeQuestionBankPackage,
   createValidationReportCsv,
   createQuestionBankPackage,
@@ -8,6 +10,70 @@ import {
   validationReportFilename,
   validateQuestionBankPackage,
 } from './questionBankPortability.js'
+
+test('the bundled JSON template validates every supported question type', () => {
+  const template = JSON.parse(readFileSync(
+    new URL(
+      '../../docs/templates/ccna-question-bank-import-sample.json',
+      import.meta.url,
+    ),
+    'utf8',
+  ))
+  const normalized = validateQuestionBankPackage(template)
+
+  assert.deepEqual(
+    new Set(normalized.questions.map((question) => question.questionType)),
+    new Set([
+      'multiple_choice',
+      'multiple_answer',
+      'true_false',
+      'identification',
+    ]),
+  )
+})
+
+test('normalizes common imported question-type aliases', () => {
+  const normalized = validateQuestionBankPackage({
+    format: 'ccna-assessment-question-bank',
+    version: 1,
+    questions: [{
+      courseCode: 'ITN',
+      moduleCode: 'ITN-01',
+      title: 'MCQ alias',
+      questionText: 'Which device routes packets?',
+      questionType: 'mcq',
+      points: 1,
+      options: [
+        { text: 'Router', isCorrect: true },
+        { text: 'Hub', isCorrect: false },
+      ],
+    }],
+  })
+
+  assert.equal(normalized.questions[0].questionType, 'multiple_choice')
+})
+
+test('overrides every imported question with a selected destination module', () => {
+  const payload = applyQuestionImportDestination({
+    format: 'ccna-assessment-question-bank',
+    version: 1,
+    questions: [
+      { courseCode: 'ITN', moduleCode: 'ITN-01', title: 'One' },
+      { courseCode: 'ENSA', moduleCode: 'ENSA-01', title: 'Two' },
+    ],
+  }, {
+    courseCode: 'srwe',
+    moduleCode: 'srwe-03',
+  })
+
+  assert.deepEqual(
+    payload.questions.map((question) => [
+      question.courseCode,
+      question.moduleCode,
+    ]),
+    [['SRWE', 'SRWE-03'], ['SRWE', 'SRWE-03']],
+  )
+})
 
 test('exports questions without database identifiers', () => {
   const payload = createQuestionBankPackage([{

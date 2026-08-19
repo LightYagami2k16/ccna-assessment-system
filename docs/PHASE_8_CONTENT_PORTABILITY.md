@@ -15,6 +15,11 @@ The instructor Question Bank can now:
 - match destination courses and modules by code instead of database IDs;
 - skip matching duplicate questions; and
 - save imported questions as drafts for instructor review.
+- accept multiple-choice (`multiple_choice` or `mcq`), multiple-answer,
+  true/false, and identification questions in the same file;
+- preserve the course and module codes stored per question or override every
+  validated question into a course and module selected in the importer; and
+- provide a downloadable mixed-question JSON template in the application.
 
 Portable files use this top-level structure:
 
@@ -32,6 +37,10 @@ Database migration:
 ```text
 supabase/migrations/060_phase8_question_bank_portability.sql
 ```
+
+No additional migration is required for destination-module selection because
+the browser normalizes the selected course and module into the existing
+version-1 import payload before calling the transactional import function.
 
 ## Phase 8.2: Quiz duplication and reusable templates
 

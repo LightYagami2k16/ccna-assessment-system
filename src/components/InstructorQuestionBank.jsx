@@ -48,6 +48,7 @@ export default function InstructorQuestionBank({ user }) {
       />
       <QuestionBankPortability
         questions={questions}
+        moduleVersion={moduleVersion}
         onImported={loadQuestions}
       />
       {loading ? (

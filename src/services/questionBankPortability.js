@@ -6,6 +6,17 @@ const QUESTION_TYPES = new Set([
   'true_false',
   'identification',
 ])
+const QUESTION_TYPE_ALIASES = new Map([
+  ['mcq', 'multiple_choice'],
+  ['single_answer', 'multiple_choice'],
+  ['multiple_choice_single_answer', 'multiple_choice'],
+  ['multiple_answers', 'multiple_answer'],
+  ['multiple_select', 'multiple_answer'],
+  ['mcma', 'multiple_answer'],
+  ['true_or_false', 'true_false'],
+  ['truefalse', 'true_false'],
+  ['short_answer', 'identification'],
+])
 const DIFFICULTIES = new Set(['beginner', 'intermediate', 'advanced'])
 
 function requiredText(value, label) {
@@ -14,9 +25,21 @@ function requiredText(value, label) {
   return normalized
 }
 
+function normalizeQuestionType(value, label) {
+  const normalized = requiredText(value, label)
+    .toLowerCase()
+    .replaceAll('-', '_')
+    .replaceAll(' ', '_')
+
+  return QUESTION_TYPE_ALIASES.get(normalized) ?? normalized
+}
+
 function normalizeQuestion(question, index) {
   const label = `Question ${index + 1}`
-  const questionType = requiredText(question.questionType, `${label} type`)
+  const questionType = normalizeQuestionType(
+    question.questionType,
+    `${label} type`,
+  )
   if (!QUESTION_TYPES.has(questionType)) {
     throw new Error(`${label} has an unsupported question type.`)
   }
@@ -65,6 +88,29 @@ function normalizeQuestion(question, index) {
     difficulty,
     sourceStatus: String(question.sourceStatus ?? 'draft').trim(),
     options,
+  }
+}
+
+export function applyQuestionImportDestination(
+  payload,
+  { courseCode, moduleCode },
+) {
+  const normalizedCourseCode = requiredText(
+    courseCode,
+    'Destination course',
+  ).toUpperCase()
+  const normalizedModuleCode = requiredText(
+    moduleCode,
+    'Destination module',
+  ).toUpperCase()
+
+  return {
+    ...payload,
+    questions: (payload?.questions ?? []).map((question) => ({
+      ...question,
+      courseCode: normalizedCourseCode,
+      moduleCode: normalizedModuleCode,
+    })),
   }
 }
 
