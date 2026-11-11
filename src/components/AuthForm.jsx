@@ -47,7 +47,7 @@ export default function AuthForm({
       <section className="hero-panel">
         <span className="eyebrow">CCNA CLASSROOM</span>
         <h1>Assess ITN, SRWE, and ENSA skills.</h1>
-        <p>Start with secure quizzes, then add Cisco-style CLI practical exams and network topologies.</p>
+        <p>A CCNA assessment platform for testing networking knowledge and practical skills through quizzes, Cisco-style CLI exams, and simulated network topologies.</p>
         <div className="course-pills">
           <span>ITN</span><span>SRWE</span><span>ENSA</span>
         </div>
