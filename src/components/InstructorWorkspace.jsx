@@ -19,19 +19,13 @@ import { administratorAssessmentToolPaths } from '../routing/workspaceRoutes'
 const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
 const InstructorOverview = lazy(() => import('./InstructorOverview'))
 const InstructorQuizBuilder = lazy(() => import('./InstructorQuizBuilder'))
-const InstructorResultsDashboard = lazy(
-  () => import('./InstructorResultsDashboard'),
-)
+const InstructorResultsArea = lazy(() => import('./InstructorResultsArea'))
 const InstructorClassAssignments = lazy(
   () => import('./InstructorClassAssignments'),
 )
 const ExamControlsDashboard = lazy(() => import('./ExamControlsDashboard'))
 const InstructorCliLabBuilder = lazy(
   () => import('./InstructorCliLabBuilder'),
-)
-const InstructorCliResults = lazy(() => import('./InstructorCliResults'))
-const InstructorOverallResults = lazy(
-  () => import('./InstructorOverallResults'),
 )
 const InstructorContentBackup = lazy(
   () => import('./InstructorContentBackup'),
@@ -249,26 +243,23 @@ export default function InstructorWorkspace({
               <InstructorOverview onNavigate={selectSection} />
             )}
             {activeSection === 'questions' && (
-              <InstructorQuestionBank user={user} />
+              <InstructorQuestionBank user={user} administratorMode={administratorMode} />
             )}
-            {activeSection === 'quizzes' && <InstructorQuizBuilder />}
+            {activeSection === 'quizzes' && <InstructorQuizBuilder administratorMode={administratorMode} />}
             {activeSection === 'cli-practicals' && (
-              <InstructorCliLabBuilder />
+              <InstructorCliLabBuilder administratorMode={administratorMode} />
             )}
             {activeSection === 'assignments' && (
               <InstructorClassAssignments
                 administratorMode={administratorMode}
+                onOpenPracticals={() => selectSection('cli-practicals')}
               />
             )}
             {activeSection === 'exam-controls' && (
-              <ExamControlsDashboard />
+              <ExamControlsDashboard administratorMode={administratorMode} />
             )}
             {activeSection === 'results' && (
-              <div className="combined-results-workspace">
-                <InstructorOverallResults />
-                <InstructorResultsDashboard />
-                <InstructorCliResults />
-              </div>
+              <InstructorResultsArea administratorMode={administratorMode} />
             )}
             {activeSection === 'content-backup' && (
               <InstructorContentBackup />

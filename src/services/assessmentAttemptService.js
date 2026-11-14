@@ -45,24 +45,14 @@ export async function reconcileExpiredAssessmentAttempts() {
 }
 
 export async function getStudentActiveAssessmentSession() {
-  await reconcileExpiredAssessmentAttempts()
-
-  const { data, error } = await supabase.rpc(
-    'get_student_active_assessment_session',
-  )
-
-  if (error) {
-    if (
-      error.code === 'PGRST202'
-      || error.code === '42883'
-      || error.message
-        ?.toLowerCase()
-        .includes('get_student_active_assessment_session')
-    ) {
-      return null
-    }
+  try {
+    await reconcileExpiredAssessmentAttempts()
+    const { data, error } = await supabase.rpc('get_student_active_assessment_session')
+    if (error) throw error
+    return data ?? null
+  } catch (cause) {
+    const error = new Error('Assessment status could not be verified. Please try again.', { cause })
+    error.code = cause?.code
     throw error
   }
-
-  return data ?? null
 }

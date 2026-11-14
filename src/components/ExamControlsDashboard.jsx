@@ -1,3 +1,6 @@
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   deleteStudentQuizAccommodation,
@@ -8,7 +11,9 @@ import {
   saveStudentQuizAccommodation,
 } from '../services/examControlService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
-import LoadingState from './LoadingState'
+import useInstructorSubsection from '../hooks/useInstructorSubsection'
+import WorkspaceSubsectionNav from './WorkspaceSubsectionNav'
+import LiveAttemptMonitor from './LiveAttemptMonitor'
 import {
   ActionBar,
   ResponsiveGrid,
@@ -42,29 +47,6 @@ function formatDate(value) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
-}
-
-function eventLabel(eventType) {
-  const labels = {
-    page_hidden: 'Exam page hidden',
-    page_visible: 'Returned to exam',
-    window_blur: 'Window lost focus',
-    window_focus: 'Window regained focus',
-    fullscreen_exited: 'Exited fullscreen',
-    connection_lost: 'Connection lost',
-    connection_restored: 'Connection restored',
-  }
-  return labels[eventType] ?? eventType ?? 'No events'
-}
-
-function clientSessionLabel(status) {
-  const labels = {
-    connected: 'Connected',
-    delayed: 'Connection delayed',
-    stale: 'Session reclaimable',
-    not_connected: 'Not connected',
-  }
-  return labels[status] ?? 'Unknown'
 }
 
 function AssignmentScheduleCard({ assignment, onSaved }) {
@@ -249,18 +231,22 @@ function IntegrityPolicyEditor({ policies, available, onSaved }) {
   const selectedPolicy = policies.find((policy) =>
     `${policy.assessmentType}:${policy.assessmentId}` === selection,
   )
+  const savedBehavior = selectedPolicy?.behavior ?? 'warn'
+  const savedIncidentLimit = selectedPolicy?.incidentLimit ?? 3
+  const savedMaxHiddenSeconds = selectedPolicy?.maxHiddenSeconds ?? 60
 
   useEffect(() => {
     if (!selection && policies.length) {
       const first = policies[0]
       setSelection(`${first.assessmentType}:${first.assessmentId}`)
-      return
     }
-    if (!selectedPolicy) return
-    setBehavior(selectedPolicy.behavior ?? 'warn')
-    setIncidentLimit(selectedPolicy.incidentLimit ?? 3)
-    setMaxHiddenSeconds(selectedPolicy.maxHiddenSeconds ?? 60)
-  }, [policies, selectedPolicy, selection])
+  }, [policies, selection])
+
+  useEffect(() => {
+    setBehavior(savedBehavior)
+    setIncidentLimit(savedIncidentLimit)
+    setMaxHiddenSeconds(savedMaxHiddenSeconds)
+  }, [selection, savedBehavior, savedIncidentLimit, savedMaxHiddenSeconds])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -352,6 +338,9 @@ function IntegrityPolicyEditor({ policies, available, onSaved }) {
       <p className="integrity-policy-editor__note">
         Automatic submission occurs when either threshold is reached. Brief
         focus changes remain reviewable events and are not counted as incidents.
+        {selectedPolicy?.assessmentType === 'quiz' && (
+          <> Exiting fullscreen is allowed during quizzes and does not count as an incident.</>
+        )}
       </p>
       <button className="primary" type="submit" disabled={saving}>
         {saving ? 'Saving...' : 'Save integrity policy'}
@@ -361,7 +350,10 @@ function IntegrityPolicyEditor({ policies, available, onSaved }) {
   )
 }
 
-export default function ExamControlsDashboard() {
+export default function ExamControlsDashboard({ administratorMode = false }) {
+  const [activeSection, setActiveSection] = useInstructorSubsection(
+    'exam-controls', administratorMode,
+  )
   const [workspace, setWorkspace] = useState({
     students: [],
     quizzes: [],
@@ -371,28 +363,29 @@ export default function ExamControlsDashboard() {
     integrityPoliciesAvailable: true,
     activeAttempts: [],
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
+  const [loadFailed, setLoadFailed] = useState(false)
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [expandedClassIds, setExpandedClassIds] = useState([])
   const [expandedScheduleCourseCodes, setExpandedScheduleCourseCodes] =
     useState([])
-  const [expandedMonitorClassIds, setExpandedMonitorClassIds] =
-    useState([])
-  const [expandedMonitorStudents, setExpandedMonitorStudents] = useState([])
   const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadWorkspace = useCallback(async ({ silent = false } = {}) => {
+    setLoadFailed(false)
     try {
       if (!silent) setLoading(true)
       setMessage('')
       setWorkspace(await getExamControlsWorkspace())
+      markLoaded()
     } catch (error) {
+      setLoadFailed(true)
       setMessage(error.message)
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => {
     void loadWorkspace()
@@ -451,61 +444,6 @@ export default function ExamControlsDashboard() {
       )
   }, [workspace.assignments, workspace.quizzes])
 
-  const activeAttemptsByClass = useMemo(() => {
-    const classGroups = new Map()
-
-    for (const attempt of workspace.activeAttempts) {
-      const classId = String(attempt.classId || 'unassigned')
-      if (!classGroups.has(classId)) {
-        classGroups.set(classId, {
-          classId,
-          classCode: attempt.classCode || 'UNASSIGNED',
-          className: attempt.className || 'Unassigned or unresolved class',
-          eventCount: 0,
-          students: new Map(),
-        })
-      }
-      const classGroup = classGroups.get(classId)
-      classGroup.eventCount += Number(attempt.eventCount) || 0
-      const studentKey = String(
-        attempt.studentEmail
-        || attempt.studentName
-        || attempt.attemptId,
-      ).toLowerCase()
-      if (!classGroup.students.has(studentKey)) {
-        classGroup.students.set(studentKey, {
-          studentKey: `${classId}:${studentKey}`,
-          studentName: attempt.studentName || attempt.studentEmail || 'Student',
-          eventCount: 0,
-          attempts: [],
-        })
-      }
-      const studentGroup = classGroup.students.get(studentKey)
-      studentGroup.eventCount += Number(attempt.eventCount) || 0
-      studentGroup.attempts.push(attempt)
-    }
-
-    return [...classGroups.values()]
-      .map((classGroup) => ({
-        ...classGroup,
-        students: [...classGroup.students.values()]
-          .map((studentGroup) => ({
-            ...studentGroup,
-            attempts: [...studentGroup.attempts].sort(
-              (left, right) =>
-                new Date(right.startedAt).getTime()
-                - new Date(left.startedAt).getTime(),
-            ),
-          }))
-          .sort((left, right) =>
-            left.studentName.localeCompare(right.studentName),
-          ),
-      }))
-      .sort((left, right) =>
-        left.className.localeCompare(right.className),
-      )
-  }, [workspace.activeAttempts])
-
   function isClassExpanded(classId) {
     return expandedClassIds.includes(String(classId))
   }
@@ -525,22 +463,6 @@ export default function ExamControlsDashboard() {
       current.includes(courseCode)
         ? current.filter((code) => code !== courseCode)
         : [...current, courseCode],
-    )
-  }
-
-  function toggleMonitorClass(classId) {
-    setExpandedMonitorClassIds((current) =>
-      current.includes(classId)
-        ? current.filter((id) => id !== classId)
-        : [...current, classId],
-    )
-  }
-
-  function toggleMonitorStudent(studentKey) {
-    setExpandedMonitorStudents((current) =>
-      current.includes(studentKey)
-        ? current.filter((key) => key !== studentKey)
-        : [...current, studentKey],
     )
   }
 
@@ -578,17 +500,25 @@ export default function ExamControlsDashboard() {
     }
   }
 
-  if (loading) return <LoadingState label="Loading exam controls..." />
-
   return (
     <div className="exam-controls">
       {confirmationDialog}
-      <SurfaceCard className="exam-control-panel">
+      <WorkspaceSubsectionNav
+        page="exam-controls"
+        activeSection={activeSection}
+        onChange={setActiveSection}
+      />
+      <SurfaceCard
+        id="exam-controls-subsection-schedules"
+        className="exam-control-panel workspace-subsection-panel"
+        hidden={activeSection !== 'schedules'}
+      >
         <SectionHeader
           eyebrow="CLASS SCHEDULING"
           title="Assignment schedules"
           description="Set a separate opening and closing time for each assigned class."
         />
+        <DataLoadBoundary loading={loading} ready={hasLoaded} error={loadFailed} onRetry={() => loadWorkspace()} label="Loading assignment schedules...">
         {!workspace.assignments.length ? (
           <div className="empty-state">
             <h3>No class assignments</h3>
@@ -701,27 +631,39 @@ export default function ExamControlsDashboard() {
             })}
           </div>
         )}
+        </DataLoadBoundary>
       </SurfaceCard>
 
-      <SurfaceCard className="exam-control-panel">
+      <SurfaceCard
+        id="exam-controls-subsection-integrity"
+        className="exam-control-panel workspace-subsection-panel"
+        hidden={activeSection !== 'integrity'}
+      >
         <SectionHeader
           eyebrow="INTEGRITY ENFORCEMENT"
           title="Assessment policies"
           description="Choose whether browser incidents are monitored, shown as student warnings, or used to submit an attempt automatically."
         />
+        <DataLoadBoundary loading={loading} ready={hasLoaded} error={loadFailed} onRetry={() => loadWorkspace()} label="Loading assessment policies...">
         <IntegrityPolicyEditor
           policies={workspace.integrityPolicies}
           available={workspace.integrityPoliciesAvailable}
           onSaved={loadWorkspace}
         />
+        </DataLoadBoundary>
       </SurfaceCard>
 
-      <SurfaceCard className="exam-control-panel">
+      <SurfaceCard
+        id="exam-controls-subsection-accommodations"
+        className="exam-control-panel workspace-subsection-panel"
+        hidden={activeSection !== 'accommodations'}
+      >
         <SectionHeader
           eyebrow="ACCOMMODATIONS"
           title="Individual student controls"
           description="Grant extra time, extra attempts, or an individual availability window."
         />
+        <DataLoadBoundary loading={loading} ready={hasLoaded} error={loadFailed} onRetry={() => loadWorkspace()} label="Loading student controls...">
         <AccommodationEditor
           students={workspace.students}
           quizzes={workspace.quizzes}
@@ -788,189 +730,29 @@ export default function ExamControlsDashboard() {
             </table>
           </div>
         )}
+        </DataLoadBoundary>
       </SurfaceCard>
 
-      <SurfaceCard className="exam-control-panel">
+      <SurfaceCard
+        id="exam-controls-subsection-monitoring"
+        className="exam-control-panel workspace-subsection-panel"
+        hidden={activeSection !== 'monitoring'}
+      >
         <SectionHeader
           eyebrow="LIVE MONITORING"
           title="Active attempts"
           description="Updates automatically every 10 seconds. Events are indicators for review."
           actions={
-            <button className="secondary" type="button" onClick={() => void loadWorkspace()}>
-              Refresh now
-            </button>
+            <RefreshButton loading={loading} label="Refresh now" onClick={() => void loadWorkspace()} />
           }
         />
-        {!workspace.activeAttempts.length ? (
-          <div className="empty-state">
-            <h3>No active attempts</h3>
-            <p>Students currently taking an exam will appear here.</p>
-          </div>
-        ) : (
-          <div className="monitor-class-groups">
-            {activeAttemptsByClass.map((classGroup) => {
-              const classExpanded = expandedMonitorClassIds.includes(
-                classGroup.classId,
-              )
-              const classPanelId = `monitor-class-${classGroup.classId
-                .replace(/[^a-z0-9]+/gi, '-')}`
-              return (
-              <section className="monitor-class-group" key={classGroup.classId}>
-                <button
-                  className="monitor-class-summary"
-                  type="button"
-                  aria-expanded={classExpanded}
-                  aria-controls={classPanelId}
-                  onClick={() => toggleMonitorClass(classGroup.classId)}
-                >
-                  <span className="course-code">{classGroup.classCode}</span>
-                  <strong>{classGroup.className}</strong>
-                  <span>
-                    {classGroup.students.length}{' '}
-                    {classGroup.students.length === 1 ? 'student' : 'students'}
-                  </span>
-                  <span className="monitor-student-summary__events">
-                    {classGroup.eventCount}{' '}
-                    {classGroup.eventCount === 1 ? 'event' : 'events'}
-                  </span>
-                  <span aria-hidden="true">{classExpanded ? '−' : '+'}</span>
-                </button>
-                {classExpanded && (
-                  <div
-                    className="monitor-student-groups"
-                    id={classPanelId}
-                  >
-            {classGroup.students.map((studentGroup) => {
-              const expanded = expandedMonitorStudents.includes(
-                studentGroup.studentKey,
-              )
-              const panelId = `monitor-student-${studentGroup.studentKey
-                .replace(/[^a-z0-9]+/g, '-')}`
-
-              return (
-                <section
-                  className="monitor-student-group"
-                  key={studentGroup.studentKey}
-                >
-                  <button
-                    className="monitor-student-summary"
-                    type="button"
-                    aria-expanded={expanded}
-                    aria-controls={panelId}
-                    onClick={() =>
-                      toggleMonitorStudent(studentGroup.studentKey)
-                    }
-                  >
-                    <strong>{studentGroup.studentName}</strong>
-                    <span className="monitor-student-summary__events">
-                      {studentGroup.eventCount}{' '}
-                      {studentGroup.eventCount === 1 ? 'event' : 'events'}
-                    </span>
-                    <span
-                      className="monitor-student-summary__chevron"
-                      aria-hidden="true"
-                    >
-                      {expanded ? '−' : '+'}
-                    </span>
-                  </button>
-
-                  {expanded && (
-                    <div
-                      className="monitor-student-attempts"
-                      id={panelId}
-                    >
-                      <ResponsiveGrid min="17.5rem" className="monitor-card-grid">
-                        {studentGroup.attempts.map((attempt) => (
-                          <SurfaceCard
-                            as="article"
-                            subtle
-                            className="monitor-card"
-                            key={attempt.attemptId}
-                          >
-                            <header>
-                              <span
-                                className={
-                                  attempt.assessmentType === 'cli'
-                                    ? 'monitor-type-badge monitor-type-badge--cli'
-                                    : 'monitor-type-badge'
-                                }
-                              >
-                                {attempt.assessmentType === 'cli'
-                                  ? 'CLI practical'
-                                  : 'Quiz'}
-                              </span>
-                              <span className="integrity-count">
-                                {attempt.eventCount}{' '}
-                                {Number(attempt.eventCount) === 1
-                                  ? 'event'
-                                  : 'events'}
-                              </span>
-                            </header>
-                            <strong>
-                              {attempt.assessmentTitle || attempt.quizTitle}
-                            </strong>
-                            <dl>
-                              <div>
-                                <dt>Started</dt>
-                                <dd>{formatDate(attempt.startedAt)}</dd>
-                              </div>
-                              <div>
-                                <dt>Expires</dt>
-                                <dd>{formatDate(attempt.expiresAt)}</dd>
-                              </div>
-                              <div>
-                                <dt>Latest event</dt>
-                                <dd>{eventLabel(attempt.latestEvent?.type)}</dd>
-                              </div>
-                              <div>
-                                <dt>Browser session</dt>
-                                <dd>
-                                  <span
-                                    className={`monitor-session-status monitor-session-status--${attempt.clientSession?.status ?? 'not_connected'}`}
-                                  >
-                                    {clientSessionLabel(
-                                      attempt.clientSession?.status,
-                                    )}
-                                  </span>
-                                  {attempt.clientSession?.clientLabel && (
-                                    <small>
-                                      {attempt.clientSession.clientLabel}
-                                    </small>
-                                  )}
-                                </dd>
-                              </div>
-                              {attempt.clientSession?.heartbeatAt && (
-                                <div>
-                                  <dt>Last session contact</dt>
-                                  <dd>
-                                    {formatDate(
-                                      attempt.clientSession.heartbeatAt,
-                                    )}
-                                  </dd>
-                                </div>
-                              )}
-                              {attempt.assessmentType === 'cli' && (
-                                <div>
-                                  <dt>Commands entered</dt>
-                                  <dd>{attempt.commandCount ?? 0}</dd>
-                                </div>
-                              )}
-                            </dl>
-                          </SurfaceCard>
-                        ))}
-                      </ResponsiveGrid>
-                    </div>
-                  )}
-                </section>
-              )
-            })}
-                  </div>
-                )}
-              </section>
-              )
-            })}
-          </div>
-        )}
+        <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading active attempts...">
+        <LiveAttemptMonitor
+          attempts={workspace.activeAttempts}
+          controlsAvailable={workspace.monitoringControlsAvailable}
+          onSubmitted={() => loadWorkspace({ silent: true })}
+        />
+        </DataLoadBoundary>
       </SurfaceCard>
 
       {message && <p className="form-message form-message--error">{message}</p>}

@@ -1,6 +1,15 @@
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import LibraryItemDialog from './LibraryItemDialog'
+import AssessmentReviewPolicy from './AssessmentReviewPolicy'
+import ReviewScheduleFields from './ReviewScheduleFields'
+import useAssessmentReviewSchedule from '../hooks/useAssessmentReviewSchedule'
+import { reviewScheduleToPolicy, validateReviewSchedule } from '../services/reviewSchedule'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCourses, getModules } from '../services/questionService'
 import CliPracticalTemplateManager from './CliPracticalTemplateManager'
+import useInstructorSubsection from '../hooks/useInstructorSubsection'
+import WorkspaceSubsectionNav from './WorkspaceSubsectionNav'
 import {
   bulkManageCliLabs,
   duplicateInstructorCliLab,
@@ -11,7 +20,6 @@ import {
   saveCliLab,
 } from '../services/cliLabService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
-import LoadingState from './LoadingState'
 import {
   ActionBar,
   ResponsiveGrid,
@@ -655,14 +663,16 @@ function criterionHelp(type) {
   return 'No target or expected value is needed.'
 }
 
-export default function InstructorCliLabBuilder() {
+export default function InstructorCliLabBuilder({ administratorMode = false }) {
+  const [activeSection, setActiveSection] = useInstructorSubsection('cli-practicals', administratorMode)
   const [workspace, setWorkspace] = useState({ labs: [], classes: [] })
   const [templates, setTemplates] = useState([])
   const [courses, setCourses] = useState([])
   const [modules, setModules] = useState([])
   const [lab, setLab] = useState(blankLab)
-  const [showEditor, setShowEditor] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const reviewSchedule = useAssessmentReviewSchedule('cli', lab.id)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
+  const [loadFailed, setLoadFailed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [expandedCriterionIndex, setExpandedCriterionIndex] = useState(0)
@@ -679,9 +689,15 @@ export default function InstructorCliLabBuilder() {
   const [duplicatingLabId, setDuplicatingLabId] = useState(null)
   const [templatingLabId, setTemplatingLabId] = useState(null)
   const [answerKeyLabId, setAnswerKeyLabId] = useState(null)
-  const [expandedLabIds, setExpandedLabIds] = useState([])
+  const [detailsLabId, setDetailsLabId] = useState(null)
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
   const { confirm, confirmationDialog } = useConfirmationDialog()
+  useEffect(() => {
+    if (activeSection !== 'library') {
+      setDetailsLabId(null)
+      setAnswerKeyLabId(null)
+    }
+  }, [activeSection])
 
   const practicalCourseGroups = useMemo(() => {
     const groups = new Map()
@@ -742,6 +758,7 @@ export default function InstructorCliLabBuilder() {
   }, [lab.criteria, lab.devices])
 
   const loadData = useCallback(async () => {
+    setLoadFailed(false)
     try {
       setLoading(true)
       setMessage('')
@@ -753,20 +770,20 @@ export default function InstructorCliLabBuilder() {
       setWorkspace(workspaceData)
       setCourses(courseData)
       setTemplates(templateData)
+      markLoaded()
       setSelectedLabIds((current) =>
         current.filter((id) => workspaceData.labs.some((item) => item.id === id)),
       )
-      setExpandedLabIds((current) =>
-        current.filter((id) => workspaceData.labs.some((item) => item.id === id)),
-      )
+      setDetailsLabId((current) => workspaceData.labs.some((item) => item.id === current) ? current : null)
     } catch (error) {
+      setLoadFailed(true)
       setMessage(
         `${error.message} Run database migration 020 if it has not been applied.`,
       )
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => {
     void loadData()
@@ -1082,11 +1099,20 @@ export default function InstructorCliLabBuilder() {
     await loadCourseModules(String(item.courseId))
     setExpandedCriterionIndex(0)
     setExpandedCriterionDeviceIds([primaryDeviceId])
-    setShowEditor(true)
+    setActiveSection('editor')
   }
 
   async function handleSave(event) {
     event.preventDefault()
+    if (!reviewSchedule.ready) {
+      setMessage('Load review settings before saving this practical.')
+      return
+    }
+    const reviewError = validateReviewSchedule(reviewSchedule.value)
+    if (reviewError) {
+      setMessage(reviewError)
+      return
+    }
     const incompleteDevice = lab.devices.find(
       (device) => !device.label.trim() || !device.hostname.trim(),
     )
@@ -1102,6 +1128,7 @@ export default function InstructorCliLabBuilder() {
     try {
       await saveCliLab({
         ...lab,
+        reviewPolicy: reviewScheduleToPolicy(reviewSchedule.value),
         durationMinutes: Number(lab.durationMinutes),
         maxAttempts: Number(lab.maxAttempts),
         passingScore: Number(lab.passingScore),
@@ -1112,12 +1139,13 @@ export default function InstructorCliLabBuilder() {
       })
       const emptyLab = blankLab()
       setLab(emptyLab)
+      reviewSchedule.reset()
       setModules([])
       setExpandedCriterionIndex(0)
       setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
       setSelectedPreset('')
-      setShowEditor(false)
       await loadData()
+      setActiveSection('library')
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -1193,13 +1221,9 @@ export default function InstructorCliLabBuilder() {
     )
   }
 
-  function toggleLabExpanded(labId) {
-    setExpandedLabIds((current) =>
-      current.includes(labId)
-        ? current.filter((id) => id !== labId)
-        : [...current, labId],
-    )
-    if (answerKeyLabId === labId) setAnswerKeyLabId(null)
+  function closeLabDetails() {
+    setDetailsLabId(null)
+    setAnswerKeyLabId(null)
   }
 
   function togglePracticalCourse(courseId) {
@@ -1299,6 +1323,9 @@ export default function InstructorCliLabBuilder() {
   return (
     <div className="cli-lab-builder">
       {confirmationDialog}
+      <WorkspaceSubsectionNav page="cli-practicals" activeSection={activeSection} onChange={setActiveSection} />
+      {message && <p className="form-message" role="status" aria-live="polite">{message}</p>}
+      <div id="cli-practicals-subsection-editor" className="workspace-subsection-panel" hidden={activeSection !== 'editor'}>
       <section className="cli-lab-panel">
         <SectionHeader
           className="section-heading"
@@ -1306,25 +1333,26 @@ export default function InstructorCliLabBuilder() {
           title="CLI practical builder"
           description="Create single-device or topology-based Cisco IOS exams and grade final configuration state."
           actions={(
-            <button
+              <button
               className="primary"
               type="button"
               onClick={() => {
                 const emptyLab = blankLab()
                 setLab(emptyLab)
+                reviewSchedule.reset()
                 setModules([])
                 setExpandedCriterionIndex(0)
                 setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
                 setSelectedPreset('')
-                setShowEditor((current) => !current)
+                setActiveSection('editor')
               }}
             >
-              {showEditor ? 'Close builder' : 'Create CLI practical'}
+              New practical
             </button>
           )}
         />
 
-        {showEditor && (
+          <DataLoadBoundary error={loadFailed} onRetry={loadData} loading={loading} ready={hasLoaded} label="Loading practical builder...">
           <form className="cli-lab-editor" onSubmit={handleSave}>
             <ResponsiveGrid min="15rem" className="form-grid form-grid--two">
               <label>
@@ -1890,31 +1918,52 @@ export default function InstructorCliLabBuilder() {
                 ))}
             </fieldset>
 
+            {reviewSchedule.loading && <p role="status">Loading review settings...</p>}
+            {reviewSchedule.error && <div role="alert"><p>{reviewSchedule.error}</p><button className="secondary" type="button" onClick={() => void reviewSchedule.retry()}>Reload review settings</button></div>}
+            <ReviewScheduleFields value={reviewSchedule.value} onChange={reviewSchedule.setValue} disabled={saving || !reviewSchedule.ready} />
+
             <ActionBar className="form-actions">
-              <button className="primary" type="submit" disabled={saving}>
+              <button className="primary" type="submit" disabled={saving || !reviewSchedule.ready}>
                 {saving ? 'Saving...' : lab.id ? 'Save practical' : 'Create practical'}
               </button>
-              <button className="secondary" type="button" onClick={() => setShowEditor(false)}>Cancel</button>
+              <button className="secondary" type="button" onClick={() => {
+                const emptyLab = blankLab()
+                setLab(emptyLab)
+                reviewSchedule.reset()
+                setModules([])
+                setExpandedCriterionIndex(0)
+                setExpandedCriterionDeviceIds([emptyLab.devices[0].id])
+                setSelectedPreset('')
+                setActiveSection('library')
+              }}>Cancel</button>
             </ActionBar>
           </form>
-        )}
+          </DataLoadBoundary>
       </section>
-
+      </div>
+      <div id="cli-practicals-subsection-templates" className="workspace-subsection-panel" hidden={activeSection !== 'templates'}>
+      {!hasLoaded && <section className="cli-lab-panel"><SectionHeader title="Practical templates" /><DataLoadBoundary error={loadFailed} onRetry={loadData} loading={loading} ready={false} label="Loading practical templates..." /></section>}
+      {hasLoaded && (
+      <DataLoadBoundary loading={loading} ready error={loadFailed} onRetry={loadData}>
       <CliPracticalTemplateManager
         templates={templates}
         onChanged={loadData}
       />
-
+      </DataLoadBoundary>
+      )}
+      </div>
+      <div id="cli-practicals-subsection-library" className="workspace-subsection-panel" hidden={activeSection !== 'library'}>
       <section className="cli-lab-panel">
         <SectionHeader
           className="section-heading"
           eyebrow="CLI CONTENT"
           title="Practical library"
           actions={(
-            <span className="status-chip">{workspace.labs.length} practicals</span>
+            <div className="loading-panel-actions"><span className="status-chip">{hasLoaded ? workspace.labs.length : '—'} practicals</span></div>
           )}
         />
-        {loading ? <LoadingState label="Loading CLI practicals..." /> : !workspace.labs.length ? (
+        <DataLoadBoundary error={loadFailed} onRetry={loadData} loading={loading} ready={hasLoaded} label="Loading CLI practicals...">
+        {!workspace.labs.length ? (
           <div className="empty-state"><h3>No CLI practicals yet</h3><p>Create the first single-device lab.</p></div>
         ) : (
           <div className="cli-library-content">
@@ -2018,16 +2067,19 @@ export default function InstructorCliLabBuilder() {
                       min="24rem"
                     >
             {course.labs.map((item) => {
-              const isExpanded = expandedLabIds.includes(item.id)
               return (
               <SurfaceCard
                 as="article"
                 subtle
-                className={`cli-lab-card${
-                  isExpanded ? ' cli-lab-card--expanded' : ''
-                }`}
+                className="cli-lab-card library-assessment-card"
                 key={item.id}
               >
+                <div className="library-card__summary">
+                  <h3>{item.title}</h3>
+                  <button className="secondary" type="button" onClick={() => setDetailsLabId(item.id)}>Show details</button>
+                </div>
+                <LibraryItemDialog open={activeSection === 'library' && detailsLabId === item.id} title={item.title} onClose={closeLabDetails}>
+                {message && <p className="form-message form-message--error" role="alert">{message}</p>}
                 <header>
                   <label className="cli-lab-select">
                     <input
@@ -2042,32 +2094,16 @@ export default function InstructorCliLabBuilder() {
                     <span className={`content-status content-status--${item.status}`}>{item.status}</span>
                   </div>
                 </header>
-                <div className="cli-lab-card__summary">
-                  <div>
-                    <h3>{item.title}</h3>
                 <p>{item.moduleCode || 'All modules'} · {item.deviceType}</p>
-                  </div>
-                  <button
-                    className="secondary cli-lab-card__toggle"
-                    type="button"
-                    aria-expanded={isExpanded}
-                    aria-controls={`cli-lab-details-${item.id}`}
-                    onClick={() => toggleLabExpanded(item.id)}
-                  >
-                    {isExpanded ? 'Collapse' : 'Expand'}
-                  </button>
-                </div>
-                {isExpanded && (
-                  <div
-                    className="cli-lab-card__details"
-                    id={`cli-lab-details-${item.id}`}
-                  >
+                <p>{item.description || 'No description provided.'}</p>
+                <div className="cli-lab-card__details">
                 <dl>
                   <div><dt>Duration</dt><dd>{item.durationMinutes} minutes</dd></div>
                   <div><dt>Criteria</dt><dd>{item.criteria.length}</dd></div>
                   <div><dt>Classes</dt><dd>{item.classIds.length}</dd></div>
                   <div><dt>Attempts</dt><dd>{item.maxAttempts}</dd></div>
                 </dl>
+                <AssessmentReviewPolicy assessmentType="cli" assessmentId={item.id} />
                 <div className="cli-lab-card__reuse-actions">
                   <button
                     className="secondary"
@@ -2105,7 +2141,7 @@ export default function InstructorCliLabBuilder() {
                       ? 'Hide answer key'
                       : 'Show answer key'}
                   </button>
-                  <button className="primary" type="button" onClick={() => void editLab(item)}>Edit</button>
+                  <button className="primary" type="button" onClick={() => { closeLabDetails(); void editLab(item) }}>Edit</button>
                 </div>
                 <div className="cli-library-action-control">
                   <select
@@ -2211,7 +2247,7 @@ export default function InstructorCliLabBuilder() {
                   </section>
                 )}
                   </div>
-                )}
+                </LibraryItemDialog>
               </SurfaceCard>
               )
             })}
@@ -2223,12 +2259,9 @@ export default function InstructorCliLabBuilder() {
             </div>
           </div>
         )}
-        {message && (
-          <p className="form-message" role="status" aria-live="polite">
-            {message}
-          </p>
-        )}
+        </DataLoadBoundary>
       </section>
+      </div>
     </div>
   )
 }

@@ -3,6 +3,9 @@ import { getInstructorCliResults } from '../services/cliLabService'
 import { getInstructorAttempts } from '../services/instructorResultsService'
 import InstructorQuestionAnalytics from './InstructorQuestionAnalytics'
 import InstructorPerformanceTrends from './InstructorPerformanceTrends'
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import {
   ResponsiveGrid,
   SectionHeader,
@@ -124,12 +127,12 @@ function AssessmentSummary({ title, description, metrics }) {
   )
 }
 
-export default function InstructorOverallResults() {
+export default function InstructorOverallResults({ includeAnalytics = true }) {
   const [quizAttempts, setQuizAttempts] = useState([])
   const [cliAttempts, setCliAttempts] = useState([])
   const [courseFilter, setCourseFilter] = useState('all')
   const [classFilter, setClassFilter] = useState('all')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
 
   const loadResults = useCallback(async () => {
@@ -150,12 +153,13 @@ export default function InstructorOverallResults() {
         assessmentType: 'CLI practical',
         assessmentTitle: attempt.labTitle,
       })))
+      markLoaded()
     } catch (error) {
       setMessage(error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => { void loadResults() }, [loadResults])
 
@@ -236,10 +240,7 @@ export default function InstructorOverallResults() {
         actions={<div className="overall-results-panel__actions">
           <button className="secondary" type="button" disabled={!filteredAttempts.length}
             onClick={exportSummary}>Export summary CSV</button>
-          <button className="secondary" type="button"
-            disabled={loading} onClick={() => void loadResults()}>
-            {loading ? 'Refreshing...' : 'Refresh overview'}
-          </button>
+          <RefreshButton loading={loading} onClick={() => void loadResults()} label="Refresh overview" />
         </div>}
       />
 
@@ -261,14 +262,15 @@ export default function InstructorOverallResults() {
       </ResponsiveGrid>
 
       <ResponsiveGrid className="results-metrics" min="9rem" aria-label="Overall assessment results">
-        <SurfaceCard as="article" subtle><span>Total attempts</span><strong>{overallMetrics.total}</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Completed</span><strong>{overallMetrics.completed}</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Students</span><strong>{overallMetrics.uniqueStudents}</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Pass rate</span><strong>{overallMetrics.passRate.toFixed(1)}%</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Average score</span><strong>{overallMetrics.average.toFixed(1)}%</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Integrity events</span><strong>{overallMetrics.eventCount}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Total attempts</span><strong>{hasLoaded ? overallMetrics.total : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Completed</span><strong>{hasLoaded ? overallMetrics.completed : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Students</span><strong>{hasLoaded ? overallMetrics.uniqueStudents : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Pass rate</span><strong>{hasLoaded ? `${overallMetrics.passRate.toFixed(1)}%` : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Average score</span><strong>{hasLoaded ? `${overallMetrics.average.toFixed(1)}%` : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Integrity events</span><strong>{hasLoaded ? overallMetrics.eventCount : '—'}</strong></SurfaceCard>
       </ResponsiveGrid>
 
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading overall results...">
       <ResponsiveGrid className="overall-results-breakdown" min="20rem">
         <AssessmentSummary title="Quiz results"
           description="Knowledge and concept assessments" metrics={quizMetrics} />
@@ -321,12 +323,13 @@ export default function InstructorOverallResults() {
         </div>
       </section>
 
-      {!loading && !filteredAttempts.length && (
+      {!filteredAttempts.length && (
         <div className="empty-state"><h3>No matching results</h3><p>Adjust the filters or wait for students to complete an assessment.</p></div>
       )}
+      </DataLoadBoundary>
       {message && <p className="form-message form-message--error" role="alert">{message}</p>}
-      <InstructorQuestionAnalytics />
-      <InstructorPerformanceTrends />
+      {includeAnalytics && <InstructorQuestionAnalytics />}
+      {includeAnalytics && <InstructorPerformanceTrends />}
     </section>
   )
 }

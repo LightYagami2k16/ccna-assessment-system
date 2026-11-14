@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { getAdminAuditEvents } from '../services/adminService'
-import LoadingState from './LoadingState'
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import TailwindEmptyState from './TailwindEmptyState'
 import { FilterBar } from './LayoutPrimitives'
 
@@ -129,7 +131,7 @@ export default function AdminAuditHistory({
   const [eventFilter, setEventFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
 
   const loadEvents = useCallback(async () => {
@@ -140,6 +142,7 @@ export default function AdminAuditHistory({
         ? previewEvents
         : await getAdminAuditEvents()
       setEvents(nextEvents)
+      markLoaded()
     } catch (error) {
       setMessage(
         error?.message ?? 'Unable to load administrator history.',
@@ -147,7 +150,7 @@ export default function AdminAuditHistory({
     } finally {
       setLoading(false)
     }
-  }, [previewMode])
+  }, [markLoaded, previewMode, setLoading])
 
   useEffect(() => {
     void loadEvents()
@@ -219,18 +222,16 @@ export default function AdminAuditHistory({
             onClick={() => exportAuditCsv(filteredEvents)}>
             Export visible events
           </button>
-          <button className="secondary" type="button" disabled={loading}
-            onClick={() => void loadEvents()}>
-            {loading ? 'Refreshing...' : 'Refresh history'}
-          </button>
+          <RefreshButton loading={loading}
+            onClick={() => void loadEvents()} label="Refresh history" />
         </div>
       </header>
 
       <div className="admin-audit-metrics" aria-label="Security audit summary">
-        <article><span>Total events</span><strong>{metrics.total}</strong></article>
-        <article><span>Last 24 hours</span><strong>{metrics.recent}</strong></article>
-        <article><span>Affected accounts</span><strong>{metrics.accounts}</strong></article>
-        <article><span>Access changes</span><strong>{metrics.accessChanges}</strong></article>
+        <article><span>Total events</span><strong>{hasLoaded ? metrics.total : '—'}</strong></article>
+        <article><span>Last 24 hours</span><strong>{hasLoaded ? metrics.recent : '—'}</strong></article>
+        <article><span>Affected accounts</span><strong>{hasLoaded ? metrics.accounts : '—'}</strong></article>
+        <article><span>Access changes</span><strong>{hasLoaded ? metrics.accessChanges : '—'}</strong></article>
       </div>
 
       <FilterBar className="admin-audit-filters" aria-label="Security history filters">
@@ -266,9 +267,8 @@ export default function AdminAuditHistory({
         </p>
       )}
 
-      {loading ? (
-        <LoadingState label="Loading security history..." />
-      ) : events.length === 0 ? (
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading security history...">
+      {events.length === 0 ? (
         <TailwindEmptyState
           icon={ShieldCheck}
           title="No administrator events yet"
@@ -340,6 +340,7 @@ export default function AdminAuditHistory({
           })}
         </div>
       )}
+      </DataLoadBoundary>
     </section>
   )
 }

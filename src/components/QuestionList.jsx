@@ -1,4 +1,7 @@
+import DataLoadBoundary from './DataLoadBoundary'
 import { useEffect, useMemo, useState } from 'react'
+import { ListFilter, RotateCcw } from 'lucide-react'
+import AppIcon from './AppIcon'
 import {
   deleteQuestion,
   deleteQuestions,
@@ -8,6 +11,7 @@ import {
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import {
   ActionBar,
+  FilterBar,
   SectionHeader,
   SurfaceCard,
 } from './LayoutPrimitives'
@@ -19,7 +23,22 @@ const QUESTION_TYPE_LABELS = {
   identification: 'Identification',
 }
 
-export default function QuestionList({ questions, onEdit, onChanged }) {
+const COURSE_ORDER = { ITN: 1, SRWE: 2, ENSA: 3 }
+
+function questionModuleId(question) {
+  return String(question.module_id ?? question.modules?.id ?? 'unassigned')
+}
+
+export default function QuestionList({
+  loading = false,
+  ready = true,
+  loadFailed = false,
+  questions,
+  moduleFilter,
+  onModuleFilterChange,
+  onEdit,
+  onChanged,
+}) {
   const [message, setMessage] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
@@ -28,15 +47,45 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
   const { confirm, confirmationDialog } = useConfirmationDialog()
 
+  const moduleOptions = useMemo(() => {
+    const modules = new Map()
+    for (const question of questions) {
+      const id = questionModuleId(question)
+      if (id === 'unassigned' || modules.has(id)) continue
+      const courseCode = question.courses?.code ?? 'OTHER'
+      const code = question.modules?.code ?? `Module ${id}`
+      const title = question.modules?.title
+      modules.set(id, {
+        id,
+        courseCode,
+        code,
+        label: `${courseCode} · ${code}${title ? ` — ${title}` : ''}`,
+      })
+    }
+    return [...modules.values()].sort((left, right) =>
+      (COURSE_ORDER[left.courseCode] ?? 999) - (COURSE_ORDER[right.courseCode] ?? 999)
+      || left.courseCode.localeCompare(right.courseCode)
+      || left.code.localeCompare(right.code, undefined, { numeric: true, sensitivity: 'base' })
+      || left.label.localeCompare(right.label),
+    )
+  }, [questions])
+
+  const filteredQuestions = useMemo(
+    () => moduleFilter === 'all'
+      ? questions
+      : questions.filter((question) => questionModuleId(question) === moduleFilter),
+    [questions, moduleFilter],
+  )
+
   const questionIds = useMemo(
-    () => questions.map((question) => question.id),
-    [questions],
+    () => filteredQuestions.map((question) => question.id),
+    [filteredQuestions],
   )
 
   const courseGroups = useMemo(() => {
     const groups = new Map()
 
-    for (const question of questions) {
+    for (const question of filteredQuestions) {
       const courseId = String(
         question.course_id ?? question.courses?.id ?? 'uncategorized',
       )
@@ -53,30 +102,25 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
       groups.get(courseId).questions.push(question)
     }
 
-    const courseOrder = {
-      ITN: 1,
-      SRWE: 2,
-      ENSA: 3,
-    }
-
     return [...groups.values()].sort(
       (left, right) =>
-        (courseOrder[left.code] ?? 999) -
-          (courseOrder[right.code] ?? 999) ||
+        (COURSE_ORDER[left.code] ?? 999) -
+          (COURSE_ORDER[right.code] ?? 999) ||
         left.code.localeCompare(right.code, undefined, {
           numeric: true,
           sensitivity: 'base',
         }),
     )
-  }, [questions])
+  }, [filteredQuestions])
 
   const selectedQuestions = useMemo(
     () =>
-      questions.filter((question) =>
+      filteredQuestions.filter((question) =>
         selectedIds.includes(question.id),
       ),
-    [questions, selectedIds],
+    [filteredQuestions, selectedIds],
   )
+  const selectedQuestionIds = selectedQuestions.map((question) => question.id)
 
   const selectionCanBeDeleted =
     selectedQuestions.length > 0 &&
@@ -91,12 +135,29 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   }, [questionIds])
 
   useEffect(() => {
-    const courseIds = courseGroups.map((course) => course.id)
+    const courseIds = new Set(questions.map((question) => String(
+      question.course_id ?? question.courses?.id ?? 'uncategorized',
+    )))
 
     setExpandedCourseIds((current) =>
-      current.filter((id) => courseIds.includes(id)),
+      current.filter((id) => courseIds.has(id)),
     )
-  }, [courseGroups])
+  }, [questions])
+
+  useEffect(() => {
+    if (
+      moduleFilter !== 'all' && moduleFilter !== 'unassigned'
+      && !moduleOptions.some((module) => module.id === moduleFilter)
+    ) {
+      onModuleFilterChange('all')
+      setSelectedIds([])
+    }
+  }, [moduleFilter, moduleOptions, onModuleFilterChange])
+
+  function changeModuleFilter(value) {
+    setSelectedIds([])
+    onModuleFilterChange(value)
+  }
 
   function toggleCourseGroup(courseId) {
     setExpandedCourseIds((current) =>
@@ -159,11 +220,11 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   }
 
   async function handleBulkDelete() {
-    if (!selectedIds.length) return
+    if (!selectedQuestionIds.length) return
 
     const confirmed = await confirm({
-      title: `Delete ${selectedIds.length} selected ${
-        selectedIds.length === 1 ? 'question' : 'questions'
+      title: `Delete ${selectedQuestionIds.length} selected ${
+        selectedQuestionIds.length === 1 ? 'question' : 'questions'
       }?`,
       message:
         'Questions with student attempt history cannot be deleted. This action cannot be undone.',
@@ -175,7 +236,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
     setBulkAction('delete')
     setMessage('')
     try {
-      await deleteQuestions(selectedIds)
+      await deleteQuestions(selectedQuestionIds)
       setSelectedIds([])
       await onChanged?.()
     } catch (error) {
@@ -186,13 +247,13 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
   }
 
   async function handleBulkStatus(status) {
-    if (!selectedIds.length) return
+    if (!selectedQuestionIds.length) return
 
     const verb = status === 'published' ? 'Publish' : 'Unpublish'
     const confirmed = await confirm({
       title: `${verb} selected questions?`,
-      message: `${verb} ${selectedIds.length} selected ${
-        selectedIds.length === 1 ? 'question' : 'questions'
+      message: `${verb} ${selectedQuestionIds.length} selected ${
+        selectedQuestionIds.length === 1 ? 'question' : 'questions'
       }?`,
       confirmLabel: `${verb} selected`,
       tone: 'default',
@@ -202,7 +263,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
     setBulkAction(status)
     setMessage('')
     try {
-      await setQuestionsStatus(selectedIds, status)
+      await setQuestionsStatus(selectedQuestionIds, status)
       await onChanged?.()
     } catch (error) {
       setMessage(error.message)
@@ -240,11 +301,46 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
         eyebrow="CONTENT LIBRARY"
         title="Question bank"
         actions={(
-          <span className="status-chip">
-            {questions.length} {questions.length === 1 ? 'question' : 'questions'}
-          </span>
+          <div className="loading-panel-actions">
+            <span className="status-chip">{ready ? <>{moduleFilter !== 'all' && `${filteredQuestions.length} of `}{questions.length} {questions.length === 1 ? 'question' : 'questions'}</> : '— questions'}</span>
+          </div>
         )}
       />
+
+      <DataLoadBoundary error={loadFailed} onRetry={onChanged} loading={loading} ready={ready} label="Loading question bank...">
+      <FilterBar className="question-bank-filters">
+        <label>
+          <span className="question-bank-filters__label">
+            <AppIcon icon={ListFilter} size="sm" />
+            Module
+          </span>
+          <select
+            value={moduleFilter}
+            onChange={(event) => changeModuleFilter(event.target.value)}
+            disabled={bulkAction !== null}
+          >
+            <option value="all">All modules</option>
+            {moduleOptions.map((module) => (
+              <option key={module.id} value={module.id}>{module.label}</option>
+            ))}
+            <option value="unassigned">Unassigned module</option>
+          </select>
+        </label>
+        <button
+          className="secondary"
+          type="button"
+          onClick={() => changeModuleFilter('all')}
+          disabled={moduleFilter === 'all' || bulkAction !== null}
+        >
+          <AppIcon icon={RotateCcw} size="sm" />
+          Clear filter
+        </button>
+      </FilterBar>
+      <p className="question-bank-filter-status" role="status">
+        {moduleFilter === 'all'
+          ? `Showing all ${questions.length} questions.`
+          : `Showing ${filteredQuestions.length} of ${questions.length} questions.`}
+      </p>
 
       {message && <p className="form-message form-message--error">{message}</p>}
       {!!questions.length && (
@@ -261,15 +357,15 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                 toggleSelection(questionIds, event.target.checked)
               }
             />
-            Select all questions
+            {moduleFilter === 'all' ? 'Select all questions' : 'Select all shown questions'}
           </label>
 
           <div className="bulk-action-bar__actions">
-            <span>{selectedIds.length} selected</span>
+            <span>{selectedQuestionIds.length} selected</span>
             <button
               className="primary bulk-action-button"
               type="button"
-              disabled={!selectedIds.length || bulkAction !== null}
+              disabled={!selectedQuestionIds.length || bulkAction !== null}
               onClick={() => void handleBulkStatus('published')}
             >
               {bulkAction === 'published'
@@ -279,7 +375,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
             <button
               className="secondary bulk-action-button"
               type="button"
-              disabled={!selectedIds.length || bulkAction !== null}
+              disabled={!selectedQuestionIds.length || bulkAction !== null}
               onClick={() => void handleBulkStatus('draft')}
             >
               {bulkAction === 'draft'
@@ -312,10 +408,15 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
           <h3>No questions created yet</h3>
           <p>Your first saved question will appear here.</p>
         </div>
+      ) : !filteredQuestions.length ? (
+        <div className="empty-state">
+          <h3>No questions in this module</h3>
+          <p>Choose another module or clear the filter to show all questions.</p>
+        </div>
       ) : (
         <div className="question-course-groups">
           {courseGroups.map((course) => {
-            const expanded = expandedCourseIds.includes(course.id)
+            const expanded = moduleFilter !== 'all' || expandedCourseIds.includes(course.id)
             const panelId = `question-course-panel-${course.id}`
             const courseQuestionIds = course.questions.map(
               (question) => question.id,
@@ -368,7 +469,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                     </label>
                   </div>
 
-                  <button
+                  {moduleFilter === 'all' && <button
                     className="module-collapse-button"
                     type="button"
                     aria-expanded={expanded}
@@ -378,7 +479,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
                     {expanded
                       ? 'Hide questions'
                       : 'Show questions'}
-                  </button>
+                  </button>}
                 </header>
 
                 {expanded && (
@@ -507,6 +608,7 @@ export default function QuestionList({ questions, onEdit, onChanged }) {
           })}
         </div>
       )}
+      </DataLoadBoundary>
     </section>
   )
 }

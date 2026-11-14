@@ -61,7 +61,7 @@ export default function useExamIntegrityMonitor({
 
     function handleFullscreenChange() {
       const isFullscreen = Boolean(document.fullscreenElement)
-      if (wasFullscreen.current && !isFullscreen) {
+      if (attemptType === 'cli' && wasFullscreen.current && !isFullscreen) {
         void record('fullscreen_exited')
       }
       wasFullscreen.current = isFullscreen

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Archive, Play, RefreshCw } from 'lucide-react'
+import { Archive, Play } from 'lucide-react'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
 import AppIcon from './AppIcon'
 import CliTerminal from './CliTerminal'
@@ -8,7 +8,9 @@ import {
   SectionHeader,
   SurfaceCard,
 } from './LayoutPrimitives'
-import WorkspaceLoading from './WorkspaceLoading'
+import DataLoadBoundary from './DataLoadBoundary'
+import useStudentPageRefresh from '../hooks/useStudentPageRefresh'
+import useDataLoadState from '../hooks/useDataLoadState'
 import {
   getAvailableCliLabs,
   getStudentCliArchiveStatuses,
@@ -44,8 +46,9 @@ export default function StudentCliArea({
     useState(null)
   const [startingId, setStartingId] = useState(null)
   const [archivingId, setArchivingId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
   const controlled = controlledActiveAttemptId !== undefined
   const activeAttemptId = controlled
     ? controlledActiveAttemptId
@@ -60,6 +63,7 @@ export default function StudentCliArea({
   )
 
   const loadLabs = useCallback(async () => {
+    setLoadFailed(false)
     try {
       setLoading(true)
       setMessage('')
@@ -69,14 +73,16 @@ export default function StudentCliArea({
       ])
       setLabs(availableData)
       setArchiveStatuses(archiveData)
+      markLoaded()
     } catch (error) {
+      setLoadFailed(true)
       setMessage(
         `${error.message} Ask the instructor to confirm that migrations 020, 038, and 051 are installed.`,
       )
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => { void loadLabs() }, [loadLabs])
 
@@ -85,6 +91,8 @@ export default function StudentCliArea({
       setActiveAttemptId(resumeAttemptId)
     }
   }, [resumeAttemptId, setActiveAttemptId])
+
+  useStudentPageRefresh(loadLabs, { enabled: !loading && !activeAttemptId && !startingId && !archivingId, intervalMs: 30000 })
 
   const availableLabs = useMemo(
     () =>
@@ -174,10 +182,6 @@ export default function StudentCliArea({
     )
   }
 
-  if (loading) {
-    return <WorkspaceLoading label="Loading assessments..." />
-  }
-
   return (
     <SurfaceCard className="student-cli-labs">
       <SectionHeader
@@ -185,84 +189,82 @@ export default function StudentCliArea({
         eyebrow="PRACTICALS"
         title="Available CLI practicals"
         description="Configure a simulated Cisco device and receive partial-credit grading."
-        actions={<button className="secondary" type="button" onClick={() => void loadLabs()}>
-          <AppIcon icon={RefreshCw} size="sm" />
-          Refresh
-        </button>}
       />
       {message && (
         <p className="form-message form-message--error" role="alert">
           {message}
         </p>
       )}
-      {!availableLabs.length ? (
-        <div className="empty-state student-assessment-empty">
-          <AssessmentTypeIcon type="cli" />
-          <h3>No CLI practicals available</h3>
-          <p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p>
-        </div>
-      ) : (
-        <ResponsiveGrid className="cli-lab-grid">
-          {availableLabs.map((lab) => {
-            const canStart = Boolean(lab.activeAttemptId) || lab.attemptsUsed < lab.maxAttempts
-            const status = archiveStatusByLab.get(String(lab.id))
-            const canArchive = Boolean(status?.hasCompletedAttempt)
-              && !lab.activeAttemptId
-              && Number(status?.attemptsRemaining) > 0
-            return (
-              <SurfaceCard
-                as="article"
-                subtle
-                className="cli-lab-card"
-                key={lab.id}
-              >
-                <header className="student-assessment-card__header">
-                  <AssessmentTypeIcon type="cli" />
-                  <div className="student-assessment-card__identity">
-                    <div className="student-assessment-card__kicker">
-                      <span className="course-code">{lab.courseCode}</span>
-                      <span className="student-assessment-card__module">
-                        {lab.moduleCode}
-                      </span>
+      <DataLoadBoundary loading={loading} ready={hasLoaded} error={loadFailed} onRetry={loadLabs} label="Loading CLI practicals...">
+        {!availableLabs.length ? (
+          <div className="empty-state student-assessment-empty">
+            <AssessmentTypeIcon type="cli" />
+            <h3>No CLI practicals available</h3>
+            <p>Assigned practicals with completed or expired attempts are available under Quiz history. A practical remains here while another attempt is available.</p>
+          </div>
+        ) : (
+          <ResponsiveGrid className="cli-lab-grid">
+            {availableLabs.map((lab) => {
+              const canStart = Boolean(lab.activeAttemptId) || lab.attemptsUsed < lab.maxAttempts
+              const status = archiveStatusByLab.get(String(lab.id))
+              const canArchive = Boolean(status?.hasCompletedAttempt)
+                && !lab.activeAttemptId
+                && Number(status?.attemptsRemaining) > 0
+              return (
+                <SurfaceCard
+                  as="article"
+                  subtle
+                  className="cli-lab-card"
+                  key={lab.id}
+                >
+                  <header className="student-assessment-card__header">
+                    <AssessmentTypeIcon type="cli" />
+                    <div className="student-assessment-card__identity">
+                      <div className="student-assessment-card__kicker">
+                        <span className="course-code">{lab.courseCode}</span>
+                        <span className="student-assessment-card__module">
+                          {lab.moduleCode}
+                        </span>
+                      </div>
+                      <h3>{lab.title}</h3>
                     </div>
-                    <h3>{lab.title}</h3>
-                  </div>
-                </header>
-                <p>{lab.description || `${lab.deviceType} configuration practical`}</p>
-                <dl>
-                  <div><dt>Duration</dt><dd>{lab.durationMinutes} minutes</dd></div>
-                  <div><dt>Passing</dt><dd>{lab.passingScore}%</dd></div>
-                  <div><dt>Attempts</dt><dd>{lab.attemptsUsed} / {lab.maxAttempts}</dd></div>
-                  <div>
-                    <dt>Devices</dt>
-                    <dd>
-                      {lab.devices?.length ?? 1}
-                      {' · '}
-                      {(lab.devices?.length ?? 1) > 1
-                        ? 'Topology'
-                        : lab.deviceType}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="cli-lab-card__student-actions">
-                  <button className="primary" type="button" disabled={!canStart || startingId === lab.id || archivingId === lab.id}
-                    onClick={() => void startLab(lab)}>
-                    <AppIcon icon={Play} size="sm" />
-                    {startingId === lab.id ? 'Opening...' : lab.activeAttemptId ? 'Resume practical' : canStart ? 'Start practical' : 'No attempts remaining'}
-                  </button>
-                  {canArchive && (
-                    <button className="secondary" type="button" disabled={archivingId === lab.id || startingId === lab.id}
-                      onClick={() => void archiveLab(lab.id)}>
-                      <AppIcon icon={Archive} size="sm" />
-                      {archivingId === lab.id ? 'Archiving...' : 'Archive to history'}
+                  </header>
+                  <p>{lab.description || `${lab.deviceType} configuration practical`}</p>
+                  <dl>
+                    <div><dt>Duration</dt><dd>{lab.durationMinutes} minutes</dd></div>
+                    <div><dt>Passing</dt><dd>{lab.passingScore}%</dd></div>
+                    <div><dt>Attempts</dt><dd>{lab.attemptsUsed} / {lab.maxAttempts}</dd></div>
+                    <div>
+                      <dt>Devices</dt>
+                      <dd>
+                        {lab.devices?.length ?? 1}
+                        {' · '}
+                        {(lab.devices?.length ?? 1) > 1
+                          ? 'Topology'
+                          : lab.deviceType}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="cli-lab-card__student-actions">
+                    <button className="primary" type="button" disabled={!canStart || startingId === lab.id || archivingId === lab.id}
+                      onClick={() => void startLab(lab)}>
+                      <AppIcon icon={Play} size="sm" />
+                      {startingId === lab.id ? 'Opening...' : lab.activeAttemptId ? 'Resume practical' : canStart ? 'Start practical' : 'No attempts remaining'}
                     </button>
-                  )}
-                </div>
-              </SurfaceCard>
-            )
-          })}
-        </ResponsiveGrid>
-      )}
+                    {canArchive && (
+                      <button className="secondary" type="button" disabled={archivingId === lab.id || startingId === lab.id}
+                        onClick={() => void archiveLab(lab.id)}>
+                        <AppIcon icon={Archive} size="sm" />
+                        {archivingId === lab.id ? 'Archiving...' : 'Archive to history'}
+                      </button>
+                    )}
+                  </div>
+                </SurfaceCard>
+              )
+            })}
+          </ResponsiveGrid>
+        )}
+      </DataLoadBoundary>
     </SurfaceCard>
   )
 }

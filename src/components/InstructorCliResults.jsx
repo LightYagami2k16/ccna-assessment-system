@@ -1,3 +1,6 @@
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getInstructorCliAttemptReview,
@@ -7,7 +10,6 @@ import {
 import BrowserEventReview from './BrowserEventReview'
 import ResultActionMenu from './ResultActionMenu'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
-import LoadingState from './LoadingState'
 import {
   ActionBar,
   ResponsiveGrid,
@@ -196,7 +198,7 @@ export default function InstructorCliResults() {
   const [expandedStudents, setExpandedStudents] = useState([])
   const [selectedAttemptIds, setSelectedAttemptIds] = useState([])
   const [resetting, setResetting] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState('error')
   const [search, setSearch] = useState('')
@@ -212,6 +214,7 @@ export default function InstructorCliResults() {
       setLoading(true)
       const data = await getInstructorCliResults()
       setAttempts(data)
+      markLoaded()
       setSelectedAttemptIds((current) =>
         current.filter((attemptId) =>
           data.some((attempt) => attempt.attemptId === attemptId),
@@ -226,7 +229,7 @@ export default function InstructorCliResults() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => { void loadResults() }, [loadResults])
 
@@ -343,7 +346,7 @@ export default function InstructorCliResults() {
   )
 
   const metrics = useMemo(() => {
-    const graded = attempts.filter(
+    const graded = filteredAttempts.filter(
       (attempt) => attempt.passed != null,
     )
     const passed = graded.filter((attempt) => attempt.passed)
@@ -355,8 +358,8 @@ export default function InstructorCliResults() {
       : 0
 
     return {
-      total: attempts.length,
-      active: attempts.filter(
+      total: filteredAttempts.length,
+      active: filteredAttempts.filter(
         (attempt) => attempt.status === 'in_progress',
       ).length,
       passRate: graded.length
@@ -364,7 +367,7 @@ export default function InstructorCliResults() {
         : 0,
       average,
     }
-  }, [attempts])
+  }, [filteredAttempts])
 
   function toggleAttempts(attemptIds, checked) {
     setSelectedAttemptIds((current) =>
@@ -533,32 +536,26 @@ export default function InstructorCliResults() {
               Export CLI CSV
             </button>
           </div>
-          <button
-            className="secondary"
-            type="button"
-            onClick={() => void loadResults()}
-          >
-            Refresh CLI results
-          </button>
+          <RefreshButton loading={loading} label="Refresh CLI results" onClick={() => void loadResults()} />
         </div>}
       />
 
       <ResponsiveGrid className="results-metrics" min="10rem" aria-label="CLI practical results summary">
         <SurfaceCard as="article" subtle>
           <span>Total attempts</span>
-          <strong>{metrics.total}</strong>
+          <strong>{hasLoaded ? metrics.total : '—'}</strong>
         </SurfaceCard>
         <SurfaceCard as="article" subtle>
           <span>Active now</span>
-          <strong>{metrics.active}</strong>
+          <strong>{hasLoaded ? metrics.active : '—'}</strong>
         </SurfaceCard>
         <SurfaceCard as="article" subtle>
           <span>Pass rate</span>
-          <strong>{metrics.passRate.toFixed(1)}%</strong>
+          <strong>{hasLoaded ? `${metrics.passRate.toFixed(1)}%` : '—'}</strong>
         </SurfaceCard>
         <SurfaceCard as="article" subtle>
           <span>Average score</span>
-          <strong>{metrics.average.toFixed(1)}%</strong>
+          <strong>{hasLoaded ? `${metrics.average.toFixed(1)}%` : '—'}</strong>
         </SurfaceCard>
       </ResponsiveGrid>
 
@@ -682,9 +679,8 @@ export default function InstructorCliResults() {
         </ActionBar>
       )}
 
-      {loading ? (
-        <LoadingState label="Loading CLI results..." />
-      ) : !attempts.length ? (
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading CLI results...">
+      {!attempts.length ? (
         <div className="empty-state">
           <h3>No CLI attempts</h3>
           <p>
@@ -1032,6 +1028,7 @@ export default function InstructorCliResults() {
           })}
         </div>
       )}
+      </DataLoadBoundary>
       {message && (
         <p
           className={

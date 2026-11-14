@@ -105,8 +105,10 @@ export async function deleteCliLabTemplate(templateId) {
 }
 
 export async function saveCliLab(payload) {
-  const { data, error } = await supabase.rpc('save_cli_lab', { p_payload: payload })
+  const reviewAware = Object.hasOwn(payload, 'reviewPolicy')
+  const { data, error } = await supabase.rpc(reviewAware ? 'save_cli_lab_with_review' : 'save_cli_lab', { p_payload: payload })
   if (error) throw error
+  if (reviewAware) return data
   const { error: topologyError } = await supabase.rpc(
     'save_cli_lab_topology',
     {

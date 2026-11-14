@@ -1,0 +1,7 @@
+# Instructor assessment library details
+
+Quiz library and Practical library cards show the assessment title and a Show details button. Details open in a native modal instead of expanding the grid card. Course grouping and bulk tools remain on the library page; individual CLI selection, badges, metadata, reuse actions, management actions and answer keys are in the popup. Quiz edit/publish/unpublish/delete, duplication and template actions are in its popup.
+
+Dialogs preserve the current record through successful reloads, close when the record is removed or the library section is left, and close before editor navigation. Nested confirmation dialogs remain in place for existing protected actions. Escape, Close details and Done close the popup; keyboard focus cycles through enabled visible controls and returns to the opener. Error messages are visible inside an open popup.
+
+Verification: observed the new compact-card check fail before implementation. All 13 focused Chromium checks pass: four role/library popup scenarios, six builder/navigation/draft/save regressions, two card-size checks and delayed duplication reload retention. Full lint, production build and diff checks pass. Desktop and phone popup screenshots were visually inspected. Independent review found no actionable issues. All browser requests use intercepted fixtures. Real authenticated owner acceptance remains pending. No database migration, commit or push is required or performed.

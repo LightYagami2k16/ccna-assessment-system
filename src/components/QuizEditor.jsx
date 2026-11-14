@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import ReviewScheduleFields from './ReviewScheduleFields'
+import useAssessmentReviewSchedule from '../hooks/useAssessmentReviewSchedule'
+import { reviewScheduleToPolicy, validateReviewSchedule } from '../services/reviewSchedule'
 import { saveInstructorQuiz } from '../services/quizBuilderService'
 import {
   ActionBar,
@@ -60,6 +63,7 @@ export default function QuizEditor({
   const [manualRandomCount, setManualRandomCount] = useState(1)
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const reviewSchedule = useAssessmentReviewSchedule('quiz', quiz?.id)
 
   const eligibleQuestions = useMemo(
     () =>
@@ -165,6 +169,9 @@ export default function QuizEditor({
   }
 
   function validate() {
+    if (!reviewSchedule.ready) return 'Load review settings before saving this quiz.'
+    const reviewError = validateReviewSchedule(reviewSchedule.value)
+    if (reviewError) return reviewError
     if (!courseId) return 'Select a course.'
     if (!title.trim()) return 'Enter a quiz title.'
     if (Number(durationMinutes) < 1 || Number(durationMinutes) > 480) {
@@ -237,6 +244,7 @@ export default function QuizEditor({
         questionSelectionMode,
         randomQuestionCount: Number(automaticRandomCount),
         showResultsImmediately: true,
+        reviewPolicy: reviewScheduleToPolicy(reviewSchedule.value),
         availableFrom: toIsoDateTime(availableFrom),
         availableUntil: toIsoDateTime(availableUntil),
         questionIds:
@@ -598,6 +606,10 @@ export default function QuizEditor({
           </FormSection>
         )}
 
+        {reviewSchedule.loading && <p role="status">Loading review settings...</p>}
+        {reviewSchedule.error && <div role="alert"><p>{reviewSchedule.error}</p><button className="secondary" type="button" onClick={() => void reviewSchedule.retry()}>Reload review settings</button></div>}
+        <ReviewScheduleFields value={reviewSchedule.value} onChange={reviewSchedule.setValue} disabled={saving || !reviewSchedule.ready} />
+
         <ActionBar className="quiz-editor__actions">
           <label>
             Status
@@ -606,7 +618,7 @@ export default function QuizEditor({
               <option value="published">Published</option>
             </select>
           </label>
-          <button className="primary form-submit" type="submit" disabled={saving}>
+          <button className="primary form-submit" type="submit" disabled={saving || !reviewSchedule.ready}>
             {saving ? 'Saving quiz…' : quiz ? 'Save changes' : 'Create quiz'}
           </button>
         </ActionBar>

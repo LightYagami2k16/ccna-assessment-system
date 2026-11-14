@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
 import AssessmentTypeIcon from './AssessmentTypeIcon'
-import AppIcon from './AppIcon'
 import StudentCliHistory from './StudentCliHistory'
 import StudentRecentResults from './StudentRecentResults'
 import {
@@ -21,7 +19,6 @@ export default function StudentAssessmentHistory({
   onCliRestored,
 }) {
   const [activeView, setActiveView] = useState('all')
-  const [refreshVersion, setRefreshVersion] = useState(0)
 
   return (
     <SurfaceCard className="student-assessment-history">
@@ -30,16 +27,6 @@ export default function StudentAssessmentHistory({
         eyebrow="MY PERFORMANCE"
         title="Assessment history"
         description="Review every completed quiz and CLI practical attempt from one organized results workspace."
-        actions={(
-          <button
-            className="secondary button-with-icon"
-            type="button"
-            onClick={() => setRefreshVersion((current) => current + 1)}
-          >
-            <AppIcon icon={RefreshCw} size="sm" />
-            Refresh history
-          </button>
-        )}
       />
 
       <ResponsiveGrid
@@ -75,7 +62,6 @@ export default function StudentAssessmentHistory({
         {(activeView === 'all' || activeView === 'quiz') && (
           <StudentRecentResults
             embedded
-            refreshVersion={refreshVersion}
             onRestored={onQuizRestored}
           />
         )}
@@ -83,7 +69,6 @@ export default function StudentAssessmentHistory({
         {(activeView === 'all' || activeView === 'cli') && (
           <StudentCliHistory
             embedded
-            refreshVersion={refreshVersion}
             onRestored={onCliRestored}
           />
         )}

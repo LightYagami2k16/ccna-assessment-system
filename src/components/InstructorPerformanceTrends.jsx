@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getInstructorPerformanceTrends } from '../services/instructorResultsService'
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import {
   ResponsiveGrid,
   SectionHeader,
@@ -131,7 +134,7 @@ export default function InstructorPerformanceTrends() {
   const [areas, setAreas] = useState([])
   const [courseFilter, setCourseFilter] = useState('all')
   const [range, setRange] = useState('12')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
 
   const load = useCallback(async () => {
@@ -141,12 +144,13 @@ export default function InstructorPerformanceTrends() {
       const data = await getInstructorPerformanceTrends()
       setTrends(data.trends)
       setAreas(data.learningAreas)
+      markLoaded()
     } catch (error) {
       setMessage(error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => { void load() }, [load])
 
@@ -181,13 +185,14 @@ export default function InstructorPerformanceTrends() {
         actions={<div className="performance-trends-panel__actions">
           <button className="secondary" type="button" disabled={!filteredAreas.length}
             onClick={() => downloadLearningAreaCsv(filteredAreas)}>Export learning areas</button>
-          <button className="secondary" type="button" disabled={loading} onClick={() => void load()}>{loading ? 'Refreshing...' : 'Refresh trends'}</button>
+          <RefreshButton loading={loading} onClick={() => void load()} label="Refresh trends" />
         </div>}
       />
       <ResponsiveGrid className="performance-trends-filters" min="12rem">
         <label>Course<select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)}><option value="all">All courses</option>{courses.map((course) => <option key={course} value={course}>{course}</option>)}</select></label>
         <label>Trend period<select value={range} onChange={(event) => setRange(event.target.value)}><option value="4">Last 4 weeks</option><option value="8">Last 8 weeks</option><option value="12">Last 12 weeks</option><option value="52">Last year</option></select></label>
       </ResponsiveGrid>
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading performance trends...">
       <ResponsiveGrid className="performance-trend-grid" min="20rem">
         <TrendChart title="Quiz score trend" rows={filteredTrends} type="quiz" />
         <TrendChart title="CLI score trend" rows={filteredTrends} type="cli" />
@@ -198,7 +203,8 @@ export default function InstructorPerformanceTrends() {
           {groups.map(([courseCode, courseAreas]) => <LearningAreaCourse key={courseCode} courseCode={courseCode} areas={courseAreas} />)}
         </div>
       </section>
-      {!loading && !filteredAreas.length && <div className="empty-state"><h3>No learning-area results yet</h3><p>Completed quiz or CLI attempts will appear here.</p></div>}
+      {!filteredAreas.length && <div className="empty-state"><h3>No learning-area results yet</h3><p>Completed quiz or CLI attempts will appear here.</p></div>}
+      </DataLoadBoundary>
       {message && <p className="form-message form-message--error" role="alert">{message}</p>}
     </section>
   )

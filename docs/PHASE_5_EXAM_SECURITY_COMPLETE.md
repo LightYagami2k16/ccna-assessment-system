@@ -11,8 +11,9 @@
   state after reconnection.
 - Expired quiz and CLI attempts are submitted from their last server-saved
   state and removed from Live Monitoring.
-- Page visibility, focus, fullscreen, and connection events are recorded for
-  instructor review.
+- Page visibility, focus, and connection events are recorded for instructor
+  review. Fullscreen exits are monitored for CLI practicals. Quiz fullscreen
+  exits are exempt in the local client; migration 067 adds the server exemption.
 - Instructors can choose Monitor only, Record and warn, or Automatically submit
   for every quiz and CLI practical.
 - Automatic submission can use an incident-count threshold, a maximum time-away
@@ -25,6 +26,13 @@
 Apply `057_phase5_integrity_enforcement.sql` after migration 056. Until it is
 applied, the Exam Controls page keeps existing monitoring behavior and displays
 a migration notice instead of the policy editor.
+
+The quiz fullscreen exemption also requires
+`067_quiz_fullscreen_exit_exemption.sql` after migration 066. It ignores quiz
+fullscreen events sent by older clients and excludes historical fullscreen
+rows from the quiz incident-limit calculation. Existing audit records remain.
+This migration is prepared locally and has not been applied or runtime-tested
+against Supabase. Database acceptance remains pending before release.
 
 ## Acceptance checks
 
@@ -40,3 +48,11 @@ a migration notice instead of the policy editor.
 8. Repeat policy checks for both quiz and CLI attempts.
 9. Confirm auto-submitted attempts appear in student History and instructor
    Student results and disappear from Live Monitoring.
+10. Enter quiz fullscreen, press Escape, and confirm that no fullscreen event,
+    warning, or automatic submission occurs, including with an incident limit
+    of one. Page-hidden and time-away enforcement must continue to work.
+11. In a disposable database after applying migration 067, verify that a legacy
+    quiz fullscreen event returns recorded false, creates no event, and cannot
+    auto-submit. Historical fullscreen rows must not contribute to the incident
+    limit. Verify that another student's attempt is still rejected and that CLI
+    fullscreen recording and enforcement retain their existing behavior.

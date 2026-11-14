@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 import {
@@ -138,6 +139,8 @@ export default function StudentQuizArea({
   const [enrollmentVersion, setEnrollmentVersion] = useState(0)
   const [activeSession, setActiveSession] = useState(null)
   const [sessionLoading, setSessionLoading] = useState(true)
+  const [sessionRefreshing, setSessionRefreshing] = useState(false)
+  const sessionRequestVersion = useRef(0)
   const [sessionMessage, setSessionMessage] = useState('')
   const [navigationOpen, setNavigationOpen] = useState(false)
   const storedSection = readStoredValue(sectionStorageKey)
@@ -152,12 +155,17 @@ export default function StudentQuizArea({
     studentNavigation.find((item) => item.id === activeSection) ??
     studentNavigation[0]
 
-  const loadActiveSession = useCallback(async () => {
+  const loadActiveSession = useCallback(async ({ silent = false } = {}) => {
+    const request = ++sessionRequestVersion.current
+    if (!silent) setSessionRefreshing(true)
     try {
-      setSessionMessage('')
       const session = await getStudentActiveAssessmentSession()
+      if (request !== sessionRequestVersion.current) return
+      setSessionMessage('')
       setActiveSession(session)
       setActiveAttemptId((currentAttemptId) => {
+        // A response started before a newly opened attempt must not clear it.
+        if (currentAttemptId !== activeAttemptId) return currentAttemptId
         if (!currentAttemptId) return null
 
         return session?.type === 'quiz' &&
@@ -166,22 +174,26 @@ export default function StudentQuizArea({
           : null
       })
     } catch (error) {
+      if (request !== sessionRequestVersion.current) return
       if (!navigator.onLine && (activeAttemptId || activeCliAttemptId)) {
         setSessionMessage(
           'Offline continuation is active. Your open assessment will synchronize when the connection returns.',
         )
       } else {
         setSessionMessage(error.message)
-        setActiveAttemptId(null)
       }
     } finally {
-      setSessionLoading(false)
+      if (request === sessionRequestVersion.current) {
+        setSessionLoading(false)
+        setSessionRefreshing(false)
+      }
     }
   }, [activeAttemptId, activeCliAttemptId])
 
   useEffect(() => {
     void loadActiveSession()
-  }, [loadActiveSession])
+    return () => { sessionRequestVersion.current += 1 }
+  }, [loadActiveSession, activeSection])
 
   useEffect(() => {
     storeValue(attemptStorageKey, activeAttemptId)
@@ -355,7 +367,7 @@ export default function StudentQuizArea({
         </aside>
 
         <section className="workspace-content student-workspace__content">
-          {sessionMessage && (
+          {sessionMessage && activeSection !== 'overview' && (
             <p className="form-message form-message--error" role="alert">
               {sessionMessage}
             </p>
@@ -371,6 +383,10 @@ export default function StudentQuizArea({
             {activeSection === 'overview' && (
               <StudentOverview
                 activeSession={activeSession}
+                statusLoading={sessionLoading}
+                statusRefreshing={sessionRefreshing}
+                statusError={sessionMessage}
+                onRefreshSession={loadActiveSession}
                 formattedExpiration={
                   activeSession
                     ? formatSessionExpiration(activeSession.expiresAt)

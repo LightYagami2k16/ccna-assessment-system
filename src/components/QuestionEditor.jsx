@@ -48,6 +48,7 @@ function optionsForQuestion(question) {
 export default function QuestionEditor({
   user,
   question = null,
+  autoExpand = false,
   onSaved,
   onCancel,
 }) {
@@ -72,13 +73,13 @@ export default function QuestionEditor({
   const [options, setOptions] = useState(() => optionsForQuestion(question))
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [expanded, setExpanded] = useState(isEditing)
+  const [expanded, setExpanded] = useState(isEditing || autoExpand)
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing || autoExpand) {
       setExpanded(true)
     }
-  }, [isEditing, question?.id])
+  }, [isEditing, question?.id, autoExpand])
 
   useEffect(() => {
     let active = true

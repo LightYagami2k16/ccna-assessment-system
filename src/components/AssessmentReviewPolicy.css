@@ -1,0 +1,34 @@
+.assessment-review-policy {
+  display: grid;
+  gap: .8rem;
+  padding: 1rem;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-subtle, #f8fbfd);
+}
+.assessment-review-policy > h3,
+.assessment-review-policy > p { margin: 0; }
+.assessment-review-policy > p { color: var(--color-text-secondary); line-height: 1.5; }
+.assessment-review-policy__choice {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  margin: 0;
+}
+.assessment-review-policy__choice input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; margin: 0; }
+.assessment-review-policy > button { justify-self: start; }
+@media (max-width: 480px) {
+  .assessment-review-policy > button { width: 100%; }
+}
+
+.assessment-review-policy .review-schedule-fields { border: 0; padding: 0; }
+.assessment-review-policy .review-schedule-fields > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.assessment-review-policy .review-schedule-fields > p { display: none; }

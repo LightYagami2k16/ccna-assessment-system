@@ -7,6 +7,8 @@ import {
   setInstructorQuizStatus,
   setInstructorQuizzesStatus,
 } from '../services/quizBuilderService'
+import LibraryItemDialog from './LibraryItemDialog'
+import AssessmentReviewPolicy from './AssessmentReviewPolicy'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import {
   ActionBar,
@@ -22,7 +24,8 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
+export default function InstructorQuizList({ quizzes, onEdit, onChanged, active = true }) {
+  const [detailsQuizId, setDetailsQuizId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [statusChangingId, setStatusChangingId] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
@@ -32,6 +35,8 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
   const [bulkAction, setBulkAction] = useState(null)
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
   const { confirm, confirmationDialog } = useConfirmationDialog()
+
+  useEffect(() => { if (!active) setDetailsQuizId(null) }, [active])
 
   const quizIds = useMemo(
     () => quizzes.map((quiz) => quiz.id),
@@ -89,6 +94,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
     setSelectedIds((current) =>
       current.filter((id) => quizIds.includes(id)),
     )
+    setDetailsQuizId((current) => quizIds.includes(current) ? current : null)
   }, [quizIds])
 
   useEffect(() => {
@@ -400,15 +406,20 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                       <SurfaceCard
                         as="article"
                         subtle
-                        className="instructor-quiz-card"
+                        className="instructor-quiz-card library-assessment-card"
                         key={quiz.id}
                       >
+                        <div className="library-card__summary">
+                          <h3>{quiz.title}</h3>
+                          <button className="secondary" type="button" onClick={() => setDetailsQuizId(quiz.id)}>Show details</button>
+                        </div>
+                        <LibraryItemDialog open={active && detailsQuizId === quiz.id} title={quiz.title} onClose={() => setDetailsQuizId(null)}>
+                        {message && <p className="form-message form-message--error" role="alert">{message}</p>}
                         <div className="instructor-quiz-card__heading">
                           <div>
                             <span className="course-code">
                               {quiz.courses?.code ?? 'CCNA'}
                             </span>
-                            <h3>{quiz.title}</h3>
                           </div>
                           <span
                             className={`content-status content-status--${quiz.status}`}
@@ -457,6 +468,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                             </dd>
                           </div>
                         </dl>
+                        <AssessmentReviewPolicy assessmentType="quiz" assessmentId={quiz.id} />
                         <div className="instructor-quiz-card__reuse-actions">
                           <button
                             className="secondary"
@@ -483,7 +495,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                           <button
                             className="primary"
                             type="button"
-                            onClick={() => onEdit(quiz)}
+                            onClick={() => { setDetailsQuizId(null); onEdit(quiz) }}
                           >
                             Edit quiz
                           </button>
@@ -523,6 +535,7 @@ export default function InstructorQuizList({ quizzes, onEdit, onChanged }) {
                               : 'Delete draft'}
                           </button>
                         </div>
+                        </LibraryItemDialog>
                       </SurfaceCard>
                     ))}
                   </ResponsiveGrid>

@@ -10,15 +10,25 @@ export async function getExamControlsWorkspace() {
     { data: classContexts },
     { data: clientSessions, error: clientSessionError },
     { data: integrityPolicies, error: integrityPolicyError },
+    { data: assessmentContexts, error: assessmentContextError },
   ] = await Promise.all([
     supabase.rpc('get_exam_controls_workspace'),
     supabase.rpc('get_cli_live_monitoring_attempts'),
     supabase.rpc('get_live_attempt_class_context'),
     supabase.rpc('get_instructor_assessment_client_sessions'),
     supabase.rpc('get_instructor_integrity_policies'),
+    supabase.rpc('get_live_attempt_assessment_context'),
   ])
   if (error) throw error
   if (cliError) throw cliError
+  if (assessmentContextError && !['42883', 'PGRST202'].includes(assessmentContextError.code)) {
+    throw assessmentContextError
+  }
+  const assessmentContextByAttempt = new Map(
+    (assessmentContexts ?? []).map((context) => [
+      `${context.assessmentType}:${context.attemptId}`, context,
+    ]),
+  )
   if (
     clientSessionError
     && !['42883', 'PGRST202'].includes(clientSessionError.code)
@@ -64,6 +74,7 @@ export async function getExamControlsWorkspace() {
     accommodations: data?.accommodations ?? [],
     integrityPolicies: integrityPolicies ?? [],
     integrityPoliciesAvailable: !integrityPolicyError,
+    monitoringControlsAvailable: !assessmentContextError,
     activeAttempts: [
       ...(data?.activeAttempts ?? []).map((attempt) => ({
         ...attempt,
@@ -75,12 +86,26 @@ export async function getExamControlsWorkspace() {
       (attempt) =>
         !attempt.expiresAt ||
         new Date(attempt.expiresAt).getTime() > Date.now(),
-    ).map(withClassContext).map(withClientSession).sort(
+    ).map((attempt) => ({ ...attempt, ...assessmentContextByAttempt.get(
+      `${attempt.assessmentType}:${attempt.attemptId}`,
+    ) })).map(withClassContext).map(withClientSession).sort(
       (left, right) =>
         new Date(right.startedAt).getTime() -
         new Date(left.startedAt).getTime(),
     ),
   }
+}
+
+export async function submitMonitoredAttempt({ assessmentType, attemptId }) {
+  if (!['quiz', 'cli'].includes(assessmentType) || !attemptId) {
+    throw new Error('Select a valid quiz or CLI attempt.')
+  }
+  const { data, error } = await supabase.rpc('instructor_submit_assessment_attempt', {
+    p_assessment_type: assessmentType,
+    p_attempt_id: attemptId,
+  })
+  if (error) throw error
+  return data
 }
 
 export async function saveAssessmentIntegrityPolicy(payload) {

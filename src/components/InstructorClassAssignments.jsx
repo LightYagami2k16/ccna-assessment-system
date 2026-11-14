@@ -1,3 +1,7 @@
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
+import LibraryItemDialog from './LibraryItemDialog'
 import {
   useCallback,
   useEffect,
@@ -5,6 +9,8 @@ import {
   useState,
 } from 'react'
 import QRCode from 'qrcode'
+import { RotateCcw, Search } from 'lucide-react'
+import AppIcon from './AppIcon'
 import {
   addStudentToClassByEmail,
   deleteClassSection,
@@ -18,6 +24,8 @@ import {
   saveQuizAccess,
 } from '../services/assignmentService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
+import useInstructorSubsection from '../hooks/useInstructorSubsection'
+import WorkspaceSubsectionNav from './WorkspaceSubsectionNav'
 import {
   ActionBar,
   ResponsiveGrid,
@@ -49,7 +57,7 @@ function sortCourseGroups(groups) {
   )
 }
 
-function ClassEditor({ students, classSection, onSaved, onCancel }) {
+function ClassEditor({ students, classSection, onSaved, onCancel, ready = true }) {
   const isEditing = Boolean(classSection)
   const [name, setName] = useState(classSection?.name ?? '')
   const [code, setCode] = useState(classSection?.code ?? '')
@@ -119,6 +127,7 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
             type="button"
             aria-expanded={expanded}
             aria-controls="class-editor-form"
+            disabled={!ready}
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded
@@ -199,7 +208,7 @@ function ClassEditor({ students, classSection, onSaved, onCancel }) {
         )}
 
         <ActionBar className="class-editor__actions">
-          <button className="primary" type="submit" disabled={saving}>
+          <button className="primary" type="submit" disabled={saving || !ready}>
             {saving ? 'Saving class...' : classSection ? 'Save class' : 'Create class'}
           </button>
         </ActionBar>
@@ -385,7 +394,7 @@ function ClassEnrollmentTools({ classSection, onChanged }) {
   )
 }
 
-function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
+function EnrollmentApprovalPanel({ courseGroups, requests, onChanged, loading = false, ready = true }) {
   const [reviewingId, setReviewingId] = useState(null)
   const [selectedRequestIds, setSelectedRequestIds] = useState([])
   const [bulkApproving, setBulkApproving] = useState(false)
@@ -510,11 +519,13 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
             Review students who joined with a class code or QR code.
           </p>
         </div>
-        {requests.length > 0 && (
+        <RefreshButton loading={loading} label="Refresh requests" onClick={() => void onChanged()} />
+        {ready && requests.length > 0 && (
           <span className="status-chip">{requests.length} pending</span>
         )}
       </div>
 
+      <DataLoadBoundary loading={loading} ready={ready} label="Loading enrollment approvals...">
       {!requests.length ? (
         <div className="empty-state">
           <h3>No pending requests</h3>
@@ -633,6 +644,7 @@ function EnrollmentApprovalPanel({ courseGroups, requests, onChanged }) {
         </div>
       )}
 
+      </DataLoadBoundary>
       {message && <p className="form-message">{message}</p>}
     </section>
   )
@@ -733,7 +745,11 @@ function QuizAccessCard({ quiz, classes, onSaved }) {
 
 export default function InstructorClassAssignments({
   administratorMode = false,
+  onOpenPracticals,
 }) {
+  const [activeSection, setActiveSection] = useInstructorSubsection(
+    'assignments', administratorMode,
+  )
   const [workspace, setWorkspace] = useState({
     students: [],
     classes: [],
@@ -741,10 +757,14 @@ export default function InstructorClassAssignments({
     quizzes: [],
   })
   const [editingClass, setEditingClass] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [classEditorRevision, setClassEditorRevision] = useState(0)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
+  const [loadFailed, setLoadFailed] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [selectedClassIds, setSelectedClassIds] = useState([])
-  const [expandedClassIds, setExpandedClassIds] = useState([])
+  const [studentSearchInput, setStudentSearchInput] = useState('')
+  const [studentSearch, setStudentSearch] = useState('')
+  const [detailsClassId, setDetailsClassId] = useState(null)
   const [expandedStudentClassIds, setExpandedStudentClassIds] =
     useState([])
   const [expandedQuizCourseCodes, setExpandedQuizCourseCodes] =
@@ -758,6 +778,26 @@ export default function InstructorClassAssignments({
     useState(null)
   const [message, setMessage] = useState('')
   const { confirm, confirmationDialog } = useConfirmationDialog()
+
+  const matchingStudentIds = useMemo(() => new Set(
+    workspace.students.filter((student) =>
+      [student.fullName, student.email].some((value) =>
+        value?.toLowerCase().includes(studentSearch),
+      ),
+    ).map((student) => student.id),
+  ), [workspace.students, studentSearch])
+
+  const filteredClasses = useMemo(() => workspace.classes.filter((classSection) =>
+    !studentSearch || classSection.studentIds.some((id) => matchingStudentIds.has(id)),
+  ), [workspace.classes, studentSearch, matchingStudentIds])
+
+  useEffect(() => {
+    setDetailsClassId((current) => activeSection === 'classes' && filteredClasses.some((item) => item.id === current) ? current : null)
+  }, [activeSection, filteredClasses])
+
+  const selectedVisibleClassIds = filteredClasses
+    .filter((classSection) => selectedClassIds.includes(classSection.id))
+    .map((classSection) => classSection.id)
 
   const quizzesByCourse = useMemo(() => {
     const groups = new Map()
@@ -863,11 +903,13 @@ export default function InstructorClassAssignments({
   }, [classCourseGroups, workspace.approvalRequests])
 
   const loadWorkspace = useCallback(async () => {
+    setLoadFailed(false)
     try {
       setLoading(true)
       setMessage('')
       const data = await getAssignmentWorkspace()
       setWorkspace(data)
+      markLoaded()
       setSelectedClassIds((current) =>
         current.filter((classId) =>
           data.classes.some(
@@ -883,11 +925,12 @@ export default function InstructorClassAssignments({
         ),
       )
     } catch (error) {
+      setLoadFailed(true)
       setMessage(error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => {
     void loadWorkspace()
@@ -920,14 +963,6 @@ export default function InstructorClassAssignments({
       checked
         ? [...new Set([...current, ...classIds])]
         : current.filter((id) => !classIds.includes(id)),
-    )
-  }
-
-  function toggleClassDetails(classId) {
-    setExpandedClassIds((current) =>
-      current.includes(classId)
-        ? current.filter((id) => id !== classId)
-        : [...current, classId],
     )
   }
 
@@ -989,12 +1024,24 @@ export default function InstructorClassAssignments({
     }
   }
 
+  function handleStudentSearch(event) {
+    event.preventDefault()
+    setStudentSearch(studentSearchInput.trim().toLowerCase())
+    setSelectedClassIds([])
+  }
+
+  function clearStudentSearch() {
+    setStudentSearchInput('')
+    setStudentSearch('')
+    setSelectedClassIds([])
+  }
+
   async function handleBulkDelete() {
-    if (!selectedClassIds.length) return
+    if (!selectedVisibleClassIds.length) return
 
     const confirmed = await confirm({
-      title: `Delete ${selectedClassIds.length} selected ${
-        selectedClassIds.length === 1 ? 'class' : 'classes'
+      title: `Delete ${selectedVisibleClassIds.length} selected ${
+        selectedVisibleClassIds.length === 1 ? 'class' : 'classes'
       }?`,
       message:
         'Their memberships and quiz assignments will also be removed. Student quiz attempt history will remain. This action cannot be undone.',
@@ -1006,8 +1053,8 @@ export default function InstructorClassAssignments({
     setBulkDeleting(true)
     setMessage('')
     try {
-      await deleteClassSections(selectedClassIds)
-      if (selectedClassIds.includes(editingClass?.id)) {
+      await deleteClassSections(selectedVisibleClassIds)
+      if (selectedVisibleClassIds.includes(editingClass?.id)) {
         setEditingClass(null)
       }
       setSelectedClassIds([])
@@ -1019,23 +1066,28 @@ export default function InstructorClassAssignments({
     }
   }
 
-  if (loading) {
-    return (
-      <section className="class-assignment-manager">
-        Loading classes and assignments...
-      </section>
-    )
-  }
 
   return (
     <div className="class-assignment-manager">
       {confirmationDialog}
+      <WorkspaceSubsectionNav
+        page="assignments"
+        activeSection={activeSection}
+        onChange={setActiveSection}
+      />
+      <div
+        id="assignments-subsection-classes"
+        className="workspace-subsection-panel"
+        hidden={activeSection !== 'classes'}
+      >
       <ClassEditor
-        key={editingClass?.id ?? 'new-class'}
+        ready={hasLoaded}
+        key={`${editingClass?.id ?? 'new-class'}-${classEditorRevision}`}
         students={workspace.students}
         classSection={editingClass}
         onSaved={async () => {
           setEditingClass(null)
+          setClassEditorRevision((current) => current + 1)
           await loadWorkspace()
         }}
         onCancel={() => setEditingClass(null)}
@@ -1047,13 +1099,54 @@ export default function InstructorClassAssignments({
           eyebrow="CLASS SECTIONS"
           title="Your classes"
           actions={(
-            <span className="status-chip">{workspace.classes.length} classes</span>
+            <div className="loading-panel-actions"><RefreshButton loading={loading} label="Refresh classes" onClick={() => void loadWorkspace()} /><span className="status-chip">
+              {hasLoaded ? filteredClasses.length : '—'} {studentSearch ? 'matching ' : ''}
+              {filteredClasses.length === 1 ? 'class' : 'classes'}
+            </span></div>
           )}
         />
+        <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading classes and assignments...">
+        <form className="class-student-search" onSubmit={handleStudentSearch}>
+          <label>
+            Student name or email
+            <input
+              type="search"
+              value={studentSearchInput}
+              onChange={(event) => setStudentSearchInput(event.target.value)}
+              placeholder="Find an enrolled student across your classes"
+              disabled={bulkDeleting}
+            />
+          </label>
+          <div className="class-student-search__actions">
+            <button className="primary" type="submit" disabled={bulkDeleting}>
+              <AppIcon icon={Search} size="sm" />
+              Search
+            </button>
+            <button
+              className="secondary"
+              type="button"
+              onClick={clearStudentSearch}
+              disabled={bulkDeleting || (!studentSearch && !studentSearchInput)}
+            >
+              <AppIcon icon={RotateCcw} size="sm" />
+              Clear search
+            </button>
+          </div>
+        </form>
+        <p className="class-student-search__status" role="status">
+          {studentSearch
+            ? `Showing ${filteredClasses.length} ${filteredClasses.length === 1 ? 'class' : 'classes'} with matching enrolled students.`
+            : 'Search enrolled students by name or email across your classes.'}
+        </p>
         {!workspace.classes.length ? (
           <div className="empty-state">
             <h3>No classes created yet</h3>
             <p>Create a class and add registered student accounts.</p>
+          </div>
+        ) : !filteredClasses.length ? (
+          <div className="empty-state">
+            <h3>No matching students</h3>
+            <p>Try another name or email, or clear the search to show all classes.</p>
           </div>
         ) : (
           <>
@@ -1061,28 +1154,28 @@ export default function InstructorClassAssignments({
               <label className="bulk-select-control">
                 <input
                   type="checkbox"
-                  checked={workspace.classes.every((classSection) =>
+                  checked={filteredClasses.every((classSection) =>
                     selectedClassIds.includes(classSection.id),
                   )}
                   disabled={bulkDeleting}
                   onChange={(event) =>
                     toggleClassSelection(
-                      workspace.classes.map(
+                      filteredClasses.map(
                         (classSection) => classSection.id,
                       ),
                       event.target.checked,
                     )
                   }
                 />
-                Select all classes
+                {studentSearch ? 'Select matching classes' : 'Select all classes'}
               </label>
 
               <div className="bulk-action-bar__actions">
-                <span>{selectedClassIds.length} selected</span>
+                <span>{selectedVisibleClassIds.length} selected</span>
                 <button
                   className="danger-button"
                   type="button"
-                  disabled={!selectedClassIds.length || bulkDeleting}
+                  disabled={!selectedVisibleClassIds.length || bulkDeleting}
                   onClick={() => void handleBulkDelete()}
                 >
                   {bulkDeleting ? 'Deleting...' : 'Delete selected'}
@@ -1091,13 +1184,9 @@ export default function InstructorClassAssignments({
             </ActionBar>
 
             <ResponsiveGrid className="class-card-grid" min="24rem">
-              {workspace.classes.map((classSection) => {
-                const expanded = expandedClassIds.includes(
-                  classSection.id,
-                )
-                const studentsExpanded =
+              {filteredClasses.map((classSection) => {
+                const studentsExpanded = Boolean(studentSearch) ||
                   expandedStudentClassIds.includes(classSection.id)
-                const detailsId = `class-details-${classSection.id}`
                 const studentsId = `class-students-${classSection.id}`
                 const enrolledStudents = classSection.studentIds
                   .map((studentId) =>
@@ -1105,15 +1194,23 @@ export default function InstructorClassAssignments({
                       (student) => student.id === studentId,
                     ),
                   )
-                  .filter(Boolean)
+                  .filter((student) => student && (
+                    !studentSearch || matchingStudentIds.has(student.id)
+                  ))
 
                 return (
                   <SurfaceCard
                     as="article"
                     subtle
-                    className="class-card"
+                    className="class-card library-assessment-card"
                     key={classSection.id}
                   >
+                    <div className="library-card__summary">
+                      <h3>{classSection.name}</h3>
+                      <button className="secondary" type="button" onClick={() => setDetailsClassId(classSection.id)}>Show details</button>
+                    </div>
+                    <LibraryItemDialog open={activeSection === 'classes' && detailsClassId === classSection.id} title={classSection.name} eyebrow="CLASS DETAILS" onClose={() => setDetailsClassId(null)}>
+                    {message && <p className="form-message form-message--error" role="alert">{message}</p>}
                     <label className="card-select-control">
                       <input
                         type="checkbox"
@@ -1144,20 +1241,9 @@ export default function InstructorClassAssignments({
                         >
                           {classSection.isActive ? 'active' : 'inactive'}
                         </span>
-                        <button
-                          className="module-collapse-button class-card__details-toggle"
-                          type="button"
-                          aria-expanded={expanded}
-                          aria-controls={detailsId}
-                          onClick={() =>
-                            toggleClassDetails(classSection.id)
-                          }
-                        >
-                          {expanded ? 'Hide details' : 'Show details'}
-                        </button>
+
                       </div>
                     </header>
-                    <h3>{classSection.name}</h3>
                     {administratorMode && (
                       <div className="class-card__owner">
                         <span>Teacher</span>
@@ -1178,11 +1264,12 @@ export default function InstructorClassAssignments({
                     <div className="class-card__student-summary">
                       <strong>
                         {enrolledStudents.length}{' '}
+                        {studentSearch && 'matching '}
                         {enrolledStudents.length === 1
                           ? 'student'
                           : 'students'}
                       </strong>
-                      <button
+                      {!studentSearch && <button
                         className="module-collapse-button"
                         type="button"
                         aria-expanded={studentsExpanded}
@@ -1194,7 +1281,7 @@ export default function InstructorClassAssignments({
                         {studentsExpanded
                           ? 'Hide students'
                           : 'Show students'}
-                      </button>
+                      </button>}
                     </div>
                     {studentsExpanded && (
                       <div
@@ -1272,8 +1359,7 @@ export default function InstructorClassAssignments({
                         )}
                       </div>
                     )}
-                    {expanded && (
-                      <div className="class-card__details" id={detailsId}>
+                      <div className="class-card__details">
                         <ClassEnrollmentTools
                           classSection={classSection}
                           onChanged={loadWorkspace}
@@ -1282,7 +1368,7 @@ export default function InstructorClassAssignments({
                           <button
                             className="primary"
                             type="button"
-                            onClick={() => setEditingClass(classSection)}
+                            onClick={() => { setDetailsClassId(null); setEditingClass(classSection) }}
                           >
                             Edit class
                           </button>
@@ -1298,20 +1384,37 @@ export default function InstructorClassAssignments({
                           </button>
                         </div>
                       </div>
-                    )}
+                    </LibraryItemDialog>
                   </SurfaceCard>
                 )
               })}
             </ResponsiveGrid>
           </>
         )}
+        </DataLoadBoundary>
       </section>
 
-      <EnrollmentApprovalPanel
-        courseGroups={approvalCourseGroups}
-        requests={workspace.approvalRequests}
-        onChanged={loadWorkspace}
-      />
+      </div>
+
+      <div
+        id="assignments-subsection-enrollment"
+        className="workspace-subsection-panel"
+        hidden={activeSection !== 'enrollment'}
+      >
+        <EnrollmentApprovalPanel
+          loading={loading}
+          ready={hasLoaded}
+          courseGroups={approvalCourseGroups}
+          requests={workspace.approvalRequests}
+          onChanged={loadWorkspace}
+        />
+      </div>
+
+      <div
+        id="assignments-subsection-access"
+        className="workspace-subsection-panel"
+        hidden={activeSection !== 'access'}
+      >
 
       <section className="quiz-assignment-panel">
         <SectionHeader
@@ -1319,16 +1422,8 @@ export default function InstructorClassAssignments({
           eyebrow="QUIZ ACCESS"
           title="Assign quizzes"
           description="Every quiz must be assigned to at least one active class before students can see or start it."
-          actions={(
-            <button
-              className="secondary"
-              type="button"
-              onClick={() => void loadWorkspace()}
-            >
-              Refresh classes
-            </button>
-          )}
         />
+        <DataLoadBoundary loading={loading} ready={hasLoaded} error={loadFailed} onRetry={loadWorkspace} label="Loading quiz access...">
         {!workspace.quizzes.length ? (
           <div className="empty-state">
             <h3>No quizzes available</h3>
@@ -1409,7 +1504,22 @@ export default function InstructorClassAssignments({
             })}
           </div>
         )}
+        </DataLoadBoundary>
       </section>
+
+      <SurfaceCard>
+        <SectionHeader
+          eyebrow="PRACTICAL ACCESS"
+          title="CLI practical access"
+          description="Choose the classes that can access each practical in the CLI practical builder."
+          actions={(
+            <button className="secondary" type="button" onClick={onOpenPracticals}>
+              Manage practical access
+            </button>
+          )}
+        />
+      </SurfaceCard>
+      </div>
 
       {message && <p className="form-message form-message--error">{message}</p>}
     </div>

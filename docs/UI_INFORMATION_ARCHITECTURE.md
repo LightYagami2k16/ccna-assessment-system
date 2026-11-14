@@ -31,6 +31,22 @@ Every signed-in workspace uses the same shell:
 - feature-level loading, empty, offline, permission, and error states.
 
 Account settings remains a global dialog. It is not a separate workspace page.
+
+Initial data loading belongs inside the selected feature panel, below its heading;
+it must not insert an extra block above subsection navigation. Until the first
+successful response, counts show — rather than implying an empty dataset. Later
+refreshes retain populated content and local filter/expansion state, using compact
+button feedback. Failed refreshes retain the last valid view and show the error.
+Automatic Live Monitoring polling remains silent. See
+[loading-state acceptance](LOADING_STATES_ACCEPTANCE.md) for scope and verification.
+
+Loading feedback does not require a permanent refresh control on every panel.
+Content libraries, templates and configuration forms use their existing automatic
+reloads; contextual Retry is available after a fetch failure. Keep manual refresh
+where other users can change the displayed information, such as monitoring,
+reporting, instructor enrollment approvals and administrator records. Embedded student histories
+refresh quietly on returning focus and show Retry only after a fetch failure.
+
 Assessment focus mode removes the normal dashboard, course catalogue, and role
 navigation until the attempt is submitted or exited through an allowed action.
 
@@ -98,12 +114,25 @@ classes, while assessment cards belong on their assessment pages.
 
 #### Quizzes
 
+Use addressable subsections: Quiz library (default), Create / edit quiz, and
+Templates. Retain the mounted editor and library when switching subsections.
+Library Edit opens the editor; successful save or Cancel returns to the library
+and clears the completed editor session. Course expansion and bulk selections
+remain in the library. The same routes apply within administrator assessment tools.
+
 - available and resumable quiz cards;
 - remaining attempts, duration, due date, and class assignment;
 - archive/restore behavior when attempts remain; and
 - a single refresh/synchronization action.
 
 #### CLI practicals
+
+Use addressable subsections: Practical library (default), Create / edit practical,
+and Templates. Retain draft devices, topology, criteria, assignments, library
+expansion, and bulk selections while switching. Edit opens the builder; successful
+save or Cancel returns to the library and resets the completed draft. Answer keys
+remain contextual to each library card. Support both instructor and administrator
+assessment-tool addresses.
 
 - available and resumable practical cards;
 - course/module, duration, attempts, and device/topology summary;
@@ -146,10 +175,22 @@ classes, while assessment cards belong on their assessment pages.
 
 Use internal subsections because all actions manage the same content domain:
 
-1. Course modules
-2. Create question
-3. Import/export and validation
-4. Question library grouped by course
+1. Question library grouped by course with module filtering (default)
+2. Create / edit question
+3. Course modules
+4. Import / export and validation
+
+Each subsection has its own address in instructor and administrator assessment
+tools. Switching subsections retains drafts, module filters, and the selected
+import file. Library Edit opens the editor; saving or cancelling an edit returns
+to the library. A successful save resets the completed editor form.
+
+The library module filter lists modules represented in its loaded questions,
+with course-qualified labels, All modules, and Unassigned module. Choosing a
+module shows only matching questions and opens the matching course sections.
+Counts and bulk selection follow the filter. The filter remains selected after
+question updates; if its last question is deleted, a named module filter resets
+to All modules. Unassigned remains selectable even when it has no questions.
 
 The primary action is **Create question**. Bulk publish, unpublish, and delete
 remain contextual actions inside the library.
@@ -191,6 +232,22 @@ Use page-level subsections or tabs:
 
 Live monitoring must group active attempts by class and student while showing
 quiz and CLI activity consistently.
+
+The local monitor now groups Class → exact quiz/CLI practical → student attempts.
+Class, assessment-type, and exact-assessment filters control the displayed groups,
+counts and cards; same-title assessments use separate database identities.
+Student-name search sits before Class, matches partial names case-insensitively,
+and combines with these filters. Clear filters resets the search as well.
+Filtered groups open automatically, with previous expansion restored on Clear.
+Filters persist across polling, manual refresh, and subsection switching.
+Student attempt cards start collapsed, retaining the name, email and event count.
+Show details reveals monitoring fields and the submission action; Hide details
+collapses that attempt independently. Expanded state survives refresh and polling.
+Each attempt has a confirmed Submit attempt action for authorized instructors or
+administrators. It grades saved server work, ends the current attempt, revokes its
+browser lease and records an audit row. Busy attempts return a safe retry message.
+Migration 068 is required and remains unapplied; without it the action is disabled.
+See [Live Monitoring acceptance](LIVE_MONITORING_ACCEPTANCE.md).
 
 #### Student results
 
@@ -332,3 +389,42 @@ the landing view.
 This blueprint completes UX1 when it is accepted as the implementation source
 for F1. Material changes to navigation, page ownership, or permissions should be
 recorded here before implementation diverges from it.
+
+## Student Overview summary update — 2026-11-13
+
+The Overview now separates verified in-progress work from ready-to-start quiz and CLI practical summaries, and from upcoming scheduled quizzes. Availability cards own the links to Quizzes and CLI practicals; the remaining workspace shortcuts are Results & history, My classes and Exam guide. Counts start unknown and exclude archived, exhausted and active work. Failed requests preserve populated data and expose category-specific feedback. A failed active-session lookup cannot produce a ready banner. Visible-page polling/focus refresh keeps the summaries current; a Retry action appears only after a failed load. Migration 069 supplies authorized future quiz windows; it is prepared locally and not applied to Supabase. CLI scheduling and recently completed-work summaries remain outside this slice. See STUDENT_OVERVIEW_ACCEPTANCE.md for verification and owner checks.
+
+
+## Student refresh cleanup — 2026-11-13
+
+Student Overview, Quizzes, CLI practicals, Results & history and My classes omit routine refresh buttons. Existing entry/action reloads remain. Visible availability and enrollment pages update every 30 seconds and when focus returns; history updates on focus, and Overview retains its existing polling. List polling pauses during active practicals and start/archive/restore/join actions. Failed loads offer contextual Retry, preserving populated content, enrollment expansion and the class-code draft. Instructor and administrator controls retain their existing scope.
+
+
+## Available-assessment detail popups — 2026-11-13
+
+Available quizzes and Available CLI practicals each show a count and a single Show Details button; their assessment lists are hidden from the overview cards. It opens an informational modal listing every available assessment in that category using the existing student-scoped availability and lifecycle data. Details include course/module, description, duration, passing score and attempt allowance; quiz deadlines and CLI device type appear when applicable. View quizzes/View practicals navigation is provided inside the popup. The modal cannot start/resume attempts, adds no data request, and uses native focus containment and Escape dismissal. No new migration is required.
+
+
+## Collapsible assessment item cards — 2026-11-13
+
+Category Show Details controls sit beside the count in a right-aligned header group. The group wraps on narrow screens without a separate footer or divider. Popup assessments start collapsed with only their name and a Show details toggle. Each card independently reveals/hides its metadata, exposes its expanded state and panel association, and resets when the popup is closed and reopened. Existing popup navigation and keyboard controls remain. See STUDENT_OVERVIEW_ACCEPTANCE.md for local verification.
+
+
+## Instructor assessment library item popups — 2026-11-13
+
+Quiz library and CLI Practical library cards show only the assessment title and Show details. Native dialogs hold each record’s metadata and existing management actions. Individual CLI selection and answer keys are inside the popup; course grouping and bulk tools remain on the page. Editor actions close the popup before navigation. Active-section changes or removal of a record close its dialog; reloads preserve a still-existing selected record. The shared modal handles Escape, close/Done actions, nested confirmations and keyboard focus through buttons, checkboxes and action selectors. See INSTRUCTOR_LIBRARY_DETAILS_ACCEPTANCE.md.
+
+
+## Your classes item popups — 2026-11-13
+
+Your classes uses compact class-name and Show details cards. The shared native popup has a Class details label and contains status, identifier/term, administrator teacher identity, roster, password reset, join-code/QR/manual enrollment tools, individual selection and edit/delete controls. Search and bulk actions remain on the page; matching-student filtering and controlled roster/selection state are preserved within popups. The popup closes before editing and on section/filter/record removal. Nested join-code confirmation cancellation and keyboard events are handled by the owning dialog, leaving its parent popup open. See CLASS_DETAILS_ACCEPTANCE.md.
+
+
+## Student attempt review release — 2026-11-13
+
+Each quiz/practical library detail popup has an independent Student attempt review setting with an explicit save. It defaults off and applies to that assessment’s own completed/expired student attempts, including earlier submissions. Student Results & history owns the fresh-authorized review action and read-only popup; grades remain independent. Reviews include submitted work, scoring feedback and correct answers/expected CLI configuration. Current-policy checks and guarded underlying access live in migration 070; it is prepared locally and not applied. See STUDENT_ATTEMPT_REVIEW_ACCEPTANCE.md for historical-content limitations and owner checks.
+
+
+## Student review schedules and creation controls — 2026-11-13
+
+Quiz/CLI create and edit forms now own review availability alongside content: disabled, after submission, or a scheduled opening with optional closing. The existing library detail-popup policy uses the same fields and saves independently. Local datetime inputs serialize to ISO timestamps, while database permission checks enforce opening-inclusive/closing-exclusive access. Existing edit policies must load before saving. Migration 071 adds atomic assessment/review saves (including CLI topology) and extends the 070 review guards. Both migrations remain prepared locally, not applied by this work. Student result tables reserve an explicit Review column and an icon action, retaining phone cards and tablet scrolling. See STUDENT_ATTEMPT_REVIEW_ACCEPTANCE.md.

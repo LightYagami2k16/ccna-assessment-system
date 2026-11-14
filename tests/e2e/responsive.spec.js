@@ -67,6 +67,7 @@ for (const viewport of viewports) {
 test('shared actions remain reachable with long labels at compact width', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 })
   await page.goto('/?uat-role=instructor')
+  await expect(page.locator('.workspace-page-header h1')).toHaveText('Overview')
 
   const menuButton = page.getByRole('button', { name: 'Open menu' })
   if (await menuButton.isVisible()) await menuButton.click()
@@ -74,6 +75,7 @@ test('shared actions remain reachable with long labels at compact width', async 
   const questionBankButton = page.getByRole('button', {
     name: /^Question bank/,
   })
+  await page.keyboard.press('Tab')
   await questionBankButton.focus()
 
   const focusStyle = await questionBankButton.evaluate((element) => {

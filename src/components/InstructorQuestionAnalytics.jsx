@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getInstructorQuestionAnalytics } from '../services/instructorResultsService'
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import {
   ResponsiveGrid,
   SectionHeader,
@@ -200,7 +203,7 @@ export default function InstructorQuestionAnalytics() {
   const [moduleFilter, setModuleFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [message, setMessage] = useState('')
 
   const loadAnalytics = useCallback(async () => {
@@ -208,12 +211,13 @@ export default function InstructorQuestionAnalytics() {
       setLoading(true)
       setMessage('')
       setQuestions(await getInstructorQuestionAnalytics())
+      markLoaded()
     } catch (error) {
       setMessage(error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => { void loadAnalytics() }, [loadAnalytics])
 
@@ -286,8 +290,7 @@ export default function InstructorQuestionAnalytics() {
         actions={<div className="question-analytics-panel__actions">
           <button className="secondary" type="button" disabled={!filteredQuestions.length}
             onClick={() => downloadQuestionCsv(filteredQuestions)}>Export question CSV</button>
-          <button className="secondary" type="button" disabled={loading}
-            onClick={() => void loadAnalytics()}>{loading ? 'Refreshing...' : 'Refresh analytics'}</button>
+          <RefreshButton loading={loading} onClick={() => void loadAnalytics()} label="Refresh analytics" />
         </div>}
       />
 
@@ -309,12 +312,13 @@ export default function InstructorQuestionAnalytics() {
       </ResponsiveGrid>
 
       <ResponsiveGrid className="results-metrics question-analytics-metrics" min="10rem">
-        <SurfaceCard as="article" subtle><span>Questions measured</span><strong>{metrics.questions}</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Student responses</span><strong>{metrics.responses}</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Average accuracy</span><strong>{metrics.averageAccuracy.toFixed(1)}%</strong></SurfaceCard>
-        <SurfaceCard as="article" subtle><span>Need review</span><strong>{metrics.needsReview}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Questions measured</span><strong>{hasLoaded ? metrics.questions : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Student responses</span><strong>{hasLoaded ? metrics.responses : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Average accuracy</span><strong>{hasLoaded ? `${metrics.averageAccuracy.toFixed(1)}%` : '—'}</strong></SurfaceCard>
+        <SurfaceCard as="article" subtle><span>Need review</span><strong>{hasLoaded ? metrics.needsReview : '—'}</strong></SurfaceCard>
       </ResponsiveGrid>
 
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading question analytics...">
       <div className="question-analytics-list">
         {questionGroups.map(([courseCode, courseQuestions]) => (
           <QuestionCourseGroup
@@ -325,9 +329,10 @@ export default function InstructorQuestionAnalytics() {
         ))}
       </div>
 
-      {!loading && !filteredQuestions.length && (
+      {!filteredQuestions.length && (
         <div className="empty-state"><h3>No question analytics yet</h3><p>Completed quiz attempts will produce question-level performance data here.</p></div>
       )}
+      </DataLoadBoundary>
       {message && <p className="form-message form-message--error" role="alert">{message}</p>}
     </section>
   )

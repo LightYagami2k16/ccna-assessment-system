@@ -1,0 +1,10 @@
+.review-schedule-fields { min-width: 0; margin-block: 1rem; padding: 1rem; border: 1px solid var(--border-color, #94a3b8); border-radius: .75rem; }
+.review-schedule-fields legend { font-weight: 600; padding-inline: .4rem; }
+.review-schedule-fields p { margin-top: 0; }
+.review-schedule-fields label { min-width: 0; }
+.review-schedule-fields__enable { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+.review-schedule-fields .review-schedule-fields__enable input { flex: 0 0 auto; width: 1.1rem; height: 1.1rem; padding: 0; margin: 0; }
+.review-schedule-fields__enable span { min-width: 0; }
+.review-schedule-fields__dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; }
+.review-schedule-fields__dates p { grid-column: 1 / -1; font-size: .9rem; }
+.review-schedule-fields input[type="datetime-local"], .review-schedule-fields select { box-sizing: border-box; max-width: 100%; min-width: 0; width: 100%; }

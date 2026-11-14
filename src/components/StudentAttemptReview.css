@@ -1,0 +1,21 @@
+.student-attempt-review { min-width: 0; overflow-wrap: anywhere; }
+.student-attempt-review__summary { display: flex; flex-wrap: wrap; gap: .75rem; padding-block: .5rem 1rem; }
+.student-attempt-review__notice { padding: 1rem; border: 1px solid var(--color-border, #dce6ef); border-radius: .5rem; }
+.student-attempt-review__card { padding: 1rem; margin-block: 1rem; border: 1px solid var(--color-border, #dce6ef); border-radius: .75rem; }
+.student-attempt-review__card h3, .student-attempt-review__card h4 { margin-top: 0; }
+.student-attempt-review__text { white-space: pre-wrap; }
+.student-attempt-review__options { list-style: none; padding: 0; }
+.student-attempt-review__options li { padding: .75rem; margin-block: .5rem; border: 1px solid var(--color-border, #dce6ef); border-radius: .5rem; }
+.student-attempt-review__selected { border-width: 2px !important; }
+.student-attempt-review__badges { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .85rem; margin-top: .4rem; }
+.student-attempt-review__values { margin: .5rem 0; }
+.student-attempt-review__values > div { padding: .4rem 0 .4rem .7rem; border-left: 1px solid var(--color-border, #dce6ef); }
+.student-attempt-review__values dt { font-weight: 600; }
+.student-attempt-review__values dd { margin: .2rem 0 0; }
+.student-attempt-review__commands { padding-left: 1.5rem; }
+.student-attempt-review__commands li { margin-block: 1rem; }
+.student-attempt-review__commands code, .student-attempt-review__commands pre { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.student-attempt-review__commands li > span { display: block; font-size: .85rem; }
+.student-attempt-review-access { margin-block: .75rem; font-size: .9rem; }
+
+.student-attempt-review__expected { display: grid; gap: .3rem; margin-block: .5rem; }

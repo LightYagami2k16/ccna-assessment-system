@@ -1,3 +1,5 @@
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   deleteInstructorModule,
@@ -5,7 +7,6 @@ import {
   saveInstructorModule,
 } from '../services/moduleService'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
-import LoadingState from './LoadingState'
 import {
   ActionBar,
   ResponsiveGrid,
@@ -59,7 +60,8 @@ export default function InstructorModuleManager({ onChanged }) {
   // Starting with an empty array makes every course collapsed initially.
   const [expandedCourseIds, setExpandedCourseIds] = useState([])
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
+  const [loadFailed, setLoadFailed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [message, setMessage] = useState('')
@@ -67,6 +69,7 @@ export default function InstructorModuleManager({ onChanged }) {
   const { confirm, confirmationDialog } = useConfirmationDialog()
 
   const loadWorkspace = useCallback(async () => {
+    setLoadFailed(false)
     try {
       setLoading(true)
       setMessage('')
@@ -74,13 +77,15 @@ export default function InstructorModuleManager({ onChanged }) {
 
       const nextWorkspace = await getInstructorModuleWorkspace()
       setWorkspace(nextWorkspace)
+      markLoaded()
     } catch (error) {
+      setLoadFailed(true)
       setMessage(error.message)
       setMessageIsError(true)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [markLoaded, setLoading])
 
   useEffect(() => {
     void loadWorkspace()
@@ -249,10 +254,7 @@ export default function InstructorModuleManager({ onChanged }) {
         title="Course modules"
         description="Expand a course to view and manage its modules. Modules are displayed automatically by module code."
         actions={(
-          <span className="status-chip module-total-badge">
-            {workspace.modules.length}{' '}
-            {workspace.modules.length === 1 ? 'module' : 'modules'}
-          </span>
+          <div className="loading-panel-actions"><span className="status-chip module-total-badge">{hasLoaded ? workspace.modules.length : '—'} {workspace.modules.length === 1 ? 'module' : 'modules'}</span></div>
         )}
       />
 
@@ -268,9 +270,7 @@ export default function InstructorModuleManager({ onChanged }) {
         </p>
       )}
 
-      {loading ? (
-        <LoadingState label="Loading course modules..." />
-      ) : (
+      <DataLoadBoundary error={loadFailed} onRetry={loadWorkspace} loading={loading} ready={hasLoaded} label="Loading course modules...">
         <ResponsiveGrid className="module-course-groups" min="20rem">
           {modulesByCourse.map((course) => {
             const courseId = String(course.id)
@@ -520,7 +520,7 @@ export default function InstructorModuleManager({ onChanged }) {
             )
           })}
         </ResponsiveGrid>
-      )}
+      </DataLoadBoundary>
     </section>
   )
 }

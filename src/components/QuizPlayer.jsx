@@ -138,8 +138,6 @@ export default function QuizPlayer({
     const messages = {
       page_hidden:
         'The exam page became hidden. This event was recorded for instructor review.',
-      fullscreen_exited:
-        'Fullscreen was exited. This event was recorded for instructor review.',
       connection_lost:
         'Your connection was lost. Continue working while the browser reconnects.',
     };

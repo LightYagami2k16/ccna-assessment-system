@@ -6,7 +6,9 @@ import {
 } from 'react'
 import { Users } from 'lucide-react'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
-import LoadingState from './LoadingState'
+import useDataLoadState from '../hooks/useDataLoadState'
+import DataLoadBoundary from './DataLoadBoundary'
+import RefreshButton from './RefreshButton'
 import TailwindEmptyState from './TailwindEmptyState'
 import { FilterBar } from './LayoutPrimitives'
 import {
@@ -74,7 +76,7 @@ export default function AdminUserManagement({
   const [selectedRoles, setSelectedRoles] = useState({})
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading, hasLoaded, markLoaded] = useDataLoadState()
   const [savingUserId, setSavingUserId] = useState(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteValues, setInviteValues] = useState({
@@ -110,6 +112,7 @@ export default function AdminUserManagement({
           ]),
         ),
       )
+      markLoaded()
     } catch (error) {
       setMessageTone('error')
       setMessage(
@@ -118,7 +121,7 @@ export default function AdminUserManagement({
     } finally {
       setLoading(false)
     }
-  }, [currentUser?.id, previewMode])
+  }, [currentUser?.id, markLoaded, previewMode, setLoading])
 
   useEffect(() => {
     void loadAccounts()
@@ -341,14 +344,11 @@ export default function AdminUserManagement({
         </div>
 
         <div className="admin-users-heading__actions">
-          <button
-            className="secondary"
-            type="button"
-            disabled={loading}
+          <RefreshButton
+            loading={loading}
             onClick={() => void loadAccounts()}
-          >
-            {loading ? 'Refreshing...' : 'Refresh accounts'}
-          </button>
+            label="Refresh accounts"
+          />
           <button
             className="primary"
             type="button"
@@ -455,7 +455,7 @@ export default function AdminUserManagement({
         ].map(([key, label]) => (
           <article key={key}>
             <span>{label}</span>
-            <strong>{accountCounts[key]}</strong>
+            <strong>{hasLoaded ? accountCounts[key] : '—'}</strong>
           </article>
         ))}
       </div>
@@ -498,9 +498,8 @@ export default function AdminUserManagement({
         </p>
       )}
 
-      {loading ? (
-        <LoadingState label="Loading accounts..." />
-      ) : visibleAccounts.length === 0 ? (
+      <DataLoadBoundary loading={loading} ready={hasLoaded} label="Loading accounts...">
+      {visibleAccounts.length === 0 ? (
         <TailwindEmptyState
           icon={Users}
           title="No matching accounts"
@@ -655,6 +654,7 @@ export default function AdminUserManagement({
           })}
         </div>
       )}
+      </DataLoadBoundary>
 
       <aside className="admin-security-note">
         <strong>Secure account provisioning</strong>
