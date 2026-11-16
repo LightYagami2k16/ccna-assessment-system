@@ -94,3 +94,8 @@ Instructor Student results → CLI practical results attempt review now has Grad
 Verification: lint and the focused populated instructor browser case pass. Coverage includes default selection, hidden command section, keyboard switching, criterion device r2 and command device r1 surviving switches, retained score summary, original command sequence/content, no final-state display, and phone containment. Desktop and phone screenshots inspected. No new API, migration, dependency, grading/permission change, hosted write, commit or push. Previous local work is preserved. Final release checks recorded below.
 
 Final instructor-tab checks: lint, production build and diff whitespace check pass; localhost responds HTTP 200. Nothing committed or pushed.
+
+
+## Publication — 2026-11-16
+
+The owner explicitly authorized commit and push. Recent CLI review changes and shared F1 workspace improvements are published on main in `28bd9fb5719c2b92f6077fcbb66e46bdbc75daf3`. Final release secret scan, 108 unit tests, lint, production build, dependency audit (zero vulnerabilities), isolated SQL contract checks and staged whitespace checks pass. [Pages deployment](https://github.com/LightYagami2k16/ccna-assessment-system/actions/runs/43792529860) and [production smoke test](https://github.com/LightYagami2k16/ccna-assessment-system/actions/runs/43792611250) succeeded. Prior local-only statements above describe the development sequence and are superseded by this publication. Migrations 072/073 are included in the repository but were not applied to Supabase by this push. Confirm/apply migrations in order for instructor criterion/command device IDs and complete authenticated acceptance separately.

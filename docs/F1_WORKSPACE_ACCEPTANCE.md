@@ -23,3 +23,8 @@ Watched the administrator selector check fail before implementation. Twenty-nine
 At localhost:5173, test real instructor/administrator subsection workflows, direct admin tool links and navigation after sign-in; verify the quiz/CLI focus boundary with real attempts. Check screen-reader behavior, 200% zoom, compact/tablet/desktop layouts and populated records. The approved standalone /admin/classes oversight route and administrator navigation consistency remain separate F1 tasks. F1 is still in progress. The new shell/breadcrumb increment remains uncommitted and unpublished for review.
 
 Final local checks: repository secret scan, full lint, production build and diff whitespace check pass. Localhost responds HTTP 200. Independent review confirmed the parent-link fix and reported no remaining actionable findings. No additional commit or push was made for this F1 increment.
+
+
+## Publication — 2026-11-16
+
+The owner authorized publication. The shared administrator shell/breadcrumb increment is included in release `28bd9fb5719c2b92f6077fcbb66e46bdbc75daf3`, pushed to main. [GitHub Pages deployment](https://github.com/LightYagami2k16/ccna-assessment-system/actions/runs/43792529860) and [production smoke test](https://github.com/LightYagami2k16/ccna-assessment-system/actions/runs/43792611250) both succeeded. Earlier local-only/uncommitted notes describe pre-release verification and are superseded by this record. Remaining F1 development and authenticated owner acceptance are unchanged.
