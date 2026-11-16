@@ -93,6 +93,7 @@ export function replaceWorkspacePath(path) {
     '',
     `${window.location.pathname}${window.location.search}#${path}`,
   )
+  window.dispatchEvent(new Event('workspacepathchange'))
 }
 
 export function pushWorkspacePath(path) {

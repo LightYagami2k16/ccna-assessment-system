@@ -8,14 +8,15 @@ import {
 } from 'lucide-react'
 import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
+import WorkspaceBreadcrumbs from './WorkspaceBreadcrumbs'
 import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
 
 const AdminUserManagement = lazy(
   () => import('./AdminUserManagement'),
 )
 const AdminOverview = lazy(() => import('./AdminOverview'))
-const InstructorWorkspace = lazy(
-  () => import('./InstructorWorkspace'),
+const AdminAssessmentTools = lazy(
+  () => import('./AdminAssessmentTools'),
 )
 const AdminAuditHistory = lazy(
   () => import('./AdminAuditHistory'),
@@ -124,6 +125,7 @@ export default function AdminWorkspace({
         })}
       </nav>
 
+      <WorkspaceBreadcrumbs role="administrator" />
       <header className="workspace-page-header admin-page-header">
         <div>
           <span className="eyebrow">ADMINISTRATOR WORKSPACE</span>
@@ -162,10 +164,7 @@ export default function AdminWorkspace({
         )}
 
         {activeSection === 'assessment-tools' && (
-          <InstructorWorkspace
-            user={user}
-            administratorMode
-          />
+          <AdminAssessmentTools user={user} />
         )}
 
         {activeSection === 'security-history' && (

@@ -1,6 +1,6 @@
 # CCNA Assessment System — Information Architecture Blueprint
 
-Last updated: August 18, 2026
+Last updated: November 14, 2026
 
 This document defines the approved role-based page structure for the next
 frontend implementation sprint. It reorganizes the existing application; it
@@ -114,30 +114,17 @@ classes, while assessment cards belong on their assessment pages.
 
 #### Quizzes
 
-Use addressable subsections: Quiz library (default), Create / edit quiz, and
-Templates. Retain the mounted editor and library when switching subsections.
-Library Edit opens the editor; successful save or Cancel returns to the library
-and clears the completed editor session. Course expansion and bulk selections
-remain in the library. The same routes apply within administrator assessment tools.
-
 - available and resumable quiz cards;
 - remaining attempts, duration, due date, and class assignment;
 - archive/restore behavior when attempts remain; and
-- a single refresh/synchronization action.
+- automatic refresh with contextual Retry after a load failure.
 
 #### CLI practicals
-
-Use addressable subsections: Practical library (default), Create / edit practical,
-and Templates. Retain draft devices, topology, criteria, assignments, library
-expansion, and bulk selections while switching. Edit opens the builder; successful
-save or Cancel returns to the library and resets the completed draft. Answer keys
-remain contextual to each library card. Support both instructor and administrator
-assessment-tool addresses.
 
 - available and resumable practical cards;
 - course/module, duration, attempts, and device/topology summary;
 - archive/restore behavior when attempts remain; and
-- a single refresh/synchronization action.
+- automatic refresh with contextual Retry after a load failure.
 
 #### Results & history
 
@@ -197,12 +184,25 @@ remain contextual actions inside the library.
 
 #### Quizzes
 
+Use addressable subsections: Quiz library (default), Create / edit quiz, and
+Templates. Retain the mounted editor and library when switching subsections.
+Library Edit opens the editor; successful save or Cancel returns to the library
+and clears the completed editor session. Course expansion and bulk selections
+remain in the library. The same routes apply within administrator assessment tools.
+
 - quiz builder opened only when creating or editing;
 - quiz library grouped by course;
 - question-selection rules and random-pool settings; and
 - publish, duplicate, assign, and delete actions.
 
 #### CLI practicals
+
+Use addressable subsections: Practical library (default), Create / edit practical,
+and Templates. Retain draft devices, topology, criteria, assignments, library
+expansion, and bulk selections while switching. Edit opens the builder; successful
+save or Cancel returns to the library and resets the completed draft. Answer keys
+remain contextual to each library card. Support both instructor and administrator
+assessment-tool addresses.
 
 - practical builder opened only when creating or editing;
 - practical library grouped by course;
@@ -428,3 +428,8 @@ Each quiz/practical library detail popup has an independent Student attempt revi
 ## Student review schedules and creation controls — 2026-11-13
 
 Quiz/CLI create and edit forms now own review availability alongside content: disabled, after submission, or a scheduled opening with optional closing. The existing library detail-popup policy uses the same fields and saves independently. Local datetime inputs serialize to ISO timestamps, while database permission checks enforce opening-inclusive/closing-exclusive access. Existing edit policies must load before saving. Migration 071 adds atomic assessment/review saves (including CLI topology) and extends the 070 review guards. Both migrations remain prepared locally, not applied by this work. Student result tables reserve an explicit Review column and an icon action, retaining phone cards and tablet scrolling. See STUDENT_ATTEMPT_REVIEW_ACCEPTANCE.md.
+
+
+## F1 shared administrator shell and breadcrumbs — 2026-11-14
+
+Administrator assessment tools now reuse the extracted assessment feature renderer directly within the administrator shell. A labelled Assessment tool selector replaces the nested instructor sidebar; one workspace page header is retained. Existing admin tool/subsection addresses and administratorMode permissions remain unchanged. Instructors keep their own sidebar. Shared breadcrumbs link to the owning page and role Overview; instructor/admin subsections show their current label. The administrator Assessment tools parent links to the canonical default Question Bank tool. Breadcrumbs observe both native hash navigation and internal address replacement. They render only in normal workspaces, outside student quiz/CLI focus mode. This F1 increment is local; see F1_WORKSPACE_ACCEPTANCE.md.

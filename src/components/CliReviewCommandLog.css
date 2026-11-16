@@ -1,0 +1,14 @@
+.cli-review-command-log { min-width: 0; }
+.cli-review-command-list { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.cli-review-command-list li { min-width: 0; padding: 1rem; border: 1px solid var(--color-border, #dce6ef); border-radius: 10px; }
+.cli-review-command-list__status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; font-size: .85rem; margin-bottom: .5rem; }
+.cli-review-command-list code, .cli-review-command-list pre { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.cli-review-command-list pre { margin: .75rem 0 0; }
+
+.cli-review-command-list .command-valid { color: #166534; }
+.cli-review-command-list .command-invalid { color: #b91c1c; }
+
+.cli-review-command-device { min-width: 0; margin-block: 0 1rem; }
+.cli-review-command-device__heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .75rem; }
+.cli-review-command-device__heading h4 { margin: 0; }
+.cli-review-command-device__heading > span { min-width: 0; overflow-wrap: anywhere; font-size: .85rem; color: var(--color-text-secondary); }

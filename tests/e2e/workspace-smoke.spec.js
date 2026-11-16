@@ -88,7 +88,7 @@ test('student pages keep their address through refresh and browser navigation', 
     page.getByRole('heading', { name: 'Student overview' }),
   ).toBeVisible()
 
-  await page.getByRole('button', { name: 'View quizzes' }).click()
+  await page.getByRole('navigation', { name: 'Student workspace', exact: true }).getByRole('button', { name: /^Quizzes/ }).click()
   await expect(page).toHaveURL(/#\/student\/assessments$/)
   await expect(
     page.getByRole('heading', { name: 'Available quizzes' }),
@@ -109,14 +109,14 @@ test('administrator assessment tools keep administrator routing context', async 
   await page.goto('/?uat-role=administrator#/admin/assessment-tools/quizzes')
   await expect(page.locator('.admin-page-header h1')).toHaveText('Assessment tools')
   await expect(
-    page.locator('.instructor-workspace .workspace-page-header h1'),
+    page.locator('.admin-assessment-tools__heading h2'),
   ).toHaveText('Quizzes')
 
-  await page.getByRole('button', { name: /CLI practicals/ }).click()
+  await page.getByRole('combobox', { name: 'Assessment tool', exact: true }).selectOption('cli-practicals')
   await expect(page).toHaveURL(/#\/admin\/assessment-tools\/practicals$/)
   await expect(page.locator('.admin-page-header h1')).toHaveText('Assessment tools')
   await expect(
-    page.locator('.instructor-workspace .workspace-page-header h1'),
+    page.locator('.admin-assessment-tools__heading h2'),
   ).toHaveText('CLI practicals')
 })
 

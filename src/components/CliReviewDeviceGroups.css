@@ -1,0 +1,8 @@
+.cli-review-device-groups { display: grid; min-width: 0; gap: 1rem; }
+.cli-review-device-group { min-width: 0; padding: 1rem; border: 1px solid var(--color-border, #dce6ef); border-radius: 12px; background: var(--color-surface, #fff); overflow-wrap: anywhere; }
+.cli-review-device-group__heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1rem; padding-bottom: .75rem; margin-bottom: .75rem; border-bottom: 1px solid var(--color-border, #dce6ef); }
+.cli-review-device-group__heading h4 { margin: 0; color: var(--color-primary-strong, #0d3158); }
+.cli-review-device-group__heading > span { min-width: 0; font-size: .85rem; color: var(--color-text-secondary, #637286); }
+.cli-review-device-group__heading code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cli-review-device-group .student-attempt-review__card { margin-block: 0; }
+.cli-review-device-group .student-attempt-review__card h5 { margin: 0 0 .5rem; font-size: .95rem; }

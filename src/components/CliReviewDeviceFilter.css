@@ -1,0 +1,4 @@
+.cli-review-device-filter { display: grid; min-width: 0; gap: .4rem; margin: 0 0 1rem; }
+.cli-review-device-filter > label { display: block; margin: 0; padding: 0; font-size: .9rem; font-weight: 600; line-height: 1.4; }
+.cli-review-device-filter > select { width: 100%; min-width: 0; max-width: 100%; margin: 0; }
+.cli-review-section > h3 { margin: 0 0 .75rem; }

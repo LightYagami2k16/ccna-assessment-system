@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { getStudentAttemptReview } from '../services/studentAttemptReviewService'
 import useStudentPageRefresh from '../hooks/useStudentPageRefresh'
 import LibraryItemDialog from './LibraryItemDialog'
+import CliReviewDeviceGroups from './CliReviewDeviceGroups'
+import CliReviewCommandLog from './CliReviewCommandLog'
 import './StudentAttemptReview.css'
 
 function label(value) {
@@ -42,9 +44,16 @@ function QuizReview({ questions = [] }) {
 }
 
 function CliReview({ criteria = [], commands = [], state }) {
-  function deviceName(id) {
-    return state?.deviceStates?.[id]?.hostname || state?.devices?.[id]?.hostname
-      || (Array.isArray(state?.devices) ? state.devices.find((device) => String(device.id) === String(id))?.hostname : '') || id
+  const prefix = useId()
+  const [activeSection, setActiveSection] = useState('configuration')
+  const sections = [{ id: 'configuration', label: 'Expected configuration' }, { id: 'commands', label: 'Command log' }]
+  function selectSectionWithKey(event, index) {
+    const positions = { ArrowRight: (index + 1) % sections.length, ArrowLeft: (index + sections.length - 1) % sections.length, Home: 0, End: sections.length - 1 }
+    if (!(event.key in positions)) return
+    event.preventDefault()
+    const next = positions[event.key]
+    setActiveSection(sections[next].id)
+    event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus()
   }
   function expectedValue(criterion) {
     if (criterion.expected != null && String(criterion.expected).trim() !== '') return criterion.expected
@@ -56,19 +65,22 @@ function CliReview({ criteria = [], commands = [], state }) {
     }[criterion.type] ?? 'Configured'
   }
   return <>
-    <section><h3>Expected configuration</h3>{criteria.length ? criteria.map((criterion, index) => <article className="student-attempt-review__card" key={index}>
-      <h4>{label(criterion.type || 'Configuration requirement')}{criterion.target ? `: ${criterion.target}` : ''}</h4>
-      {criterion.deviceId && <p>Device: {deviceName(criterion.deviceId)}</p>}
+    <div className="student-attempt-review__sections" role="tablist" aria-label="CLI review sections">
+      {sections.map((section, index) => <button key={section.id} type="button" role="tab"
+        id={`${prefix}-${section.id}-tab`} aria-controls={`${prefix}-${section.id}-panel`}
+        aria-selected={activeSection === section.id} tabIndex={activeSection === section.id ? 0 : -1}
+        onClick={() => setActiveSection(section.id)} onKeyDown={event => selectSectionWithKey(event, index)}>{section.label}</button>)}
+    </div>
+    <section className="cli-review-section student-attempt-review__cli-panel" role="tabpanel" id={`${prefix}-configuration-panel`} aria-labelledby={`${prefix}-configuration-tab`} hidden={activeSection !== 'configuration'} tabIndex={activeSection === 'configuration' ? 0 : -1}>
+      <h3>Expected configuration</h3>
+      {criteria.length ? <CliReviewDeviceGroups criteria={criteria} state={state} filterable>{(criterion, index) => <article className="student-attempt-review__card" key={index}>
+      <h5>{label(criterion.type || 'Configuration requirement')}{criterion.target ? `: ${criterion.target}` : ''}</h5>
       <div className="student-attempt-review__expected"><strong>Expected</strong><ValueDetails value={expectedValue(criterion)} /></div>
       <p>{criterion.met === true ? 'Requirement met' : criterion.met === false ? 'Requirement not met' : 'Outcome not recorded'} · {criterion.pointsAwarded ?? 'Not recorded'} of {criterion.points ?? '—'} points</p>
-    </article>) : <p>Configuration requirements were not recorded.</p>}</section>
-    <section><h3>Your commands</h3>{commands.length ? <ol className="student-attempt-review__commands">{[...commands].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map((command, index) => <li key={`${command.sequence ?? index}:${index}`}>
-      {command.deviceId && <p>Device: {deviceName(command.deviceId)}</p>}
-      <code>{command.command}</code>
-      {command.accepted != null && <span>{command.accepted ? 'Accepted' : 'Not accepted'}</span>}
-      {command.output && <pre>{command.output}</pre>}
-    </li>)}</ol> : <p>No commands recorded.</p>}</section>
-    <section><h3>Final device state</h3><ValueDetails value={state} /></section>
+    </article>}</CliReviewDeviceGroups> : <p>Configuration requirements were not recorded.</p>}</section>
+    <section className="cli-review-section student-attempt-review__cli-panel" role="tabpanel" id={`${prefix}-commands-panel`} aria-labelledby={`${prefix}-commands-tab`} hidden={activeSection !== 'commands'} tabIndex={activeSection === 'commands' ? 0 : -1}>
+      <h3>Command log</h3><CliReviewCommandLog commands={commands} criteria={criteria} state={state} />
+    </section>
   </>
 }
 
@@ -122,7 +134,7 @@ export default function StudentAttemptReview({ assessmentType, attemptId, title,
   }
   return <LibraryItemDialog open title={title || 'Attempt review'} eyebrow="YOUR ATTEMPT REVIEW" onClose={close}>
     <div className="student-attempt-review" aria-busy={loading}>
-      {loading && <p role="status">{data ? 'Checking review access...' : 'Loading attempt review...'}</p>}
+      {loading && (!data || assessmentType !== 'cli') && <p role="status">{data ? 'Checking review access...' : 'Loading attempt review...'}</p>}
       {error && <div role="alert"><p>{error}</p><button className="secondary" type="button" disabled={loading} onClick={() => void retry()}>Try again</button></div>}
       {data && authorized && <>
         <div className="student-attempt-review__summary"><strong>{data.attempt?.scorePoints ?? '—'} of {data.attempt?.maximumPoints ?? '—'} points</strong>
@@ -130,7 +142,7 @@ export default function StudentAttemptReview({ assessmentType, attemptId, title,
           {data.attempt?.passed != null && <span>{data.attempt.passed ? 'Passed' : 'Not passed'}</span>}
         </div>
         {data.historicalContentNotice && <p className="student-attempt-review__notice">{data.historicalContentNotice}</p>}
-        {assessmentType === 'quiz' ? <QuizReview questions={data.questions} /> : <CliReview criteria={data.criteria} commands={data.commands} state={data.state} />}
+        {assessmentType === 'quiz' ? <QuizReview questions={data.questions} /> : <CliReview key={attemptId} criteria={data.criteria} commands={data.commands} state={data.state} />}
       </>}
     </div>
   </LibraryItemDialog>

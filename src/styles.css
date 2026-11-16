@@ -3814,6 +3814,9 @@ legend {
 .cli-review-summary article { padding: 1rem; border: 1px solid #dce6ef; border-radius: 12px; background: #f8fbfd; }
 .cli-review-summary span { display: block; color: #637286; font-size: .78rem; }
 .cli-review-summary strong { display: block; margin-top: .3rem; color: #0d3158; font-size: 1.25rem; }
+.cli-attempt-review__tabs { display: flex; flex-wrap: wrap; gap: .5rem; padding: .4rem; border: 1px solid var(--color-border, #dce6ef); border-radius: 12px; background: #f4f9fd; }
+.cli-attempt-review__tabs [role="tab"] { flex: 1 1 10rem; min-width: 0; padding: .75rem; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #0d3158; font-weight: 700; }
+.cli-attempt-review__tabs [aria-selected="true"] { background: #0c6fa8; color: #fff; }
 .cli-criterion-review-list { display: grid; gap: .65rem; }
 .cli-criterion-review { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: .9rem; border: 1px solid #dce6ef; border-radius: 12px; }
 .cli-criterion-review--correct { border-color: #86d8a2; background: #f0fdf4; }

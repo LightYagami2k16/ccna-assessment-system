@@ -1,35 +1,13 @@
 import { lazy, Suspense, useState } from 'react'
-import {
-  Archive,
-  ChartNoAxesColumn,
-  ClipboardList,
-  LayoutDashboard,
-  Library,
-  MonitorCheck,
-  PanelLeftOpen,
-  SquareTerminal,
-  Users,
-  X,
-} from 'lucide-react'
+import { PanelLeftOpen, X } from 'lucide-react'
 import AppIcon from './AppIcon'
 import WorkspaceLoading from './WorkspaceLoading'
 import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
-import { administratorAssessmentToolPaths } from '../routing/workspaceRoutes'
+import { instructorNavigation } from '../routing/assessmentNavigation'
+import AssessmentWorkspaceContent from './AssessmentWorkspaceContent'
+import WorkspaceBreadcrumbs from './WorkspaceBreadcrumbs'
 
-const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
 const InstructorOverview = lazy(() => import('./InstructorOverview'))
-const InstructorQuizBuilder = lazy(() => import('./InstructorQuizBuilder'))
-const InstructorResultsArea = lazy(() => import('./InstructorResultsArea'))
-const InstructorClassAssignments = lazy(
-  () => import('./InstructorClassAssignments'),
-)
-const ExamControlsDashboard = lazy(() => import('./ExamControlsDashboard'))
-const InstructorCliLabBuilder = lazy(
-  () => import('./InstructorCliLabBuilder'),
-)
-const InstructorContentBackup = lazy(
-  () => import('./InstructorContentBackup'),
-)
 
 const instructorSections = new Set([
   'overview',
@@ -42,56 +20,6 @@ const instructorSections = new Set([
   'content-backup',
 ])
 
-const instructorNavigation = [
-  {
-    id: 'overview',
-    icon: LayoutDashboard,
-    label: 'Overview',
-    description: 'Teaching priorities and shortcuts',
-  },
-  {
-    id: 'questions',
-    icon: Library,
-    label: 'Question bank',
-    description: 'Modules and reusable questions',
-  },
-  {
-    id: 'quizzes',
-    icon: ClipboardList,
-    label: 'Quizzes',
-    description: 'Build and publish assessments',
-  },
-  {
-    id: 'cli-practicals',
-    icon: SquareTerminal,
-    label: 'CLI practicals',
-    description: 'Create Cisco configuration exams',
-  },
-  {
-    id: 'assignments',
-    icon: Users,
-    label: 'Classes & assignments',
-    description: 'Enrollment and quiz access',
-  },
-  {
-    id: 'exam-controls',
-    icon: MonitorCheck,
-    label: 'Exam controls',
-    description: 'Schedules and live monitoring',
-  },
-  {
-    id: 'results',
-    icon: ChartNoAxesColumn,
-    label: 'Student results',
-    description: 'Review attempts and browser events',
-  },
-  {
-    id: 'content-backup',
-    icon: Archive,
-    label: 'Content backup',
-    description: 'Protect and restore instructional content',
-  },
-]
 
 function getStoredSection(userId) {
   if (!userId) return 'overview'
@@ -111,26 +39,16 @@ function getStoredSection(userId) {
 
 export default function InstructorWorkspace({
   user,
-  administratorMode = false,
 }) {
   const [activeSection, setActiveSection] = useWorkspaceRoute({
-    role: administratorMode ? 'administrator' : 'instructor',
+    role: 'instructor',
     initialSection: getStoredSection(user?.id),
     storageKey: user?.id
       ? `ccna-instructor-active-section:${user.id}`
       : null,
-    sectionPaths: administratorMode
-      ? administratorAssessmentToolPaths
-      : undefined,
-    defaultSection: administratorMode ? 'questions' : undefined,
-    defaultPath: administratorMode
-      ? administratorAssessmentToolPaths.questions
-      : undefined,
   })
   const [navigationOpen, setNavigationOpen] = useState(false)
-  const availableNavigation = administratorMode
-    ? instructorNavigation.filter((item) => item.id !== 'overview')
-    : instructorNavigation
+  const availableNavigation = instructorNavigation
   const activeNavigationItem =
     availableNavigation.find((item) => item.id === activeSection) ??
     availableNavigation[0]
@@ -215,6 +133,7 @@ export default function InstructorWorkspace({
         </aside>
 
         <section className="workspace-content">
+          <WorkspaceBreadcrumbs role="instructor" />
           <header className="workspace-page-header">
             <div>
               <span className="eyebrow">INSTRUCTOR WORKSPACE</span>
@@ -232,39 +151,16 @@ export default function InstructorWorkspace({
             </span>
           </header>
 
-          <Suspense
-            fallback={
-              <WorkspaceLoading
-                label={`Loading ${activeNavigationItem.label.toLowerCase()}...`}
-              />
-            }
-          >
-            {activeSection === 'overview' && !administratorMode && (
+          {activeSection === 'overview' ? (
+            <Suspense fallback={<WorkspaceLoading label="Loading overview..." />}>
               <InstructorOverview onNavigate={selectSection} />
-            )}
-            {activeSection === 'questions' && (
-              <InstructorQuestionBank user={user} administratorMode={administratorMode} />
-            )}
-            {activeSection === 'quizzes' && <InstructorQuizBuilder administratorMode={administratorMode} />}
-            {activeSection === 'cli-practicals' && (
-              <InstructorCliLabBuilder administratorMode={administratorMode} />
-            )}
-            {activeSection === 'assignments' && (
-              <InstructorClassAssignments
-                administratorMode={administratorMode}
-                onOpenPracticals={() => selectSection('cli-practicals')}
-              />
-            )}
-            {activeSection === 'exam-controls' && (
-              <ExamControlsDashboard administratorMode={administratorMode} />
-            )}
-            {activeSection === 'results' && (
-              <InstructorResultsArea administratorMode={administratorMode} />
-            )}
-            {activeSection === 'content-backup' && (
-              <InstructorContentBackup />
-            )}
-          </Suspense>
+            </Suspense>
+          ) : <AssessmentWorkspaceContent
+            section={activeSection}
+            label={activeNavigationItem.label}
+            user={user}
+            onOpenPracticals={() => selectSection('cli-practicals')}
+          />}
         </section>
       </div>
     </div>

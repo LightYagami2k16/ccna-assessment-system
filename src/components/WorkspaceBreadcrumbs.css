@@ -1,0 +1,13 @@
+.workspace-breadcrumbs { margin-bottom: 1rem; min-width: 0; color: var(--color-text-secondary); font-size: .875rem; }
+.workspace-breadcrumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .65rem; padding: 0; margin: 0; list-style: none; }
+.workspace-breadcrumbs li { display: inline-flex; align-items: center; gap: .65rem; min-width: 0; overflow-wrap: anywhere; }
+.workspace-breadcrumbs li + li::before { content: '/'; color: var(--color-text-secondary); }
+.workspace-breadcrumbs a { color: var(--color-primary-strong); text-underline-offset: .2em; padding-block: .3rem; }
+.workspace-breadcrumbs [aria-current="page"] { font-weight: 600; }
+.admin-assessment-tools { min-width: 0; }
+.admin-assessment-tools__heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.admin-assessment-tools__heading h2 { margin: 0; }
+.admin-assessment-tools__heading p { margin: .3rem 0 0; color: var(--color-text-secondary); }
+.admin-assessment-tools__heading label { display: grid; gap: .4rem; min-width: min(100%, 16rem); max-width: 100%; font-weight: 600; }
+.admin-assessment-tools__heading select { width: 100%; min-width: 0; }
+@media(max-width: 600px) { .admin-assessment-tools__heading label { width: 100%; } }

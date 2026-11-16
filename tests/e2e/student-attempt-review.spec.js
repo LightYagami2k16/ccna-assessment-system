@@ -70,19 +70,23 @@ test('review access failure does not block history scores or enable detail reque
   expect(controls.detailRequests).toBe(0)
 })
 
-test('practical review presents expected configuration, commands and final state on phones', async ({ page }, testInfo) => {
+test('practical review presents overview and device command tabs without final state on phones', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 800 })
   await reviewFixture(page)
   await page.locator('.student-cli-history').getByRole('button', { name: 'Review attempt 1' }).click()
   const popup = page.getByRole('dialog', { name: 'Switch practical' })
   await expect(popup.getByRole('heading', { name: 'Expected configuration' })).toBeVisible()
-  await expect(popup.getByText('hostname Access1', { exact: true })).toBeVisible()
-  await expect(popup.getByRole('heading', { name: 'Final device state' })).toBeVisible()
+  await expect(popup.getByRole('heading', { name: 'Final device state' })).toHaveCount(0)
   await expect(popup.getByText('Enabled (no shutdown)', { exact: true })).toBeVisible()
   await expect(popup.getByText('Must exist', { exact: true })).toBeVisible()
   await expect(popup.getByText('Running configuration saved', { exact: true })).toBeVisible()
-  await expect(popup.getByText('Device: Access1', { exact: true })).toHaveCount(2)
+  await expect(popup.getByRole('region', { name: 'Access1 (Device ID: device-id)', exact: true })).toContainText('Hostname')
+  await expect(popup.locator('.cli-review-device-groups').getByText('Device ID not recorded', { exact: true })).toBeVisible()
   await expect(popup.getByText('Device: device-id', { exact: true })).toHaveCount(0)
+  await popup.getByRole('tab', { name: 'Command log', exact: true }).click()
+  await expect(popup.getByText('hostname Access1', { exact: true })).toBeVisible()
+  await popup.locator('.cli-review-command-log').getByRole('combobox', { name: 'Filter by device', exact: true }).selectOption(JSON.stringify('device-id'))
+  await expect(popup.getByText('hostname Access1', { exact: true })).toBeVisible()
   expect(await popup.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
   await popup.evaluate((element) => { element.scrollTop = 0 })
   await page.screenshot({ path: testInfo.outputPath('student-cli-review-phone.png') })
@@ -123,21 +127,29 @@ test('a late response from a closed review cannot replace a newer review', async
   await expect(popup.getByText('Fresh question')).toBeVisible()
 })
 
-test('pending revalidation retains review content, then removes it when access is denied', async ({ page }) => {
-  const controls = await reviewFixture(page)
-  await page.locator('.student-recent-results:not(.student-cli-history)').getByRole('button', { name: 'Review attempt 1' }).click()
-  const popup = page.getByRole('dialog', { name: 'Addressing quiz' })
-  await expect(popup.getByText('Choose a private address')).toBeVisible()
-  let release
-  await page.route('**/rpc/get_student_attempt_review', async (route) => {
-    await new Promise((resolve) => { release = resolve })
-    await route.fallback()
+for (const type of ['quiz', 'cli']) {
+  test(`${type} pending revalidation retains content and clears it on denial, with silent CLI checks`, async ({ page }) => {
+    const controls = await reviewFixture(page)
+    const history = page.locator(type === 'cli' ? '.student-cli-history' : '.student-recent-results:not(.student-cli-history)')
+    await history.getByRole('button', { name: 'Review attempt 1' }).click()
+    const popup = page.getByRole('dialog', { name: type === 'cli' ? 'Switch practical' : 'Addressing quiz' })
+    const content = popup.getByText(type === 'cli' ? 'Running configuration saved' : 'Choose a private address', { exact: true })
+    await expect(content).toBeVisible()
+    let release
+    await page.route('**/rpc/get_student_attempt_review', async (route) => {
+      await new Promise((resolve) => { release = resolve })
+      await route.fallback()
+    })
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect.poll(() => Boolean(release)).toBe(true)
+    if (type === 'cli') {
+      await expect(popup.getByRole('status')).toHaveCount(0)
+      await expect(popup.getByText('Checking review access...', { exact: true })).toHaveCount(0)
+    } else await expect(popup.getByRole('status')).toHaveText('Checking review access...')
+    await expect(content).toBeVisible()
+    controls.allowed = false
+    release()
+    await expect(popup.getByRole('alert')).toBeVisible()
+    await expect(content).toHaveCount(0)
   })
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
-  await expect(popup.getByRole('status')).toHaveText('Checking review access...')
-  await expect(popup.getByText('Choose a private address')).toBeVisible()
-  controls.allowed = false
-  release()
-  await expect(popup.getByRole('alert')).toBeVisible()
-  await expect(popup.getByText('Choose a private address')).toHaveCount(0)
-})
+}

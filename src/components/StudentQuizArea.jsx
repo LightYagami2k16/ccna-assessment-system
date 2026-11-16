@@ -22,6 +22,7 @@ import StudentExamGuide from './StudentExamGuide'
 import StudentOverview from './StudentOverview'
 import StudentQuizList from './StudentQuizList'
 import WorkspaceLoading from './WorkspaceLoading'
+import WorkspaceBreadcrumbs from './WorkspaceBreadcrumbs'
 import { getStudentActiveAssessmentSession } from '../services/assessmentAttemptService'
 import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
 import {
@@ -367,6 +368,7 @@ export default function StudentQuizArea({
         </aside>
 
         <section className="workspace-content student-workspace__content">
+          <WorkspaceBreadcrumbs role="student" />
           {sessionMessage && activeSection !== 'overview' && (
             <p className="form-message form-message--error" role="alert">
               {sessionMessage}

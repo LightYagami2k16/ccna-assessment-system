@@ -1,13 +1,15 @@
 import useDataLoadState from '../hooks/useDataLoadState'
 import DataLoadBoundary from './DataLoadBoundary'
 import RefreshButton from './RefreshButton'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import {
   getInstructorCliAttemptReview,
   getInstructorCliResults,
   resetInstructorCliAttempts,
 } from '../services/cliLabService'
 import BrowserEventReview from './BrowserEventReview'
+import CliReviewDeviceGroups from './CliReviewDeviceGroups'
+import CliReviewCommandLog from './CliReviewCommandLog'
 import ResultActionMenu from './ResultActionMenu'
 import useConfirmationDialog from '../hooks/useConfirmationDialog'
 import {
@@ -117,6 +119,17 @@ function groupResults(attempts) {
 }
 
 function CliAttemptReview({ attemptId, onBack }) {
+  const prefix = useId()
+  const [activeSection, setActiveSection] = useState('criteria')
+  const sections = [{ id: 'criteria', label: 'Grading criteria' }, { id: 'commands', label: 'Command log' }]
+  function selectSectionWithKey(event, index) {
+    const positions = { ArrowRight: (index + 1) % sections.length, ArrowLeft: (index + sections.length - 1) % sections.length, Home: 0, End: sections.length - 1 }
+    if (!(event.key in positions)) return
+    event.preventDefault()
+    const next = positions[event.key]
+    setActiveSection(sections[next].id)
+    event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus()
+  }
   const [review, setReview] = useState(null)
   const [message, setMessage] = useState('')
 
@@ -155,9 +168,17 @@ function CliAttemptReview({ attemptId, onBack }) {
         <article><span>Commands</span><strong>{review.commands.length}</strong></article>
       </div>
 
+      <div className="cli-attempt-review__tabs" role="tablist" aria-label="CLI attempt review sections">
+        {sections.map((section, index) => <button key={section.id} type="button" role="tab"
+          id={`${prefix}-${section.id}-tab`} aria-controls={`${prefix}-${section.id}-panel`}
+          aria-selected={activeSection === section.id} tabIndex={activeSection === section.id ? 0 : -1}
+          onClick={() => setActiveSection(section.id)} onKeyDown={event => selectSectionWithKey(event, index)}>{section.label}</button>)}
+      </div>
+
+      <section className="cli-review-section" role="tabpanel" id={`${prefix}-criteria-panel`} aria-labelledby={`${prefix}-criteria-tab`} hidden={activeSection !== 'criteria'} tabIndex={activeSection === 'criteria' ? 0 : -1}>
       <h3>Grading criteria</h3>
-      <div className="cli-criterion-review-list">
-        {review.criteria.map((criterion, index) => (
+      <CliReviewDeviceGroups criteria={review.criteria} state={review.attempt.state} filterable>
+        {(criterion, index) => (
           <article className={criterion.met ? 'cli-criterion-review cli-criterion-review--correct' : 'cli-criterion-review cli-criterion-review--incorrect'}
             key={`${criterion.type}-${criterion.target}-${index}`}>
             <span className="cli-criterion-review__mark">{criterion.met ? '✓' : '✕'}</span>
@@ -170,22 +191,14 @@ function CliAttemptReview({ attemptId, onBack }) {
             </div>
             <span>{Number(criterion.pointsAwarded)} / {Number(criterion.points)} points</span>
           </article>
-        ))}
-      </div>
+        )}
+      </CliReviewDeviceGroups>
+      </section>
 
+      <section className="cli-review-section" role="tabpanel" id={`${prefix}-commands-panel`} aria-labelledby={`${prefix}-commands-tab`} hidden={activeSection !== 'commands'} tabIndex={activeSection === 'commands' ? 0 : -1}>
       <h3>Command log</h3>
-      <div className="cli-command-review">
-        {review.commands.map((command) => (
-          <div key={command.sequence}>
-            <span>#{command.sequence}</span>
-            <code>{command.command}</code>
-            <span className={command.accepted ? 'command-valid' : 'command-invalid'}>
-              {command.accepted ? 'Accepted' : 'Invalid'}
-            </span>
-            {command.output && <pre>{command.output}</pre>}
-          </div>
-        ))}
-      </div>
+      <CliReviewCommandLog commands={review.commands} criteria={review.criteria} state={review.attempt.state} />
+      </section>
     </section>
   )
 }
@@ -498,7 +511,7 @@ export default function InstructorCliResults() {
   }
 
   if (selectedAttemptId) {
-    return <CliAttemptReview attemptId={selectedAttemptId} onBack={() => setSelectedAttemptId(null)} />
+    return <CliAttemptReview key={selectedAttemptId} attemptId={selectedAttemptId} onBack={() => setSelectedAttemptId(null)} />
   }
 
   return (
