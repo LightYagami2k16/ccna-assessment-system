@@ -167,11 +167,11 @@
 .duel-waiting-roster {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);width:min(50rem,100%);}
 .duel-waiting-slot {position:relative;display:flex;min-width:0;}
 .duel-waiting-versus {position:absolute;left:calc(clamp(2rem,5vw,5rem)/-2);top:50%;transform:translate(-50%,-50%);font-weight:900;font-size:1.2rem;color:#53768e;}
-.duel-waiting-player {display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:flex-start;gap:.9rem;min-height:14rem;padding:1.5rem 1rem;border:1px solid #bdd8e9;border-radius:18px;background:#ffffffdc;box-shadow:0 10px 30px #164b6d0c;}
-.duel-waiting-player__character {display:flex;align-items:center;justify-content:center;min-height:13rem;width:100%;}
+.duel-waiting-player {display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:flex-start;gap:.5rem;min-height:14rem;padding:1.25rem 1rem;border:1px solid #bdd8e9;border-radius:18px;background:#ffffffdc;box-shadow:0 10px 30px #164b6d0c;}
+.duel-waiting-player__character {display:flex;align-items:center;justify-content:center;min-height:12.5rem;width:100%;}
 .duel-waiting-player__action {display:flex;align-items:center;justify-content:center;min-height:2.65rem;width:100%;}
-.duel-waiting-player h4 {display:flex;align-items:center;justify-content:center;flex:1;width:100%;min-height:3.2rem;font-size:1.15rem;line-height:1.4;margin:0;overflow-wrap:anywhere;}
-.duel-waiting-player>.duel-status {margin-top:auto;}
+.duel-waiting-player h4 {display:flex;align-items:flex-start;justify-content:center;flex:1;width:100%;font-size:1.15rem;line-height:1.35;margin:0;overflow-wrap:anywhere;}
+.duel-waiting-player>.duel-status {margin:0;}
 .duel-waiting-avatar {display:grid;place-items:center;width:4.5rem;height:4.5rem;border-radius:50%;background:#d8f0ff;border:3px solid #80c9ef;color:#086493;font-size:1.6rem;font-weight:800;}
 .duel-waiting-slot:nth-child(2) .duel-waiting-avatar {background:#e3f5e9;border-color:#88cfaa;color:#17613c;}
 .duel-waiting-arena__hint {font-size:.9rem;color:#526982;max-width:36rem;}
@@ -233,7 +233,7 @@
 @keyframes duel-versus-right {from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}
 @media(max-width:650px){.duel-character-picker>header{align-items:flex-start;flex-direction:column;}.duel-character-picker__layout{grid-template-columns:1fr;}.duel-character-preview{grid-row:1;}.duel-character--preview img{height:9rem;}.duel-character-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:22rem;}.duel-character-grid button img{width:100%;height:5rem;}.duel-character-count{align-self:flex-start;}.duel-overlay--versus .duel-overlay__content{padding:1.25rem .8rem;}.duel-character--hero img{height:clamp(9rem,30dvh,17rem);}.duel-versus-lineup{gap:2rem;}.duel-versus-emblem{left:-1rem;}.duel-character--waiting img{height:8rem;}.duel-character--waiting{width:8rem;}}
 @media(prefers-reduced-motion:reduce){.duel-versus-player,.duel-overlay--versus .duel-overlay__content{animation:none;}}
-@media(max-width:650px){.duel-waiting-player__character{min-height:10rem;}.duel-waiting-roster{grid-auto-rows:1fr;}}
+@media(max-width:650px){.duel-waiting-player__character{min-height:9.5rem;}.duel-waiting-roster{grid-auto-rows:1fr;}}
 
 .duel-player:has(.duel-health--damaged) .duel-character img,.duel-host-player:has(.duel-health--damaged) .duel-character img {animation:duel-character-hit .3s ease-out;}
 @keyframes duel-character-hit {0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}65%{transform:translateX(4px);}}
