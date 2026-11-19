@@ -2,7 +2,7 @@ import {memo,useEffect,useRef,useState,useId,useMemo} from 'react'
 import {getDevicePrompt} from '../simulator/ciscoSimulator'
 
 const EMPTY_OPERATIONS=[]
-function CliDuelDeviceConsole({data,enabled,onOperation,onFinish,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
+function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
  const radioGroup=useId()
  const inputRef=useRef(null),screenRef=useRef(null),followOutput=useRef(true)
  const devices=data.task?.devices||[]
@@ -28,7 +28,6 @@ function CliDuelDeviceConsole({data,enabled,onOperation,onFinish,readOnly=false,
   {!compact&&<aside className="cli-instructions"><h2>Requirements</h2><p>{data.task.instructions}</p>
    <div className="cli-device-summary"><span>Device</span><strong>{device.label}</strong><span>Type</span><strong>{device.type}</strong><span>{device.type==='pc'?'IPv4 address':'Current mode'}</span><strong>{device.type==='pc'?(ip||'Not configured'):state.mode?.replaceAll('_',' ')}</strong><span>{device.type==='pc'?'Default gateway':'Saved'}</span><strong>{device.type==='pc'?(gateway||'Not configured'):(state.saved?'Yes':'No')}</strong></div>
    {!!data.task?.topology?.links?.length&&<div className="cli-topology-summary"><strong>Topology links</strong><ul>{data.task.topology.links.map((link,index)=><li key={link.id||index}>{devices.find(item=>item.id===link.fromDeviceId)?.label} {link.fromInterface} ↔ {devices.find(item=>item.id===link.toDeviceId)?.label} {link.toInterface}</li>)}</ul></div>}
-   {!readOnly&&<button className="danger-button" type="button" disabled={!enabled||pendingOperations.length>0} onClick={onFinish}>Finish attempt</button>}
   </aside>}
   <section className="cisco-terminal" aria-label="Cisco CLI terminal">
    <div className="cisco-terminal__titlebar"><span>{device.label} · {state.hostname} — {remote?`SSH to ${remote.hostname}`:device.type==='pc'?'PC Command Prompt':'Cisco IOS'}</span><small>{readOnly?'Read-only player view':'Press Enter to run a command'}</small></div>

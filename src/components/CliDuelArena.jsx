@@ -3,7 +3,7 @@ import useCliDuel from '../hooks/useCliDuel'
 import useCliDuelOperationQueue from '../hooks/useCliDuelOperationQueue'
 import useAssessmentFocusMode from '../hooks/useAssessmentFocusMode'
 import useAssessmentClientSession from '../hooks/useAssessmentClientSession'
-import { getDuelPlayer, sendDuelAction, finishDuel, settleDuel, setDuelArenaPresence, selectDuelCharacter, duelError } from '../services/cliDuelService'
+import { getDuelPlayer, sendDuelAction, settleDuel, setDuelArenaPresence, selectDuelCharacter, duelError } from '../services/cliDuelService'
 import './CliDuel.css'
 import CliDuelOverlay from './CliDuelOverlay'
 import CliDuelHealthBar from './CliDuelHealthBar'
@@ -29,10 +29,8 @@ export default function CliDuelArena({ participantId, onExit }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [unsent,setUnsent]=useState([])
-  const showFinishConfirmation=useCallback(()=>setConfirmFinish(true),[])
   const [clock, setClock] = useState(Date.now())
   const [offset, setOffset] = useState(0)
-  const [confirmFinish, setConfirmFinish] = useState(false)
   const [outcomeDismissed,setOutcomeDismissed]=useState(false)
   const [selectingCharacter,setSelectingCharacter]=useState(false)
   const inFlight = useRef(false)
@@ -54,7 +52,7 @@ export default function CliDuelArena({ participantId, onExit }) {
     return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener('visibilitychange',present);void setDuelArenaPresence(participantId,lease.clientId,false).catch(()=>{})}
   },[admitting,participantId,lease.clientId,lease.status,lease.connectionStatus,refresh,match?.hostControlled,spectator])
   const terminal=['completed','cancelled','voided'].includes(match?.status)
-  useEffect(() => { if (own) setLocked(terminal || own.status !== 'in_progress'); if(terminal||match?.status!=='active')setConfirmFinish(false) }, [own,terminal,match?.status])
+  useEffect(() => { if (own) setLocked(terminal || own.status !== 'in_progress') }, [own,terminal])
   useEffect(() => {
     if (pending && data?.ownCommands?.some(entry => entry.sequence === pending.sequence && entry.command === (pending.action === 'operation' ? fullOperationCommand(pending) : pending.command) && (pending.action !== 'operation' || entry.deviceId === pending.deviceId))) setPending(null)
   }, [pending, data?.ownCommands])
@@ -98,11 +96,6 @@ export default function CliDuelArena({ participantId, onExit }) {
     const payload = { action: 'command', participantId, clientId: lease.clientId, commandId: crypto.randomUUID(), sequence: Number(data.revision) + 1, expectedRevision: Number(data.revision), command }
     setPending(payload); void send(payload)
   }
-  async function finish() {
-    if (inFlight.current || pending || queued.entries.length) return
-    setBusy(true)
-    try { await finishDuel(participantId, lease.clientId); setConfirmFinish(false); await refresh() } catch (failure) { setMessage(duelError(failure)) } finally { setBusy(false) }
-  }
   return <CliDuelStage><section className="panel cli-duel duel-arena cli-practical-shell">
     <header className="duel-heading cli-practical-header"><div><span className="eyebrow">CLI DUEL ARENA</span><h2>{match?.title || 'Connecting to duel'}</h2><p>{match?.rulesVersion>=2 ? 'Zero HP ends the duel · New objectives deal damage once · Host controls pauses' : 'Score first · Finish time breaks ties · No pause on disconnect'}</p></div><div className="duel-arena-actions"><DuelFullscreenButton/><button className="secondary" onClick={onExit}>Back to duels</button></div></header>
     {(error || message || (!locked && lease.message)) && <p role="alert">{error || message || (!locked && lease.message)}</p>}
@@ -121,15 +114,13 @@ export default function CliDuelArena({ participantId, onExit }) {
     {match?.status==='completed'&&own&&!outcomeDismissed&&<CliDuelOverlay kind={draw||!winners.length?'result':won?'victory':'defeated'} title={draw?'DRAW':!winners.length?'DUEL COMPLETE':won?'VICTORY':'DEFEATED'} onClose={()=>setOutcomeDismissed(true)}><CliDuelCharacter characterId={own.characterId} size="result" showName/><p>{match.endReason==='knockout'?'The duel ended by knockout.':'Final ranking uses score, then finish time.'}</p></CliDuelOverlay>}
 
     {showBattle && data?.task && match?.rulesVersion!==3 && <section className="duel-task"><h3>Configuration task</h3><p>{data.task.instructions}</p></section>}
-    {showBattle && data?.ownState && match?.rulesVersion===3 && <CliDuelDeviceConsole data={data} enabled={inputAllowed&&!queued.uncertain} onOperation={enqueueOperation} onFinish={showFinishConfirmation} readOnly={spectator} pendingOperations={queued.entries}/>}
+    {showBattle && data?.ownState && match?.rulesVersion===3 && <CliDuelDeviceConsole data={data} enabled={inputAllowed&&!queued.uncertain} onOperation={enqueueOperation} readOnly={spectator} pendingOperations={queued.entries}/>}
     {showBattle && data?.ownState && match?.rulesVersion!==3 && <><div className="duel-terminal" aria-label="Your CLI command log" role="log">{data.ownCommands?.map(entry => <div key={entry.sequence}><code>{entry.command}</code>{entry.output && <pre>{entry.output}</pre>}</div>)}</div>
       <p className="duel-prompt"><code>{getDevicePrompt(data.ownState)}</code></p><form onSubmit={submit} className="duel-command"><label>Cisco command<input autoComplete="off" spellCheck="false" maxLength={500} value={command} disabled={!enabled} onChange={e => setCommand(e.target.value)} /></label><button className="primary" disabled={!enabled || !command.trim()}>Send command</button></form></>}
     {queued.uncertain&&!terminal&&own?.status==='in_progress'&&<div className="duel-actions"><button type="button" className="secondary" disabled={!inputAllowed||queued.sending} onClick={queued.retry}>Retry same command</button><button type="button" className="secondary" onClick={refresh}>Resynchronize</button></div>}
     {!!unsent.length&&<details className="duel-unsent"><summary>Recent commands needing review ({unsent.length})</summary><pre>{unsent.map(entry=>`${data?.task?.devices?.find(device=>device.id===entry.deviceId)?.label||'Device'}: ${fullOperationCommand(entry)}`).join('\n')}</pre><button type="button" className="secondary" onClick={()=>setUnsent([])}>Dismiss list</button></details>}
     {pending && !terminal && own?.status==='in_progress' && <div className="duel-actions"><button className="secondary" disabled={busy || lease.connectionStatus !== 'online'} onClick={() => send(pending)}>Retry same command</button><button className="secondary" disabled={busy} onClick={refresh}>Resynchronize</button></div>}
     {!locked && lease.status === 'blocked' && <button className="secondary" onClick={lease.retry}>Retry session access</button>}
-    {!terminal && match?.rulesVersion!==3 && match?.status==='active' && own?.status === 'in_progress' && !countdown && !expired && <button className="secondary" disabled={busy || Boolean(pending)} onClick={() => setConfirmFinish(true)}>Finish attempt</button>}
-    {confirmFinish && <div className="duel-controls"><p>Submit your current verified configuration? Your score will be locked and you cannot enter more commands.</p><div className="duel-actions"><button className="primary" disabled={busy || Boolean(pending) || queued.entries.length>0} onClick={finish}>Confirm finish</button><button className="secondary" onClick={() => setConfirmFinish(false)}>Continue working</button></div></div>}
     {own && own.status !== 'in_progress' && <p role="status">{terminal ? 'Match complete. Return to duels to see the final standings.' : 'Your attempt is locked. Waiting for the opponent or the deadline.'}</p>}
     <small>Connection: {lease.connectionStatus}. Scores are verified by the server.</small>
   </section></CliDuelStage>
