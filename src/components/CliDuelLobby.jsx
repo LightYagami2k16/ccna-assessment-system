@@ -28,9 +28,19 @@ export default function CliDuelLobby({ id, onPlay, onRematch, onBack }) {
     <header><span className="eyebrow">{match.status}</span><h2>{match.title}</h2><p>{match.durationMinutes} minutes · {match.hostControlled?'Host starts once both players enter':match.arenaEntryRequired?'Both players enter, then a 5-second countdown':'Shared 10-second countdown'} · Host: {match.hostName}</p></header>
     {match.rulesVersion>=2 && <p>Starting HP: {match.startingHp} each · Each objective deals damage once · Zero HP ends the duel.</p>}
     {(error || message) && <p role="alert">{error || message}</p>}
-    <div className="duel-grid">{data.participants.map(p => <article className="duel-player" key={p.id}><CliDuelCharacter characterId={p.characterId} showName/><h3>{p.displayName}{p.isOwn ? ' (you)' : ''}</h3><p>{p.status.replaceAll('_', ' ')}</p>
-      <strong>{p.scorePoints} / {p.maximumPoints} points</strong><p>{p.placement ? `Rank ${p.placement} · ` : ''}{p.elapsedMs != null ? `${(p.elapsedMs / 1000).toFixed(2)} seconds` : 'Not finished'}</p>
-      {(match.canHost || (match.status === 'completed' && p.isOwn && match.allowReview)) && <button className="secondary" onClick={() => setReview(p.id)}>{match.canHost ? 'Inspect attempt' : 'Review attempt'}</button>}</article>)}</div>
+    <div className="duel-grid">{data.participants.map(p => <article className="duel-player duel-result-card" key={p.id}>
+      <div className="duel-result-card__details">
+        <span className="duel-status">{p.status.replaceAll('_', ' ')}</span>
+        <h3>{p.displayName}{p.isOwn ? ' (you)' : ''}</h3>
+        <dl className="duel-result-card__stats">
+          <div><dt>Score</dt><dd>{p.scorePoints} / {p.maximumPoints} points</dd></div>
+          <div><dt>Rank</dt><dd>{p.placement || '—'}</dd></div>
+          <div><dt>Finish time</dt><dd>{p.elapsedMs != null ? `${(p.elapsedMs / 1000).toFixed(2)} seconds` : 'Not finished'}</dd></div>
+        </dl>
+        {(match.canHost || (match.status === 'completed' && p.isOwn && match.allowReview)) && <button className="secondary" onClick={() => setReview(p.id)}>{match.canHost ? 'Inspect attempt' : 'Review attempt'}</button>}
+      </div>
+      {p.characterId && <div className="duel-result-card__artwork"><CliDuelCharacter characterId={p.characterId} size="standing" showName/></div>}
+    </article>)}</div>
     {(match.cancelReason || match.voidReason) && <p>Recorded reason: {match.cancelReason || match.voidReason}</p>}
     {match.status === 'lobby' && <div className="duel-actions">
       {own && <button className="primary" disabled={busy} onClick={() => act(() => readyDuel(id, getAssessmentClientId(), own.status !== 'ready'))}>{own.status === 'ready' ? 'Not ready' : 'Ready to compete'}</button>}
