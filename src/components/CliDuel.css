@@ -266,6 +266,14 @@
 .duel-terminal-sync {padding:.45rem .9rem;background:#102b3b;color:#b8d7e7;text-align:left;font-size:.75rem;}
 .duel-unsent {margin-top:1rem;padding:.75rem;border:1px solid #d3e3ee;border-radius:10px;background:#fff;}
 .duel-unsent pre {white-space:pre-wrap;overflow-wrap:anywhere;}
+.duel-port-status {flex:none;padding:.65rem .9rem;background:#102b3b;color:#dceef9;border-bottom:1px solid #315367;text-align:left;}
+.duel-port-status__heading {display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap;font-size:.8rem;font-weight:700;}
+.duel-port-status__heading small {font-size:.7rem;font-weight:400;color:#b8d2e2;}
+.duel-port-status ul {display:flex;flex-wrap:wrap;gap:.45rem .9rem;list-style:none;margin:.4rem 0 0;padding:0;}
+.duel-port-status li {display:flex;align-items:center;gap:.4rem;min-width:0;font-size:.75rem;overflow-wrap:anywhere;}
+.duel-port-status li strong {font-size:.7rem;font-weight:500;color:#c9dbe7;}
+.duel-port-status__dot {display:inline-block;flex:none;width:.65rem;height:.65rem;border-radius:50%;background:#f87171;border:1px solid #fca5a5;}
+.duel-port-status__dot--enabled {background:#34d399;border-color:#6ee7b7;}
 
 /* Standings pair readable results with full character artwork. */
 .duel-lobby>.duel-grid:has(.duel-result-card) {grid-auto-rows:1fr;}

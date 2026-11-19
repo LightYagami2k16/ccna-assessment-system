@@ -4,12 +4,14 @@ import {createPortal} from 'react-dom'
 export default function CliDuelStage({children}){
  const stage=useRef(null)
  useLayoutEffect(()=>{
-  const root=document.getElementById('root'),wasInert=root?.inert,overflow=document.body.style.overflow,opener=document.activeElement
-  if(root)root.inert=true
+  const root=document.getElementById('root'),wasInert=root?.inert,wasHidden=root?.hidden,overflow=document.body.style.overflow,pageOverflow=document.documentElement.style.overflow,opener=document.activeElement,scrollX=window.scrollX,scrollY=window.scrollY
+  // The arena is portaled outside the workspace: remove that background from layout too.
+  if(root){root.inert=true;root.hidden=true}
   document.body.style.overflow='hidden'
+  document.documentElement.style.overflow='hidden'
   const arena=stage.current
   if(!arena?.querySelector('dialog[open]'))arena?.focus({preventScroll:true})
-  return()=>{if(document.fullscreenElement===arena)void document.exitFullscreen().catch(()=>{});if(root)root.inert=wasInert;document.body.style.overflow=overflow;const target=opener?.isConnected&&opener!==document.body?opener:document.getElementById('main-workspace-content');if(!wasInert)target?.focus({preventScroll:true})}
+  return()=>{if(document.fullscreenElement===arena)void document.exitFullscreen().catch(()=>{});if(root){root.inert=wasInert;root.hidden=wasHidden}document.body.style.overflow=overflow;document.documentElement.style.overflow=pageOverflow;const target=opener?.isConnected&&opener!==document.body?opener:document.getElementById('main-workspace-content');if(!wasInert)target?.focus({preventScroll:true});window.scrollTo(scrollX,scrollY)}
  },[])
  return createPortal(<main ref={stage} className="duel-stage" tabIndex="-1" aria-label="CLI Duel arena">{children}</main>,document.body)
 }

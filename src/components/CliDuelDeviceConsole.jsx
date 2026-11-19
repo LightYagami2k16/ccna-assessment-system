@@ -1,5 +1,6 @@
 import {memo,useEffect,useRef,useState,useId,useMemo} from 'react'
 import {getDevicePrompt} from '../simulator/ciscoSimulator'
+import {getDuelPorts} from '../services/cliDuelPorts'
 
 const EMPTY_OPERATIONS=[]
 function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
@@ -10,6 +11,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
  const [settings,setSettings]=useState({ipAddress:'',subnetMask:'',defaultGateway:'',preferredDns:'',alternateDns:''})
  const device=devices.find(item=>item.id===selection)||devices.find(item=>item.id===data.ownState.activeDeviceId)||devices[0]
  const deviceId=device?.id,state=data.ownState.deviceStates?.[deviceId]
+ const ports=getDuelPorts(data.task,deviceId,state)
  const adapter=state?.interfaces?.Ethernet0
  const ip=adapter?.ipAddress||'',mask=adapter?.subnetMask||'',gateway=state?.defaultGateway||'',dns1=state?.dnsServers?.[0]||'',dns2=state?.dnsServers?.[1]||''
  useEffect(()=>{setMode(state?.dhcpEnabled?'dhcp':'static');setSettings({ipAddress:ip,subnetMask:mask,defaultGateway:gateway,preferredDns:dns1,alternateDns:dns2})},[deviceId,ip,mask,gateway,dns1,dns2,state?.dhcpEnabled])
@@ -32,6 +34,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
   <section className="cisco-terminal" aria-label="Cisco CLI terminal">
    <div className="cisco-terminal__titlebar"><span>{device.label} · {state.hostname} — {remote?`SSH to ${remote.hostname}`:device.type==='pc'?'PC Command Prompt':'Cisco IOS'}</span><small>{readOnly?'Read-only player view':'Press Enter to run a command'}</small></div>
    <div className="cli-device-tabs" role="tablist" aria-label="Topology devices">{devices.map(item=><button key={item.id} type="button" role="tab" aria-selected={item.id===deviceId} onClick={()=>{setSelection(item.id);setCommand('');setPcView(item.type==='pc'?'configuration':'command')}}>{item.label}</button>)}</div>
+   {ports.length>0&&<section className="duel-port-status" aria-label={`${device.label} port status`}><span className="duel-port-status__heading">Port status <small>Administrative state</small></span><ul>{ports.map(port=><li key={port.name}><span className={`duel-port-status__dot${port.enabled?' duel-port-status__dot--enabled':''}`} aria-hidden="true"/><span>{port.name}</span><strong>{port.enabled?'Enabled':'Down'}</strong></li>)}</ul></section>}
   {device.type==='pc'&&<div className="pc-workspace-tabs" role="tablist" aria-label="PC tools"><button type="button" role="tab" aria-selected={pcView==='configuration'} onClick={()=>setPcView('configuration')}>IP Configuration</button><button type="button" role="tab" aria-selected={pcView==='command'} onClick={()=>setPcView('command')}>Command Prompt</button></div>}
   {device.type==='pc'&&pcView==='configuration'?<form className="pc-ipv4-panel" onSubmit={configure}>
    <div className="pc-ipv4-panel__heading"><div><span className="eyebrow">PC NETWORK ADAPTER</span><h2>Internet Protocol Version 4 (TCP/IPv4)</h2><p>Choose DHCP or enter the static settings required by the challenge.</p></div><span className="pc-ipv4-panel__adapter">Ethernet0</span></div><fieldset><legend>IP address settings</legend>

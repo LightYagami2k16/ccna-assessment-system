@@ -1,5 +1,15 @@
 # CLI Duel pilot — local acceptance
 
+## November 19 update: arena isolation and port indicators
+
+The shared duel arena now hides the workspace behind the game and restores it on exit. Its desktop/phone result-dialog, scrolling and failed-load exit regressions pass.
+
+The device console shows administrative port status in student and read-only host views. Only ports named in topology links, interface criteria or EtherChannel member criteria appear. Indicators use verified device state: green for `shutdown: false`, red otherwise. This reports administrative enablement, not end-to-end connectivity. Switching devices changes the port list; unrelated player-created interfaces do not appear.
+
+For hosted use, apply `supabase/migrations/083_cli_duel_port_status.sql` in the same Supabase project after migrations 074–082. It adds a safe `configuredPorts` list to authorized task readers without publishing criteria or expected answers. Existing task-visibility and host-access guards remain in place. No Edge Function redeployment is required. Until 083 is applied, the frontend can show topology-link ports but cannot discover ports mentioned only in private criteria. No hosted migration was applied by this source update.
+
+Validation includes 165 unit tests, lint, production build, repository secret scan, and isolated SQL contracts applying 083 twice, including safe metadata, deduplication, reader integration and helper permissions. The focused Chromium check passes no-shutdown/shutdown updates, per-device filtering, unrelated-port exclusion, phone presentation and the host's read-only views.
+
 Last updated: November 18, 2026 (Asia/Manila). Current local behavior includes the host-controlled arena amendment below.
 
 ## Scope and use

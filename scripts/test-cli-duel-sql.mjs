@@ -270,6 +270,15 @@ try{
   await db.exec('reset role');assert.equal((await db.query("select has_function_privilege('anon','public.cli_duel_random_character()','EXECUTE') allowed")).rows[0].allowed,false)
   console.log('PASS082 twice: case-sensitive text/device grading, normalized IOS enums, own-browser random choice, atomic missing-only host assignment, repeat Start/abort preservation and private helper ACL.')
  }
+ if(process.env.DUEL_PORTS_TEST){
+  await db.exec('reset role');await db.exec(await file('083_cli_duel_port_status.sql'));await db.exec(await file('083_cli_duel_port_status.sql'))
+  const definition={devices:[{id:'d1'},{id:'d2'}],criteria:[{type:'interface_enabled',deviceId:'d1',target:'g0/1',expected:'SECRET'},{type:'interface_ip',deviceId:'d1',target:'gi0/2',expected:'PRIVATE IP'},{type:'etherchannel_member',deviceId:'d2',target:'f0/3',expected:'PRIVATE GROUP'},{type:'hostname',deviceId:'d2',expected:'SECRET HOST'}],topology:{links:[{fromDeviceId:'d1',fromInterface:'g0/1',toDeviceId:'d2',toInterface:'g0/1'}]}}
+  const safe=(await db.query('select public.cli_duel_public_task($1::jsonb) task',[JSON.stringify(definition)])).rows[0].task
+  assert.equal(safe.criteria,undefined);assert.equal(safe.configuredPorts.length,4);assert.ok(safe.configuredPorts.every(port=>Object.keys(port).sort().join(',')==='deviceId,interface'));assert.ok(!JSON.stringify(safe).includes('SECRET'));assert.ok(!JSON.stringify(safe).includes('PRIVATE'))
+  for(const name of ['cli_duel_player_data(uuid,uuid)','get_cli_duel_host_arena(uuid)'])assert.match((await db.query('select pg_get_functiondef($1::regprocedure) def',[`public.${name}`])).rows[0].def,/public.cli_duel_public_task\(c.definition_snapshot\)/)
+  assert.equal((await db.query("select has_function_privilege('authenticated','public.cli_duel_public_task(jsonb)','EXECUTE') allowed")).rows[0].allowed,false)
+  console.log('PASS083 twice: deduplicated configured ports, private answer values, protected reader integration and helper ACL.')
+ }
  console.log('PASS atomic start, ordinary quiz/CLI session barriers and retained cancelled history.')
  console.log('PASS extended SQL: actual grading, undo/HP, dedup/stale rejection, browser lease, auto-completion, key/review isolation, release withdrawal, timeout exact ties, rematches, void and role/ban/ownership changes.')
 
