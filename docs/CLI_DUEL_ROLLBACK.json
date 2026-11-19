@@ -1,0 +1,2861 @@
+{
+  "createdLocalDate": "2026-11-18",
+  "root": "C:\\Users\\Campos\\Downloads\\ccna-assessment-starter\\ccna-assessment-starter",
+  "baselineHead": "04a093a2daad777730f1bc5e1ea189498f6e0904",
+  "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-baseline-20261116-153425\\working-folder.zip",
+  "checkpointZipSha256": "3ed7b74a4320ff01f6bd653faa005b0d63fd903978691b2573eb606bfd474ee9",
+  "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-baseline-20261116-153425\\manifest.json",
+  "baselineManifestSha256": "a0dd211688ee49e0d8f0bd65cd5dae605b5928715b1c3d72bdfbfde16c2b4728",
+  "changed": [
+    {
+      "path": "docs/PROJECT_ROADMAP.md",
+      "beforeSha256": "82718b91238cc56a47d8f0c625e2a252a2c972ba3f9e86ed626e0493bd7499b8",
+      "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+    },
+    {
+      "path": "package.json",
+      "beforeSha256": "54d87bb7130a410676a3b53212b9a554467b505e32004872802ce7556ccee094",
+      "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+    },
+    {
+      "path": "src/components/AdminAssessmentTools.jsx",
+      "beforeSha256": "cf241623d14577acf94d62b5e030ecc8ff70d0689bfd178d27f40db360c56663",
+      "afterSha256": "faa112d5ca90e63f8f5d89f5a53f21f49b67b16a39e4a5e680a754aad8ddb8af"
+    },
+    {
+      "path": "src/components/AdminWorkspace.jsx",
+      "beforeSha256": "a09b6aefb20de7dfe9e21022978883f3e06cc5eca59975b1075dd00ac7dbe7fe",
+      "afterSha256": "3f52ad7edd1085f80372c61e3e7f4f2dba3058507aef0bd26f56b3dd78b3be38"
+    },
+    {
+      "path": "src/components/AssessmentWorkspaceContent.jsx",
+      "beforeSha256": "886220a56db0dd6d5891300d22fd339886e205766b5276bb1c08ecf4e12902c9",
+      "afterSha256": "078c969371e693d3d69a0b5e8d98c2a471765aef902dc627a804ca3c4f577a26"
+    },
+    {
+      "path": "src/components/InstructorCliLabBuilder.jsx",
+      "beforeSha256": "c76fd40ffd00dc9348b22183179f2100a122d622c0506286424eab60edfa8e8b",
+      "afterSha256": "803c8e777562cf87bdd90198a77b5357c09b644fbed83a55e3604586ed588a5d"
+    },
+    {
+      "path": "src/components/InstructorWorkspace.jsx",
+      "beforeSha256": "4d2d8ccbab5e3116b6a1a41f307e5a727daab54f808d34780381df4ff5755111",
+      "afterSha256": "193d6172385cc6fa4d92f01dace147555e89c71a11746b536455e06809025948"
+    },
+    {
+      "path": "src/components/StudentOverview.jsx",
+      "beforeSha256": "d2e9a803c425b4190114d0e4cfd8c231107545be42ed34b4b37ed5d108ec9721",
+      "afterSha256": "fd831fa9106c4663e34153ac98db4d6078760f89a2068d7f66d2b9d23b67eae1"
+    },
+    {
+      "path": "src/components/StudentQuizArea.jsx",
+      "beforeSha256": "2d961eeabe1a87884e72ac01e44f246127bb6b9b335f7e6bf447af3fc6c59374",
+      "afterSha256": "366f3d5c7787189ef8e5ab2fca1049bf01d79a83b9aa4a955ce3c401fdf76966"
+    },
+    {
+      "path": "src/components/WorkspaceBreadcrumbs.jsx",
+      "beforeSha256": "29ad539d5b947608d871f9e7a3e7d60dedfbd2f74749e6844e425b2c99d2ed9b",
+      "afterSha256": "d54672eba1394edc2f6d232feff130c827ddb19466f1601cb15aa85543a3b6b6"
+    },
+    {
+      "path": "src/routing/assessmentNavigation.js",
+      "beforeSha256": "042d315f9e44701360001b8a47c8b2cbb10a12f4314e992ad0160ab21ccda0a3",
+      "afterSha256": "08a8fc44bdc09d25dd553ec8539bf96c41ab3fd06072c11b2227571db49db4d2"
+    },
+    {
+      "path": "src/routing/workspaceRoutes.js",
+      "beforeSha256": "aec77110e5db0f450ede58d013a60f73d9c6a0cbdf48df6ba419347beac7cc85",
+      "afterSha256": "0f9d3f0239fec00a7327bee40b70fb278c81c88c628883f5de5871a49d103f8c"
+    },
+    {
+      "path": "src/services/cliCriterionApplicability.js",
+      "beforeSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988",
+      "afterSha256": "ab35f0efb1fcefe6116bc994042d0c4fb9bd1cb2460065fd9a09b0f9d7ca6536"
+    },
+    {
+      "path": "src/simulator/ciscoSimulator.js",
+      "beforeSha256": "c38ffa25603e11dcc30a7a8834bf6bdad4e04755f20d8f746380109b29dbeacb",
+      "afterSha256": "7a5d6103f9d17201356529a9259372e2085cdc5403b661313bbc9ccc97c28914"
+    }
+  ],
+  "added": [
+    {
+      "path": "assets/duel-characters/Asta.png",
+      "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+    },
+    {
+      "path": "assets/duel-characters/Eren Yeager.png",
+      "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+    },
+    {
+      "path": "assets/duel-characters/Gon Freecss.png",
+      "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+    },
+    {
+      "path": "assets/duel-characters/Ichigo Kurosaki.png",
+      "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+    },
+    {
+      "path": "assets/duel-characters/Izuku Midoriya.png",
+      "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+    },
+    {
+      "path": "assets/duel-characters/Ken Kaneki.png",
+      "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+    },
+    {
+      "path": "assets/duel-characters/Meliodas.png",
+      "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+    },
+    {
+      "path": "assets/duel-characters/Monkey D. Luffy.png",
+      "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+    },
+    {
+      "path": "assets/duel-characters/Natsu Dragneel.png",
+      "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+    },
+    {
+      "path": "assets/duel-characters/Saitama.png",
+      "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+    },
+    {
+      "path": "assets/duel-characters/Shinra Kusakabe.png",
+      "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+    },
+    {
+      "path": "assets/duel-characters/Son Goku.png",
+      "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+    },
+    {
+      "path": "assets/duel-characters/Sung Jinwoo.png",
+      "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+    },
+    {
+      "path": "assets/duel-characters/Uzumaki Naruto.png",
+      "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+    },
+    {
+      "path": "assets/duel-characters/Yuji Itadori.png",
+      "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+    },
+    {
+      "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+      "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-16-cli-duel-pilot.md",
+      "afterSha256": "2dae71e0eec8b6011254a261f76c70e85e41aecbf32cb6ef67a5a0102e8d5619"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-18-cli-duel-arena-entry.md",
+      "afterSha256": "7bbcafe4d21fda6e71f11e7b9eea730e99d383f90308dd69e3dd76c990a47256"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-18-cli-duel-full-practical-builder.md",
+      "afterSha256": "86c8cf0cf30c8d244f5861008aa9b04c06065fd98f62f9136a2d4245a923127d"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-18-cli-duel-knockout-customization.md",
+      "afterSha256": "216817ceb7f42fc30f3ca6f1258a6c7351cf7b69ffe42c788afe76b7cc0301b9"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+      "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+      "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+      "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+      "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+      "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-11-16-cli-duel-pilot-design.md",
+      "afterSha256": "594aa5cab9ab4480465959e94aeaef58177d917ff3d12ed5aecc131a1512d395"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-11-18-cli-duel-knockout-customization-design.md",
+      "afterSha256": "fa01b45e15671e818f4c0984c396729e2b2f6ed0211bcaf80f7e95990df3bccb"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+      "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+    },
+    {
+      "path": "scripts/test-cli-duel-boundaries.mjs",
+      "afterSha256": "6beef8db096fe1b625e0202902961e93b8a7f1e50e87ed81598ce367ac7aa9f4"
+    },
+    {
+      "path": "scripts/test-cli-duel-full-local.mjs",
+      "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+    },
+    {
+      "path": "scripts/test-cli-duel-host-local.mjs",
+      "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+    },
+    {
+      "path": "scripts/test-cli-duel-knockout-local.mjs",
+      "afterSha256": "6f9f4a18b8278cf140a3d81231f3c950ca4aa6a2db5f0ef7178e8bbf640ad05a"
+    },
+    {
+      "path": "scripts/test-cli-duel-local-browser.mjs",
+      "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+    },
+    {
+      "path": "scripts/test-cli-duel-local.mjs",
+      "afterSha256": "dd6605a5d474ee3c8dba191b0ba729bcfb7d2a3eee4ccb7ae0fba25b823b3bc4"
+    },
+    {
+      "path": "scripts/test-cli-duel-queue-local.mjs",
+      "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+    },
+    {
+      "path": "scripts/test-cli-duel-sql.mjs",
+      "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+    },
+    {
+      "path": "src/components/CliCompetitions.jsx",
+      "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+    },
+    {
+      "path": "src/components/CliDuel.css",
+      "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+    },
+    {
+      "path": "src/components/CliDuelArena.jsx",
+      "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+    },
+    {
+      "path": "src/components/CliDuelCharacter.jsx",
+      "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+    },
+    {
+      "path": "src/components/CliDuelCharacterDialog.jsx",
+      "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+    },
+    {
+      "path": "src/components/CliDuelCharacterPicker.jsx",
+      "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+    },
+    {
+      "path": "src/components/CliDuelDeviceConsole.jsx",
+      "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+    },
+    {
+      "path": "src/components/CliDuelHealthBar.jsx",
+      "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+    },
+    {
+      "path": "src/components/CliDuelHostArena.jsx",
+      "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+    },
+    {
+      "path": "src/components/CliDuelLobby.jsx",
+      "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+    },
+    {
+      "path": "src/components/CliDuelOverlay.jsx",
+      "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+    },
+    {
+      "path": "src/components/CliDuelReview.jsx",
+      "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+    },
+    {
+      "path": "src/components/CliDuelStage.jsx",
+      "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+    },
+    {
+      "path": "src/components/CliDuelVersus.jsx",
+      "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+    },
+    {
+      "path": "src/components/CliDuelWaitingRoom.jsx",
+      "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+    },
+    {
+      "path": "src/components/CliPracticalConfigurationFields.jsx",
+      "afterSha256": "dc6f3b0c5ec97f8e3ab7d9af7d162d0e548fbc02dbc026c228af2f9c6050e5d2"
+    },
+    {
+      "path": "src/hooks/useCliDuel.js",
+      "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+    },
+    {
+      "path": "src/hooks/useCliDuelOperationQueue.js",
+      "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+    },
+    {
+      "path": "src/hooks/useCliPracticalEditor.js",
+      "afterSha256": "305fc2721faf79a4433a939f277493b3e1e19abe1fbe702e5b4bd32a5fa3b244"
+    },
+    {
+      "path": "src/services/cliDuelCharacters.js",
+      "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+    },
+    {
+      "path": "src/services/cliDuelCharacters.test.js",
+      "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+    },
+    {
+      "path": "src/services/cliDuelCustomization.test.js",
+      "afterSha256": "c491779a089a67d2b9d7ec6d032a2ab5b41a20389d6cce6b61c347453ebbce82"
+    },
+    {
+      "path": "src/services/cliDuelFullProtocol.test.js",
+      "afterSha256": "e3603d9549c2f3b9db2bc076c1f19605e17229c389be309c5450ced7f42c5b2a"
+    },
+    {
+      "path": "src/services/cliDuelHandler.test.js",
+      "afterSha256": "5ae94abd55e468b6da5e85fc6df6c278c80813fb67c21ce4084aa6c94a6adffa"
+    },
+    {
+      "path": "src/services/cliDuelOperationQueue.js",
+      "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+    },
+    {
+      "path": "src/services/cliDuelOperationQueue.test.js",
+      "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+    },
+    {
+      "path": "src/services/cliDuelProtocol.test.js",
+      "afterSha256": "094072c03e02b548bbd1eae1e07e1c53af2a8c9ef60b8fbb46761d1fd9194edd"
+    },
+    {
+      "path": "src/services/cliDuelService.js",
+      "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+    },
+    {
+      "path": "src/services/cliDuelSync.js",
+      "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+    },
+    {
+      "path": "src/services/cliDuelSync.test.js",
+      "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+    },
+    {
+      "path": "src/services/cliDuelWinners.js",
+      "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+    },
+    {
+      "path": "src/services/cliDuelWinners.test.js",
+      "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+    },
+    {
+      "path": "supabase/config.toml",
+      "afterSha256": "22a5a76fb7d58209a055ac430c88e142bf1f6e15659c8576124ce00071881c77"
+    },
+    {
+      "path": "supabase/functions/_shared/ciscoSimulator.js",
+      "afterSha256": "c38ffa25603e11dcc30a7a8834bf6bdad4e04755f20d8f746380109b29dbeacb"
+    },
+    {
+      "path": "supabase/functions/_shared/cliCriterionApplicability.js",
+      "afterSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988"
+    },
+    {
+      "path": "supabase/functions/_shared/cliDuelFullProtocol.js",
+      "afterSha256": "5c8a68772d5132c89acf67b5ba355643092a50e1422fe9b78800710bed80be98"
+    },
+    {
+      "path": "supabase/functions/_shared/cliDuelProtocol.js",
+      "afterSha256": "2b8a63b1aeed6728f0d9f0b66a9b584b529647f5e329cfdd4b300559476d445d"
+    },
+    {
+      "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+      "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+    },
+    {
+      "path": "supabase/functions/cli-duel/handler.js",
+      "afterSha256": "d995abb9a26e96981d42d0932b8c401b5ba5445ebec19856127847fcdcf291d2"
+    },
+    {
+      "path": "supabase/functions/cli-duel/index.ts",
+      "afterSha256": "ace97fe37d7cdc9dbb6baa2d2bd126db296d818ceebf5c231286ec212dcd68fb"
+    },
+    {
+      "path": "supabase/migrations/074_cli_duel_pilot.sql",
+      "afterSha256": "5ff35173df4fb0ee450c75badd217bf735daf249b8a720f9ec8f8bbe17566432"
+    },
+    {
+      "path": "supabase/migrations/075_cli_duel_sessions_realtime.sql",
+      "afterSha256": "b60a4f59a4c15c837cadc9c343d22cfaf0bb07876bbcbc0978d77706a6621a83"
+    },
+    {
+      "path": "supabase/migrations/076_cli_duel_knockout_customization.sql",
+      "afterSha256": "a2d582c2143fc9f1076f6ea2b03aadc95f65185a2710d6b6ed92922515a60006"
+    },
+    {
+      "path": "supabase/migrations/077_cli_duel_full_practical_configuration.sql",
+      "afterSha256": "9b05aa930885fc1e37c1577777720086e60d3c79ddbefc41217ab856ca9f564f"
+    },
+    {
+      "path": "supabase/migrations/078_cli_duel_arena_entry.sql",
+      "afterSha256": "bfa5088936e2ab51820c04305cc058c21865deff590e25a94c58207272778ee8"
+    },
+    {
+      "path": "supabase/migrations/079_cli_duel_command_prompts.sql",
+      "afterSha256": "67b08ff902a1ff9967604d77f5485f3add9f2004fb9f71d7f1663dbacf55405d"
+    },
+    {
+      "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+      "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+    },
+    {
+      "path": "supabase/migrations/081_cli_duel_characters.sql",
+      "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+    },
+    {
+      "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+      "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+    },
+    {
+      "path": "tests/e2e/cli-duel-characters.spec.js",
+      "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+    },
+    {
+      "path": "tests/e2e/cli-duel-full-builder.spec.js",
+      "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+    },
+    {
+      "path": "tests/e2e/cli-duel-host-arena.spec.js",
+      "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+    },
+    {
+      "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+      "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+    },
+    {
+      "path": "tests/e2e/cli-duel.spec.js",
+      "afterSha256": "91d54bc54e98ff11633a049ac89f0935ebdcc37c4205c8dcf52e72b278062805"
+    }
+  ],
+  "instructions": [
+    "Verify every afterSha256 before restoring/removing any file; stop on mismatch to protect later work.",
+    "Restore changed files only from the checkpoint ZIP. Remove only added files whose current hashes match.",
+    "Do not reset/clean the repository or replace the entire working folder. Preserve prior accepted UI.",
+    "This manifest excludes itself. Optionally preserve the new development log as a separate audit copy.",
+    "Hosted database and .env were unchanged. Do not perform hosted rollback. The disposable local project was fresh; its private post-test dump is local-stack/local-acceptance-backup.dump."
+  ],
+  "knockoutCheckpoint": {
+    "createdLocalDate": "2026-11-18",
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-knockout-baseline-20261118\\working-folder.zip",
+    "checkpointZipSha256": "28ae2a4c43d2829bf96724e508b336c13f7c2ec4a6873cba9b5d0a94349fdb41",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-knockout-baseline-20261118\\manifest.json",
+    "baselineManifestSha256": "eb16b4aeb9abcc0ea5250fe3e3decb53ba8dfb896b96c5d3f09a0fee4e5c56d3",
+    "pre076LocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-knockout-baseline-20261118\\pre-076-local.dump",
+    "pre076LocalDatabaseDumpSha256": "767ba4b3ef6ea8c0a54cee92aa1583194a174907c354534851f5db3201c42bb7",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "f26d002578218be3d5966e74de381c01cc356917ea2fe1f3ac43805fa2c2a43c",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "9c70a55682bb0eb110dd0c1f790d63d2be48c61df05d97c480e39b76a9e16b5c",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-18-cli-duel-knockout-customization-design.md",
+        "beforeSha256": "606b656f495dc32251abc82d0879b4fbdadc89a9cddf11b373802bb9a4b9d1e7",
+        "afterSha256": "fa01b45e15671e818f4c0984c396729e2b2f6ed0211bcaf80f7e95990df3bccb"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "8a04c6d5f6105bbddf64ca2293f7fbd6100b9745df0e311748347c48beadacd0",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "5c4ce8403a3361afdc5e0efac1cdc7127a87581d92ca94b07fc865c910df16f7",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "9a52851a4b423ec062354341416777306cbae490a14df1d31cb22a4c16d9f72e",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "fb02e71d4a7c5cc768650cec3b2ff58200185537d6639f76726f1ebed03c82aa",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "73a318a4c8486832ff72627abbb8434351ebbb67e8df60ba86c8378d399740a6",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "e50f71facbeb7ab99503d60c29fa1df15fd01d6ebf39e106f9200bc643a86bfb",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "70ec0a58786d7437b948e8aea313dda411c5bb1fd353caee47581afdeb28a06b",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "b6032615119bf0df5df656c5a378e4da7dc92287d15cd72fdbc0afda6042c6fc",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/components/InstructorCliLabBuilder.jsx",
+        "beforeSha256": "c76fd40ffd00dc9348b22183179f2100a122d622c0506286424eab60edfa8e8b",
+        "afterSha256": "803c8e777562cf87bdd90198a77b5357c09b644fbed83a55e3604586ed588a5d"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "01d812a2cb224014a4fe88279db77efbdd61056205fdff7594dbe76458d71e88",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliCriterionApplicability.js",
+        "beforeSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988",
+        "afterSha256": "ab35f0efb1fcefe6116bc994042d0c4fb9bd1cb2460065fd9a09b0f9d7ca6536"
+      },
+      {
+        "path": "src/services/cliDuelHandler.test.js",
+        "beforeSha256": "d4bbe2459b73794162e607ec1f1679994d003aefb9c6dcb0d90bf38c3b7a49fa",
+        "afterSha256": "5ae94abd55e468b6da5e85fc6df6c278c80813fb67c21ce4084aa6c94a6adffa"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "ab085aae45c98df6f1fe39b59a893ed6670b9761df3dc7bceccf24dc121c5300",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliDuelProtocol.js",
+        "beforeSha256": "725bb4b2f06440f62633879089097c64a9212fc53f0f22db0d952ed9f77eb1c8",
+        "afterSha256": "2b8a63b1aeed6728f0d9f0b66a9b584b529647f5e329cfdd4b300559476d445d"
+      },
+      {
+        "path": "supabase/functions/cli-duel/handler.js",
+        "beforeSha256": "c3d7e36bcccc96a568e71dd36c079a9500be2aadd764587717e28ca3deea055c",
+        "afterSha256": "d995abb9a26e96981d42d0932b8c401b5ba5445ebec19856127847fcdcf291d2"
+      },
+      {
+        "path": "tests/e2e/cli-duel.spec.js",
+        "beforeSha256": "955d9c583173eb625159390b6feb64d5973db9524772bcf973d0d89ebc7a1c79",
+        "afterSha256": "91d54bc54e98ff11633a049ac89f0935ebdcc37c4205c8dcf52e72b278062805"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-arena-entry.md",
+        "afterSha256": "7bbcafe4d21fda6e71f11e7b9eea730e99d383f90308dd69e3dd76c990a47256"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-full-practical-builder.md",
+        "afterSha256": "86c8cf0cf30c8d244f5861008aa9b04c06065fd98f62f9136a2d4245a923127d"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-knockout-customization.md",
+        "afterSha256": "216817ceb7f42fc30f3ca6f1258a6c7351cf7b69ffe42c788afe76b7cc0301b9"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+        "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-full-local.mjs",
+        "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-knockout-local.mjs",
+        "afterSha256": "6f9f4a18b8278cf140a3d81231f3c950ca4aa6a2db5f0ef7178e8bbf640ad05a"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/components/CliPracticalConfigurationFields.jsx",
+        "afterSha256": "dc6f3b0c5ec97f8e3ab7d9af7d162d0e548fbc02dbc026c228af2f9c6050e5d2"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/hooks/useCliPracticalEditor.js",
+        "afterSha256": "305fc2721faf79a4433a939f277493b3e1e19abe1fbe702e5b4bd32a5fa3b244"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelCustomization.test.js",
+        "afterSha256": "c491779a089a67d2b9d7ec6d032a2ab5b41a20389d6cce6b61c347453ebbce82"
+      },
+      {
+        "path": "src/services/cliDuelFullProtocol.test.js",
+        "afterSha256": "e3603d9549c2f3b9db2bc076c1f19605e17229c389be309c5450ced7f42c5b2a"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/functions/_shared/cliCriterionApplicability.js",
+        "afterSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988"
+      },
+      {
+        "path": "supabase/functions/_shared/cliDuelFullProtocol.js",
+        "afterSha256": "5c8a68772d5132c89acf67b5ba355643092a50e1422fe9b78800710bed80be98"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "supabase/migrations/076_cli_duel_knockout_customization.sql",
+        "afterSha256": "a2d582c2143fc9f1076f6ea2b03aadc95f65185a2710d6b6ed92922515a60006"
+      },
+      {
+        "path": "supabase/migrations/077_cli_duel_full_practical_configuration.sql",
+        "afterSha256": "9b05aa930885fc1e37c1577777720086e60d3c79ddbefc41217ab856ca9f564f"
+      },
+      {
+        "path": "supabase/migrations/078_cli_duel_arena_entry.sql",
+        "afterSha256": "bfa5088936e2ab51820c04305cc058c21865deff590e25a94c58207272778ee8"
+      },
+      {
+        "path": "supabase/migrations/079_cli_duel_command_prompts.sql",
+        "afterSha256": "67b08ff902a1ff9967604d77f5485f3add9f2004fb9f71d7f1663dbacf55405d"
+      },
+      {
+        "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+        "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-full-builder.spec.js",
+        "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "instructions": [
+      "For amendment-only source rollback, verify current after hashes and restore changed files from this checkpoint; remove only matching added files. Stop if any hash differs.",
+      "Both inventory sections deliberately omit the control manifest itself to avoid recursive hashes. The checkpoint ZIP retains its earlier control manifest.",
+      "The private dump targets only the disposable local project. Do not restore to hosted Supabase. Keep any later local data separately before a database rollback."
+    ],
+    "removed": []
+  },
+  "fullBuilderCheckpoint": {
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-full-builder-baseline-20261118\\working-folder.zip",
+    "checkpointZipSha256": "aecf164062073a95a40c6cb6ab36817d88469c0ee3b175636d49c11119c174ec",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-full-builder-baseline-20261118\\manifest.json",
+    "baselineManifestSha256": "372ad4ada8e79be3d20d2187d6a5e9195f68e2a136623c535cef846c50949e4a",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-full-builder-baseline-20261118\\pre-077-local.dump",
+    "privateLocalDatabaseDumpSha256": "226915a76cf05965fc550811ae88b58d6c0b3cfc6f124e0ba74083b6a63da35e",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "e1136984743f1d15a826c085ac00d1a7488dba146840ba566ce0e2b45624dcf4",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "e8162632226e994f931d2210bf1c136fcf08444eddedec166e32abfef5a6489a",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "6f911f76af19365f3981a001ffe82989ca1fb8f83a74bd5907f0a81d6c7d6e1b",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "c6925ce562f021b46c17bf3c27c1428b0c43cd1a059c4e99a7ab846ffe8f2997",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "e9e9d14c2418464e01cfdc519a19c4fb3cfaaf2cb4ba5f895e38e651e8dcf395",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "4abea554b8f1d75c764995f0076d75288b67717c9744beb620cf775ac970d19f",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "180ab7506e4554d41975ba3a9220990444727f9682d532e227a61c794e9df0bd",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "ec3169889b099857880b8f5bb1b0deaba8f86d2f89b66e26c79d5589babf4b81",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "2a67b161b61ac80111ff5dae7aaa14d077e841a2131f62904fe8fa92e436b3bf",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/components/InstructorCliLabBuilder.jsx",
+        "beforeSha256": "c76fd40ffd00dc9348b22183179f2100a122d622c0506286424eab60edfa8e8b",
+        "afterSha256": "803c8e777562cf87bdd90198a77b5357c09b644fbed83a55e3604586ed588a5d"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "01d812a2cb224014a4fe88279db77efbdd61056205fdff7594dbe76458d71e88",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliCriterionApplicability.js",
+        "beforeSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988",
+        "afterSha256": "ab35f0efb1fcefe6116bc994042d0c4fb9bd1cb2460065fd9a09b0f9d7ca6536"
+      },
+      {
+        "path": "src/services/cliDuelHandler.test.js",
+        "beforeSha256": "d4bbe2459b73794162e607ec1f1679994d003aefb9c6dcb0d90bf38c3b7a49fa",
+        "afterSha256": "5ae94abd55e468b6da5e85fc6df6c278c80813fb67c21ce4084aa6c94a6adffa"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "2bad51db80d93e2a4fc263c96cf05f1dadbe0a10439ab82a9af60cddfbad76cb",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/cli-duel/handler.js",
+        "beforeSha256": "23c049c14e706f8a4e26f4e63307b2e63809a5d6623905c47bc3821ba8a6b376",
+        "afterSha256": "d995abb9a26e96981d42d0932b8c401b5ba5445ebec19856127847fcdcf291d2"
+      },
+      {
+        "path": "tests/e2e/cli-duel.spec.js",
+        "beforeSha256": "d519d7fb4b42a005a1ba0abbca55cb6b59cd75493a1fede6b8ec2b9dea4f0e77",
+        "afterSha256": "91d54bc54e98ff11633a049ac89f0935ebdcc37c4205c8dcf52e72b278062805"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-arena-entry.md",
+        "afterSha256": "7bbcafe4d21fda6e71f11e7b9eea730e99d383f90308dd69e3dd76c990a47256"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-full-practical-builder.md",
+        "afterSha256": "86c8cf0cf30c8d244f5861008aa9b04c06065fd98f62f9136a2d4245a923127d"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+        "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-full-local.mjs",
+        "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/components/CliPracticalConfigurationFields.jsx",
+        "afterSha256": "dc6f3b0c5ec97f8e3ab7d9af7d162d0e548fbc02dbc026c228af2f9c6050e5d2"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/hooks/useCliPracticalEditor.js",
+        "afterSha256": "305fc2721faf79a4433a939f277493b3e1e19abe1fbe702e5b4bd32a5fa3b244"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelFullProtocol.test.js",
+        "afterSha256": "e3603d9549c2f3b9db2bc076c1f19605e17229c389be309c5450ced7f42c5b2a"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/functions/_shared/cliCriterionApplicability.js",
+        "afterSha256": "7a1e5935fa903b0778df26f742e1c9d53afb114dde4e8bd96308bd0b78c3b988"
+      },
+      {
+        "path": "supabase/functions/_shared/cliDuelFullProtocol.js",
+        "afterSha256": "5c8a68772d5132c89acf67b5ba355643092a50e1422fe9b78800710bed80be98"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "supabase/migrations/077_cli_duel_full_practical_configuration.sql",
+        "afterSha256": "9b05aa930885fc1e37c1577777720086e60d3c79ddbefc41217ab856ca9f564f"
+      },
+      {
+        "path": "supabase/migrations/078_cli_duel_arena_entry.sql",
+        "afterSha256": "bfa5088936e2ab51820c04305cc058c21865deff590e25a94c58207272778ee8"
+      },
+      {
+        "path": "supabase/migrations/079_cli_duel_command_prompts.sql",
+        "afterSha256": "67b08ff902a1ff9967604d77f5485f3add9f2004fb9f71d7f1663dbacf55405d"
+      },
+      {
+        "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+        "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-full-builder.spec.js",
+        "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": [
+      {
+        "path": "src/components/CliDuelCustomization.jsx",
+        "beforeSha256": "713741a7d83e2e20cefa42d9208385e5f0ea1e63e5a0324b9a33f5a732e13b5e"
+      }
+    ],
+    "instructions": [
+      "For amendment-only rollback, verify current after hashes, restore changed and removed files from this full-builder checkpoint and remove only matching added files. Stop on any unexpected hash.",
+      "Use pre077 dump only for the disposable local project; preserve later local test data before restore. Never restore this dump to hosted Supabase.",
+      "The control manifest is omitted from inventories to avoid recursive hashes; the checkpoint ZIP retains the prior version."
+    ]
+  },
+  "removed": [],
+  "arenaEntryCheckpoint": {
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-arena-baseline-20261118\\working-folder.zip",
+    "checkpointZipSha256": "153afd4afb6373ecb9823f12a77b13c605e87656b64cae9e2a4fd8f073cba81f",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-arena-baseline-20261118\\manifest.json",
+    "baselineManifestSha256": "1586b838304b7a28030cc450c788a68dd615cdde6652a3e34885d9057dbb4bb0",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-arena-baseline-20261118\\pre-078-local.dump",
+    "privateLocalDatabaseDumpSha256": "96430eacd13966b9ae7f18ad280604a358b3710e5687976465cffda622b0d440",
+    "instructions": [
+      "Verify all current after hashes before rolling back. Restore changed/removed files from this checkpoint and remove only matching added files. Stop on any unexpected hash.",
+      "The pre078 private dump is for the disposable local stack only; preserve later local data before any restore. Never restore to hosted Supabase.",
+      "Inventories omit the control file to avoid recursive hashes; its previous content is inside the checkpoint ZIP."
+    ],
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "4b9fe30a1e1c4c6b747b47de2766a435a85046037b6ab2b1b596862bd02e810d",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "6bb87def2d81360936f2975e4edc779161348af3ba4483b1742b5c3508c038aa",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "bac7383a5fe6d8d79b64060f2f6638e6b9e07096f034acd3dd86202d0b1951ab",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-full-local.mjs",
+        "beforeSha256": "fc7ded40fd86d7e8b2490891d3bae17c395578656ab58d87dbc3879d747d1343",
+        "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "6f7698cfdf5b1b1b2caad899f532695aad646eb1197af5bd0a34b2948d5525ca",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "f33f8e1accbb293e817effe1f308150123b9cb005c92a1eae49a650df38fd839",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "2b9d6d46a5ed05c84bb0213315c49812ec693b1f3f0b920a368ce50eb7796ff4",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "3fdd0153dfed417328e8c4fa32ef5fb73687674484d85c769dc535c4ae8a11e0",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "3c4931c9047622b1ff78ef59199e4c376529d44ad0dd85e393e334694f4bbe49",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "21b2b0bdfdb333b4a6f6dd8d85d2a637f8c18a94a63ca3917acadfa8c7237697",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "7470b0dff3a3d043bcfad0e719d755935a191a71f705732105edb9e7a73480be",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/components/CliPracticalConfigurationFields.jsx",
+        "beforeSha256": "3154918f746cd629fe3dff4fc465c20b42115c2ed4bac9fd0b8576a7e4ab68ef",
+        "afterSha256": "dc6f3b0c5ec97f8e3ab7d9af7d162d0e548fbc02dbc026c228af2f9c6050e5d2"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "01d812a2cb224014a4fe88279db77efbdd61056205fdff7594dbe76458d71e88",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelFullProtocol.test.js",
+        "beforeSha256": "9004dbe19a2f2396677adc28ca9b0e13ef03494e79f0238b87428360f44befca",
+        "afterSha256": "e3603d9549c2f3b9db2bc076c1f19605e17229c389be309c5450ced7f42c5b2a"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "15418a882318e6f47711589e2d7c2cdea8828db5151a7c5e1f4791c3e49339e3",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliDuelFullProtocol.js",
+        "beforeSha256": "a8bda28f2468aa3a69d9fe75a82f00e0b799a7887292e426e205cf9223f10999",
+        "afterSha256": "5c8a68772d5132c89acf67b5ba355643092a50e1422fe9b78800710bed80be98"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "tests/e2e/cli-duel-full-builder.spec.js",
+        "beforeSha256": "8a4657b0d5dd724713b22b4f02db3c55284188f104581295e9b76499da9d007c",
+        "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-18-cli-duel-arena-entry.md",
+        "afterSha256": "7bbcafe4d21fda6e71f11e7b9eea730e99d383f90308dd69e3dd76c990a47256"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+        "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/migrations/078_cli_duel_arena_entry.sql",
+        "afterSha256": "bfa5088936e2ab51820c04305cc058c21865deff590e25a94c58207272778ee8"
+      },
+      {
+        "path": "supabase/migrations/079_cli_duel_command_prompts.sql",
+        "afterSha256": "67b08ff902a1ff9967604d77f5485f3add9f2004fb9f71d7f1663dbacf55405d"
+      },
+      {
+        "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+        "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "commandPromptCheckpoint": {
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-prompt-baseline-20261118\\working-folder.zip",
+    "checkpointZipSha256": "7b919acedc3c4cd687a549bff87b6955eff689391e8059c473a0cce666758cc5",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-prompt-baseline-20261118\\manifest.json",
+    "baselineManifestSha256": "8b8756dbaab690da08b7168d1a98958ae90ae04c6e1cc15aa2a8d48e347fffd5",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-prompt-baseline-20261118\\pre-079-local.dump",
+    "privateLocalDatabaseDumpSha256": "44f290dfe645677f62178afa9c8711aa5eca953e3b8195ba18a9ec5d809bac7b",
+    "instructions": [
+      "Verify current after hashes before rollback; restore changed/removed files from this checkpoint and remove only matching added files. Stop on an unexpected hash.",
+      "The private pre079 DB dump targets only the disposable local stack. Preserve later local data before restore; never restore to hosted Supabase.",
+      "The control file is omitted to avoid recursive hashes; the checkpoint ZIP retains its prior content."
+    ],
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "bd5e5dd58c84435bcfcd8b5e8425e1511c110cbaa5669fd1f178d9144da87760",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "d475152b14d4d505ca88e0d693428b0a8ca3a9642afaad496b47f7f0fb66e95c",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "bac7383a5fe6d8d79b64060f2f6638e6b9e07096f034acd3dd86202d0b1951ab",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-full-local.mjs",
+        "beforeSha256": "fc7ded40fd86d7e8b2490891d3bae17c395578656ab58d87dbc3879d747d1343",
+        "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "524285ddede8adc7f63ca4bc2728c7b07abe030b016bde58e36d989bd1ef044f",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "49593079369a1fc81b0b7a6800b8bfe30560f7963154f137c92837cfc3acfdb3",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "f7142c02f718a2e5fa042f2399838a93a3b74b6715f478ac5442b429d9110fed",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "7b490815511cae6bd7b82be09b790a3d88b648a2244a7e164994fd03d7150b29",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "ff66399f32accd4fe1d362ce96f1a12d7f6f0e5cc95f930bab0c8eb0430cc281",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "f8609941c9284972ac9e10b6c7f6d304161a708b17e54e11d5961fb9c1e492fe",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "f1d204d151c268f3a9b90960cc750782a0b99702f115a3109c3dbe1ce930769f",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "01d812a2cb224014a4fe88279db77efbdd61056205fdff7594dbe76458d71e88",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelFullProtocol.test.js",
+        "beforeSha256": "69bd8d69ade564bffdc0944bdca7937acfe319478692e4482ea14abe58f7b6aa",
+        "afterSha256": "e3603d9549c2f3b9db2bc076c1f19605e17229c389be309c5450ced7f42c5b2a"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "5eaa25b685a41255c1e77a762f62300684d761aed73c3b1be85b68d3a10575f9",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliDuelFullProtocol.js",
+        "beforeSha256": "c75f0b0d6cebc781285877245f9316d643faec1c7277706b7f319cb90b1c2f51",
+        "afterSha256": "5c8a68772d5132c89acf67b5ba355643092a50e1422fe9b78800710bed80be98"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "tests/e2e/cli-duel-full-builder.spec.js",
+        "beforeSha256": "7ee736c66e0ad9b82bef496e7e97c01c8470273190c104d12d088509178ec97a",
+        "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+        "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/migrations/079_cli_duel_command_prompts.sql",
+        "afterSha256": "67b08ff902a1ff9967604d77f5485f3add9f2004fb9f71d7f1663dbacf55405d"
+      },
+      {
+        "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+        "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "hostArenaCheckpoint": {
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-host-baseline-20261119\\working-folder.zip",
+    "checkpointZipSha256": "775ac40791a723c380357e0a6dea7e317a1a05041fd873e53c010bf97bd4f11f",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-host-baseline-20261119\\manifest.json",
+    "baselineManifestSha256": "edd37a3bbc4d989c37df1ba45d44012dc6cd2ae9b833e912baecacfcb2a1700e",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-host-baseline-20261119\\pre-080-local.dump",
+    "privateLocalDatabaseDumpSha256": "76e451ffd0a4a34e4c815acab4ebd5a31713c261008f6253298525698298c442",
+    "instructions": [
+      "Verify all current after hashes before rollback. Restore changed/removed files from this source checkpoint and remove only matching added files. Stop on unexpected hashes.",
+      "The private pre080 dump targets only disposable local Supabase; preserve later local data first. Never restore it to hosted Supabase.",
+      "Inventories omit this control file to avoid recursive hashes; its previous content is in the source ZIP."
+    ],
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "4cfd19bcc0bc6c7747b8d6ce6c46a0331918ade45fbea385638b3a31ea24e02e",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "4d821c48eaf2b1c8a82a3dac31bfa7cbaf477af48659d486ca11e97650916619",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "bac7383a5fe6d8d79b64060f2f6638e6b9e07096f034acd3dd86202d0b1951ab",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-full-local.mjs",
+        "beforeSha256": "b705511b02b0856e0757db16c77042e21a0cfda04e4c9f1924d3bee61443620b",
+        "afterSha256": "94737b98c3d47ec7892e6f7d7b4f5a1ff2472d02992c8a0edaef7db98f6b2a05"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "524285ddede8adc7f63ca4bc2728c7b07abe030b016bde58e36d989bd1ef044f",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "a3dd61e921cf204a91af8ab743b1e37e66ed7d7d4f6ee8f96fb1b493740d5005",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "f7142c02f718a2e5fa042f2399838a93a3b74b6715f478ac5442b429d9110fed",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "7b490815511cae6bd7b82be09b790a3d88b648a2244a7e164994fd03d7150b29",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "ff66399f32accd4fe1d362ce96f1a12d7f6f0e5cc95f930bab0c8eb0430cc281",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "eb931ca1ed56d1bcc3f654e3e08a36a2784fc0d4f1816d22e6fa82ea8852173f",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "f1d204d151c268f3a9b90960cc750782a0b99702f115a3109c3dbe1ce930769f",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "01d812a2cb224014a4fe88279db77efbdd61056205fdff7594dbe76458d71e88",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "5eaa25b685a41255c1e77a762f62300684d761aed73c3b1be85b68d3a10575f9",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "tests/e2e/cli-duel-full-builder.spec.js",
+        "beforeSha256": "9ba43f34ce71cd71663b8e80cac0a27c5efda3f5355edea4e3b23d67ba58ca9d",
+        "afterSha256": "8434799be85c044e5b154abaaea87d4282634d4a57da5d12afd10516f20ee0a7"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-host-arena.md",
+        "afterSha256": "4a1e4688d07cb25d8935f517665d214db6806edfeb4ba2383299a7444370aca2"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/migrations/080_cli_duel_host_arena.sql",
+        "afterSha256": "3c90fbd32c3ebeaa1de07a617edac768738fe0be6cf8b5f211d0af9a9a9dca68"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "waitingStageCheckpoint": {
+    "createdLocalDate": "2026-11-19",
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-waiting-baseline-20261119\\working-folder.zip",
+    "checkpointZipSha256": "91c1d7738098fdd080388a13b114600649d73bc76d23719f18efbae721a05c71",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-waiting-baseline-20261119\\manifest.json",
+    "baselineManifestSha256": "b8ea78fbd8a9cdcc2efc47e801cff3c43048128a38ebc529c11bdaf2441dc2f1",
+    "instructions": "Source-only checkpoint before waiting/full-window/results/scroll changes. No database changes in this amendment. Restore only reviewed paths whose current hashes match this inventory; preserve later edits and prior checkpoints. Final live three-account UI rerun remains pending due browser startup failures.",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "f490e772c562b28ed181addf3ca0186b66db39c369e06aec8f9afc761106faf3",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "403d1235d75c9528ef508c1c6e365e242347f57b656482803d5f18ea797fbcd4",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "bac7383a5fe6d8d79b64060f2f6638e6b9e07096f034acd3dd86202d0b1951ab",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "beforeSha256": "200269cf9cb9d65f9896f13d6aa658c1bc765fd13fa4fcfda052e514afa1f535",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "7357201705f7a35190bff30b3599642ceb0b7f5a756ee0d19eec1612fae28528",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "382b024d2db505bf6a85f18ab055671be3ba90b09c1df05a9251a22d25c642a9",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "3202d8473aa74e6306c5648eda1bb7c311fd2efa81a0211bcba8c61bff38c2e1",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "73234e40ad7cb1147c1b1b448837afeaad945eaaa953986fa980451c160aafa7",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "e9febae65e03cc96bbd6aab810736556b2aaf71d0828df28c94b4debeec63af8",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "f9346359bda9e859bd44a2e3e660db598a7aafa603058793fcbdde37cad432c0",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "beforeSha256": "bdecf1bfdf3e79856784ab9a13ade7c196e37ffa331f049036feb897a31013de",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "beforeSha256": "72134c1ec2aac9f84094474d63dc2855d216f33ee4be289b0d8e5ce3c6f8c438",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "dd3986cf1b0f79e4f2698457c7f2d9fc9fbefa0261232c05bcc37a9df95efd07",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "beforeSha256": "3a1a3a046f138b58aa8ea010178c675f20986a96e533780c68fdd5dcc779d566",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "1a208f8e825481cf22c40736a8ac5b5333bbc08957febbc43fc06511bdd96f08",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "ba808aea0d9fc708801912ec9d3cdcc24c0caa795e81a614f2176adffe619521",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "tests/e2e/cli-duel-host-arena.spec.js",
+        "beforeSha256": "baab94fa8aff2d40a183c8cbaf7a5b05e68328577c8f3a7aa6d8d6dc38427244",
+        "afterSha256": "73d09d7cfe9b42050c2cf35e94e89976753a6674929717ac33b6d8a48c41e6b9"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-waiting-stage.md",
+        "afterSha256": "7e494af0536c242a38697fe4f7fabc8f6f6c00fd1b7894255c64a39fa4e78bc7"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelStage.jsx",
+        "afterSha256": "31823fefdcbb731c5ed90c9c50cc567a0872fb6d4f01300740506b14fdada1fd"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "src/services/cliDuelWinners.js",
+        "afterSha256": "29f099d9b18fcc9f96ad0909ed433cd04bd6bcc220b1abfacdceb4e738e07f90"
+      },
+      {
+        "path": "src/services/cliDuelWinners.test.js",
+        "afterSha256": "5347d1955c74998ba59ce2e2252d090eb7c2bcfbb8ede7a84a3d565b28e318c7"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "charactersCheckpoint": {
+    "createdLocalDate": "2026-11-19",
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-characters-baseline-20261119\\working-folder.zip",
+    "checkpointZipSha256": "82f0df04dd43542af3423d19a2662eef51b5c10551feab65ba41724861415a8b",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-characters-baseline-20261119\\manifest.json",
+    "baselineManifestSha256": "09854e8f29d4dcabbc450bd5bd81e11b0fd1c0a3e937c0cbc6eb5cb44d71bc84",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-characters-baseline-20261119\\private-pre081-local-db.dump",
+    "privateLocalDatabaseDumpSha256": "eba84d339f975dd62896a30b13b90f1b37cb9228beaf0bad8cfb03c0ee7d3c8d",
+    "instructions": "Pre081 source/private disposable local DB checkpoint. Review guarded source hashes before restoring affected paths; preserve later edits and original uploaded files outside this repository. DB backup is exclusively for isolated55321; never restore it over hosted Supabase. Current new assets are byte-for-byte source copies. Real3-account browser acceptance remains pending due blank-page creation timeout before app interaction; five focused Chromium checks plus147 units/SQL/API/QA checks passed.",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "7f4ef222edd8d6569477b9873787ba4ddd3db2b461dca5bced8556a82965f3c6",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "7b26098b80985edf19669da2c0ed6c7bf314cd2365b29a0910ab7c14cfa90631",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "f4a09a8397c527f7cb272aa025f04c86b8eed0d8c18691f84f6917f5fa586338",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "beforeSha256": "200269cf9cb9d65f9896f13d6aa658c1bc765fd13fa4fcfda052e514afa1f535",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "385c810559dab66ae095d03a6d53fa8077fd653737e65c03ba26740cab684452",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "382b024d2db505bf6a85f18ab055671be3ba90b09c1df05a9251a22d25c642a9",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "3202d8473aa74e6306c5648eda1bb7c311fd2efa81a0211bcba8c61bff38c2e1",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "34218d390baece77661bd5ad35d06ecc7def56dde054f1de7022ae6b8a65e453",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "b855884b3f10fd1abc01d6c2f1e99f9b14d8e22d50a44ae3fdecf4b1117d7b89",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "422b3ab8365eee87c02254ff714ea131e27311223ef17e643188cf8c39b5adb2",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "beforeSha256": "bdecf1bfdf3e79856784ab9a13ade7c196e37ffa331f049036feb897a31013de",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "beforeSha256": "0c6d195a27ac442881d67e490419e0c89e08b730c6c64cc34649a33b57de3e8a",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelLobby.jsx",
+        "beforeSha256": "dd3986cf1b0f79e4f2698457c7f2d9fc9fbefa0261232c05bcc37a9df95efd07",
+        "afterSha256": "cd1c4b932f9b3e5ba54a2579052294ae37d9fa6dc36e96a5abf7409428ab6bd2"
+      },
+      {
+        "path": "src/components/CliDuelOverlay.jsx",
+        "beforeSha256": "036f68826eb8f36bb4af993846df4d74d2c7b332327915ef9c32c7832497d407",
+        "afterSha256": "ced55e55fc0c298d2d38eadd650c9bf8111d7d461e6a1f3d9a2c398c44da32d5"
+      },
+      {
+        "path": "src/components/CliDuelReview.jsx",
+        "beforeSha256": "250a30c31df15d938136595730fa9de707c20879a46c5387005e3f7829a49054",
+        "afterSha256": "31a729ee84c603c4c2e87370dc8a0c29051351d5954f510643fb7c8041e59d7e"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "beforeSha256": "2aa24dfdc16d4097c85f1db43bc4c3b209321a951aaf6ac4db895079346e200f",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "1a208f8e825481cf22c40736a8ac5b5333bbc08957febbc43fc06511bdd96f08",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelService.js",
+        "beforeSha256": "ba808aea0d9fc708801912ec9d3cdcc24c0caa795e81a614f2176adffe619521",
+        "afterSha256": "1a7168deafad86bd4a04f471535b62f6d7cb798f72be9451d409cda7fbd45807"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      }
+    ],
+    "added": [
+      {
+        "path": "assets/duel-characters/Asta.png",
+        "afterSha256": "dd0d334ce5a50b806ad90b82216fe4d9cc2d63839aaa2316afbb896b13242c7f"
+      },
+      {
+        "path": "assets/duel-characters/Eren Yeager.png",
+        "afterSha256": "6972f920fec9586e9ed1f8a766202bfa83f0b87fc98b5a9c47bc049e24aaecf7"
+      },
+      {
+        "path": "assets/duel-characters/Gon Freecss.png",
+        "afterSha256": "de473a207a9fa84d14853b0e202a6caf0a3f13bbb6c5f919577206604cd0804f"
+      },
+      {
+        "path": "assets/duel-characters/Ichigo Kurosaki.png",
+        "afterSha256": "851ecd5cd2a40995b7876a306cb9b52d0ee6c563cddc9e94ca47a18e3b38f95e"
+      },
+      {
+        "path": "assets/duel-characters/Izuku Midoriya.png",
+        "afterSha256": "31c2dcc2f211876bd5e8fb3870714fbebf258998dc6e2a68c7854ae8c20df180"
+      },
+      {
+        "path": "assets/duel-characters/Ken Kaneki.png",
+        "afterSha256": "a71e527480024f407baee886a9db8b39efdb0aecb39d324a5918627491706717"
+      },
+      {
+        "path": "assets/duel-characters/Meliodas.png",
+        "afterSha256": "88879b3f68763df421e15eda39ee13bd0580d0f0bec77c311e5337a279af1498"
+      },
+      {
+        "path": "assets/duel-characters/Monkey D. Luffy.png",
+        "afterSha256": "d98a3dabfca825eee6beedd782aaf81aec9246d76ffefdd941dcc0fadd0cf6ef"
+      },
+      {
+        "path": "assets/duel-characters/Natsu Dragneel.png",
+        "afterSha256": "e71f191365b477383498354d46813bb86d4c9cce7db53d3d7d043a141f603088"
+      },
+      {
+        "path": "assets/duel-characters/Saitama.png",
+        "afterSha256": "84cb67cf0a81a35b72be87f4edba2f5911f8cb910044ad45717286a354b75973"
+      },
+      {
+        "path": "assets/duel-characters/Shinra Kusakabe.png",
+        "afterSha256": "e49e5a61c935fdb7751c44bd97e41962c9012febe7140b924ae3d50bfad920ec"
+      },
+      {
+        "path": "assets/duel-characters/Son Goku.png",
+        "afterSha256": "95ea46e9bef0831a7272828c3aa9e099d25942c239ca1d8d991acae34e5d1c6d"
+      },
+      {
+        "path": "assets/duel-characters/Sung Jinwoo.png",
+        "afterSha256": "85a350c298af27fcdf97a606f3159b54aa7473468c034c4b918eac57d3f6a0ab"
+      },
+      {
+        "path": "assets/duel-characters/Uzumaki Naruto.png",
+        "afterSha256": "869a32afe6ff68d0b6060919384a61ebb9eabd62abdf459674a39ef05413b202"
+      },
+      {
+        "path": "assets/duel-characters/Yuji Itadori.png",
+        "afterSha256": "f110155a1e73ce1f585cbef22a07840e5d25e23349401bd44b3a9c3c616ba625"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-characters.md",
+        "afterSha256": "d5c5ace5907d93de731fc4457c2fe67a60df6c180757759a8b688f962df74db0"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-11-19-cli-duel-characters-design.md",
+        "afterSha256": "1114daa39ce941588c3e9139dfd81fd98769fedf7c2fdd0c5f2d4c139902e05f"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacter.jsx",
+        "afterSha256": "fa882927b9fb140a951bb181a30e3b71e25b65e627036a771e0e10602ac9a5ed"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelVersus.jsx",
+        "afterSha256": "dca0808428cf3b9647779ab02086b77e5c7dce688fe6f963083e64b419363483"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.js",
+        "afterSha256": "a1b684d932335350eecd4fc79c3e72026d1ddf9d0cbf0752dfdca469cf5c26c0"
+      },
+      {
+        "path": "src/services/cliDuelCharacters.test.js",
+        "afterSha256": "be608208f160567977e1f423736904c0d01ed6be355a389b2c57f33539da2295"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "supabase/migrations/081_cli_duel_characters.sql",
+        "afterSha256": "5b5b8380f9612e52ee24281de5e290700fa9a2510afb5b486035218319c4e9c5"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "popupCaseCheckpoint": {
+    "createdLocalDate": "2026-11-19",
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-popup-baseline-20261119\\working-folder.zip",
+    "checkpointZipSha256": "da04a1fa2bdde6a5b99cd4bcf53bb9f0d1a4a4e87b41ff259e6e6a8d94435e53",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-popup-baseline-20261119\\manifest.json",
+    "baselineManifestSha256": "3b3f12f89010ccaf143a1bf359d58c0bd471aa6307ddfafaf8d04999f1838592",
+    "privateLocalDatabaseDump": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-popup-baseline-20261119\\private-pre082-local-db.dump",
+    "privateLocalDatabaseDumpSha256": "d926434e7bfc0d426ede1f7869f9b2c2dc37c41f71fb145a27cddb33ddea43e9",
+    "instructions": "Pre082 source/private isolated DB checkpoint for character popup/random fallback/case-sensitive grading. Review current guarded hashes before restoring affected source paths and preserve later edits. DB dump exclusively for disposable55321, never hosted Supabase. Current147 units/8 focused UI cases/SQL082 twice/API fixture checks/QA pass; API fixture advances timestamps explicitly, full wall-clock multiplayer acceptance remains pending. No original artwork, simulator, builder, prior migrations or git HEAD changes.",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "663c3aafcd8bbfad0f027612f8e8b42fcd865416fba47707c9c86716c8470006",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "2680f70c223a4202cb93894a65e1ec8f803e0a58770910a1783770a3d1dec61b",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "b9cf8656d43ee80220efeba09dea221b5653bb580edf66ba6a445ce7859611b6",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-host-local.mjs",
+        "beforeSha256": "cf60e1ad17b1b656bb12effabedf6cee9ea4a030bd9fca5d872c22e71d7fd267",
+        "afterSha256": "508a4ea8f0e5210e9f4a44f4d5e9e05377867b34594e210659e6eacd01e6df18"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "36babb94ffaebe66a4f3f39d5a4ac9e54eaf0c641874d021124f9cca2fa97f1b",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "scripts/test-cli-duel-sql.mjs",
+        "beforeSha256": "ef0e3ecd06268dde6a52d021ec29cb3fc02b6c25b9cbd50426fd5ad01a10c0be",
+        "afterSha256": "6a5ba7f92b927897905e70f0d3adf9b722da8a281303a6c837bafeddf11df7a7"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "3202d8473aa74e6306c5648eda1bb7c311fd2efa81a0211bcba8c61bff38c2e1",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "05e02138f7f2e7bba565f0555a35e6691408145e3ab43d3e40dec21dd1194e14",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "1c431ecd17c59876c37c048088d321cf9f1db1e2b74a758af2951e4077bd78c5",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelCharacterPicker.jsx",
+        "beforeSha256": "00ba3417f418a2b477e1fbc10558ae8a99060467033f14ec03790f65360a9097",
+        "afterSha256": "f43bc130f0a219386007d52892fd9670be41ab5002e36b918ba0659a53edb85d"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "422b3ab8365eee87c02254ff714ea131e27311223ef17e643188cf8c39b5adb2",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "beforeSha256": "bdecf1bfdf3e79856784ab9a13ade7c196e37ffa331f049036feb897a31013de",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "beforeSha256": "9453a8b63a440cac8a31fc894de282db6e228f190400e4637dcc31a9b1d0f251",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/components/CliDuelWaitingRoom.jsx",
+        "beforeSha256": "2afc15df7a58fcd9c5e8195de0def4342e1f1b7ca5cbcb03f8c3e4b9ae285e4f",
+        "afterSha256": "25aded734eb957b06b3b22acb3e7bfc3da8b39f334c3db81ddbf0e2c555955b8"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "1a208f8e825481cf22c40736a8ac5b5333bbc08957febbc43fc06511bdd96f08",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      },
+      {
+        "path": "tests/e2e/cli-duel-characters.spec.js",
+        "beforeSha256": "241b80f10c3ea3536bcf210e894c98346960f5ec5e62a96effc12b8f106c3012",
+        "afterSha256": "c2c29af98cf66a860462fb31b43df699a779d3030cbfa012488770a9e678b1bb"
+      }
+    ],
+    "added": [
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-character-popup.md",
+        "afterSha256": "74a70308b311ac340d06c112d8450288800b0912eef65f398c58eb5c65967613"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/components/CliDuelCharacterDialog.jsx",
+        "afterSha256": "bad587d40b8ba6c88c6bccef4647cf30ae7a626334cc88a40a96f3d8a51ed4ee"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "supabase/migrations/082_cli_duel_random_and_case_sensitive_grading.sql",
+        "afterSha256": "0304e2aa00146311cd55fff6ba73cafb6f1810cbe990f73823afb2c2363580e1"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  },
+  "responsiveTerminalCheckpoint": {
+    "createdLocalDate": "2026-11-19",
+    "checkpointZip": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-smooth-baseline-20261119\\working-folder.zip",
+    "checkpointZipSha256": "833ebda5bd23584cf581af0e41de89a25c5f7508970cfd0df8bd9042f17d0be3",
+    "baselineManifest": "C:\\Users\\Campos\\AppData\\Local\\Temp\\ccna-cli-duel-smooth-baseline-20261119\\manifest.json",
+    "baselineManifestSha256": "8e20ee4621231d92ab7fe6e55823d676b9128cbfd50c32582b7206c8aa62c598",
+    "instructions": "Source-only checkpoint before responsive terminal/type-ahead and right HUD. Verify guarded hashes before restoring reviewed paths; preserve later edits and all earlier checkpoints. No schema/backend/config changes or DB rollback required for this amendment; only fictional local acceptance match data were created.162 units,15 distinct Chromium cases and real local Edge queue fixture pass; fixture countdown timestamps explicitly advanced, not full real-time multiplayer acceptance. No commit/push/hosted changes.",
+    "changed": [
+      {
+        "path": "docs/CLI_DUEL_ACCEPTANCE.md",
+        "beforeSha256": "368c2b92cc0a6ba08ba2a573c51d97421e62143d3ea37d0086000db34ee5a15e",
+        "afterSha256": "1a1b44154cd3fe5f0bfb8272dc7a8ae0cddfbbf532da67b92ce0984371cbc405"
+      },
+      {
+        "path": "docs/PROJECT_ROADMAP.md",
+        "beforeSha256": "3d01d985e2730a517eb3a499bc6c20d1e08bb3e9c3add87e2c03d7f7bea6f8c2",
+        "afterSha256": "ae02920ce7126f441a11063d0dc34a1817992c1a83f87c03472747516a245b6a"
+      },
+      {
+        "path": "package.json",
+        "beforeSha256": "b9cf8656d43ee80220efeba09dea221b5653bb580edf66ba6a445ce7859611b6",
+        "afterSha256": "aa67c41d2ee088492f84442b1f52161fb55fce2ad9288ed28caf796a7b17db4b"
+      },
+      {
+        "path": "scripts/test-cli-duel-local-browser.mjs",
+        "beforeSha256": "82bcc4f9e81ca585ef5620ae7da0cd6454fcabf444cd6aa625706257234f3617",
+        "afterSha256": "e9c8de8406df6f4756dc487b006e56aceb1baca0d7c328fdd4fbf575d087b0c3"
+      },
+      {
+        "path": "src/components/CliCompetitions.jsx",
+        "beforeSha256": "3202d8473aa74e6306c5648eda1bb7c311fd2efa81a0211bcba8c61bff38c2e1",
+        "afterSha256": "eb5f7a68c03b0a84b67a15e797736e2de6b279c368d91eb52e8da58078dbbbb2"
+      },
+      {
+        "path": "src/components/CliDuel.css",
+        "beforeSha256": "873c391d388551157b272f76d87d300e2c94d07b06d629fb9ae18acae3bf094f",
+        "afterSha256": "6f70d1452a7773c8f4970cffaa8a7166ba16eff4786fcad7406cd35c210a4609"
+      },
+      {
+        "path": "src/components/CliDuelArena.jsx",
+        "beforeSha256": "ffb568c8acf693220d62ee631fca16421d4991c055146afe25cc255849150b48",
+        "afterSha256": "615395b6f9502dfd3365ffddc1b7bed7a35b18da3e714c0e1fb13b4f55ee1ae4"
+      },
+      {
+        "path": "src/components/CliDuelDeviceConsole.jsx",
+        "beforeSha256": "422b3ab8365eee87c02254ff714ea131e27311223ef17e643188cf8c39b5adb2",
+        "afterSha256": "fbc342cab4d90afd0504913b5009171a69e3cbf38ef21deadfcf1cb341c305a2"
+      },
+      {
+        "path": "src/components/CliDuelHealthBar.jsx",
+        "beforeSha256": "bdecf1bfdf3e79856784ab9a13ade7c196e37ffa331f049036feb897a31013de",
+        "afterSha256": "32e00abe3a5693336d95f070a4ec309d0fcd814c53547da2de32a5f03f18a796"
+      },
+      {
+        "path": "src/components/CliDuelHostArena.jsx",
+        "beforeSha256": "ed2171195619b1433800a4460b5df1fe1531f97b4ae430f350cb56b2745aec48",
+        "afterSha256": "63a04f9786bfd59a3108af98e0645bd7963241a1f16955a1fb6757cabaa01219"
+      },
+      {
+        "path": "src/hooks/useCliDuel.js",
+        "beforeSha256": "1a208f8e825481cf22c40736a8ac5b5333bbc08957febbc43fc06511bdd96f08",
+        "afterSha256": "f240cd516123433e1a3f63d34bd71ac630fecf570f6b2500da85f1f1517f7854"
+      },
+      {
+        "path": "src/services/cliDuelSync.js",
+        "beforeSha256": "9cdb79de82afb0d848598f031ed54bb9fbec4835bfe511c3433eb8afc85ea3f5",
+        "afterSha256": "80b99c281b3a3cd4e8ef3852ab23599aeaa0b9bcacdf33554aad31655807a4d0"
+      },
+      {
+        "path": "src/services/cliDuelSync.test.js",
+        "beforeSha256": "03e3cfed34f40b8c6e81acdb6639314f9062eba3754ae2793977544ba48a74d3",
+        "afterSha256": "40f79afdd2cdd47cc1f9099b2364590e893c9f428c21d88902db7a1e98003f06"
+      },
+      {
+        "path": "supabase/functions/_shared/cliPracticalConfiguration.js",
+        "beforeSha256": "7e62f9e86c2f6e8868f327861c1e021b5f72f7acd330be06d36f0435f890e894",
+        "afterSha256": "69c11416d4b08b944a50ba351b9ad311759af63e2b689a7561c61386f5b9b568"
+      }
+    ],
+    "added": [
+      {
+        "path": "docs/superpowers/plans/2026-11-19-cli-duel-smooth-terminal.md",
+        "afterSha256": "2be161ccc5f084f43ac47559efbda96d232e5d7f9d69457b91082903853d4d6c"
+      },
+      {
+        "path": "scripts/test-cli-duel-queue-local.mjs",
+        "afterSha256": "17b3c2f7572dbc280af2de2d24d51881f45c33f90e64851239e5e8362437a8a6"
+      },
+      {
+        "path": "src/hooks/useCliDuelOperationQueue.js",
+        "afterSha256": "4598c6abb4bf3453f48d23be47f2c59982b7493049a65688590dc68891029620"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.js",
+        "afterSha256": "6c9465c00bb312c4252b4d45691eb28e2646855f0d4daa07da700133570ff583"
+      },
+      {
+        "path": "src/services/cliDuelOperationQueue.test.js",
+        "afterSha256": "22f3c55df82f8c211d032b5a56d98e17ca273770ffb70b1d1b177905b5a402d2"
+      },
+      {
+        "path": "tests/e2e/cli-duel-responsive-terminal.spec.js",
+        "afterSha256": "433112c75917e5e106c5afafef1cd40de9b22704e2aa4344fe06334a77b00859"
+      }
+    ],
+    "removed": []
+  }
+}

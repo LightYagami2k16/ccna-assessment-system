@@ -5,8 +5,8 @@ import { instructorNavigation } from '../routing/assessmentNavigation'
 import './WorkspaceBreadcrumbs.css'
 
 const roleLabels = {
-  student: { overview: 'Overview', available: 'Quizzes', cli: 'CLI practicals', history: 'Results & history', classes: 'My classes', guide: 'Exam guide' },
-  administrator: { overview: 'Overview', accounts: 'User accounts', 'security-history': 'Security history', 'system-health': 'System health', 'assessment-tools': 'Assessment tools' },
+  student: { competitions: 'CLI Duels', overview: 'Overview', available: 'Quizzes', cli: 'CLI practicals', history: 'Results & history', classes: 'My classes', guide: 'Exam guide' },
+  administrator: { competitions: 'CLI Duels', overview: 'Overview', accounts: 'User accounts', 'security-history': 'Security history', 'system-health': 'System health', 'assessment-tools': 'Assessment tools' },
   instructor: Object.fromEntries(instructorNavigation.map(({ id, label }) => [id, label])),
 }
 function subscribe(listener) {

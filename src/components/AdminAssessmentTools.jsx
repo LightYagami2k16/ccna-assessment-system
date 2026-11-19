@@ -3,7 +3,7 @@ import { administratorAssessmentToolPaths } from '../routing/workspaceRoutes'
 import { instructorNavigation } from '../routing/assessmentNavigation'
 import AssessmentWorkspaceContent from './AssessmentWorkspaceContent'
 
-const tools = instructorNavigation.filter(({ id }) => id !== 'overview')
+const tools = instructorNavigation.filter(({ id }) => id !== 'overview' && id !== 'competitions')
 
 export default function AdminAssessmentTools({ user }) {
   const [section, setSection] = useWorkspaceRoute({

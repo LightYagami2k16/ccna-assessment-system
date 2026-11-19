@@ -1,0 +1,24 @@
+# Host-controlled CLI Duel arena
+
+Goal/spec: implement the owner's eight requested revisions locally. New duels open immediately to the host spectator arena; students are invited directly through Enter arena. Host starts only after both active controlling student sessions are inside. Both players must remain present through a centered5-second countdown, otherwise return to waiting. Host sees student1 terminal, central description/task and student2 terminal. Host leaving/re-entering never mutates play. Host may pause both clock/input, then Continue only with both active and a new5-second countdown (explicitly confirmed). Centered victory/defeat dialogs and lightweight HP damage/countdown/result animation, honoring reduced motion.
+
+Architecture: forward080 opts new full-builder matches into host control, keeping old histories/rules and academic paths. Server owns admission/start/pause/resume, precise remaining time, live player presence and elapsed-active-time accounting. Host read-only RPC is independently authorized and never grants input/player lease ownership. Student late countdown acknowledgements confirm both are still present before activating. Paused input/finish cannot alter scores; exact committed retries remain replayable. No automatic pause when host disconnects, and no player disconnect pause during active play except host action. Failed initial countdown returns waiting; failed resume returns paused with time intact.
+
+Ruling: keep source work in the current shared workspace with hash-guarded source/private localDB checkpoint. Existing explicit instructions authorize implementation without routine approval. Local5174/Supabase55321 only, no commit/push/hosted changes. Reserve individual assessment lease when invited student enters; no mandatory extra Ready/Open arena step for new host flow. Read-only host task/state remains visible while waiting/paused; players unlock task at first actual start.
+
+- [x] SQL red/green: new host flow, direct student admission, scoped host view, explicit host start, disconnect/countdown reset/post-countdown acknowledgements, no host heartbeat dependency.
+- [x] SQL red/green: pause locks commands/finish/deadline and preserves time; resume requires both present +5seconds, accurate elapsed time, stale/deadline races, KO/history/retry guards.
+- [x] UI: host arena two read-only device-aware consoles around central task/controls, automatic host entry, persistent re-entry, direct player invitations, state/timer sync.
+- [x] UI: player paused display, viewport-centered countdown/result accessible dialogs, lightweight HP damage animation/reduced motion, desktop/phone containment.
+- [x] Verification: units/lint/scan/build, SQL repeated080 plus legacy contracts; Chromium + real3-account local acceptance; one independent final review; logs/rollback inventories. Source freeze during browser checks; build/browser sequential.
+
+Review focus: input/finish during pauses, countdown disconnect at final instant, no timer lost while paused/resuming, concurrent host controls/commands, leases/role revocation, host-only dual view, no host lease acquisition or leave mutation, exact retry after pause/KO, server-only ranking/time, hidden/offline student before start.
+
+Execution ledger: scope and pause/resume behavior confirmed by owner. Completed locally.140 units,19 distinct browser checks (final8-case rerun green), repeated SQL080/legacy contracts, real API/DB race/privacy/pause/KO and3-account browser acceptance pass. Lint/scan/build pass.
+
+- Review fixes: re-read participant under match lock before admission; verify current class eligibility; support authenticated submitted spectators for both-active resume without restoring lease/input; disable and uniquely group read-only PC radios. Actual concurrent seal/admission test confirms no resurrection.
+- Ruling: the final5-second boundary requires post-countdown presence from both players, with a short confirming state; the actual duration begins at server activation. A failed initial countdown returns waiting; a failed resume stays paused with saved time. Host departure never mutates lifecycle.
+- Ruling: submitted students may Watch arena with read-only presence, so the explicit both-active rule can still be fulfilled after a partial submission. Current class/role eligibility and server input locks remain.
+- Preserved pre080 source/privateDB checkpoint. Updated roadmap, acceptance and all rollback after-hashes. Existing live/history matches retain prior flow. No commit/push or hosted changes.
+
+- Final measured-pause assertion confirms at least the known1.1-second pause is excluded from recorded active time. The repeat race fixture uses100/200ms clock offsets inside the3-second freshness budget and clears only interrupted fictional matches; full API/race acceptance passes.

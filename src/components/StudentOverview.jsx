@@ -76,9 +76,9 @@ export default function StudentOverview({ activeSession, formattedExpiration, st
       : statusError ? <section className="student-overview-summary" role="alert">{statusError}</section>
         : activeSession ? <section className="student-active-session" aria-labelledby="student-active-session-title">
           <div><span className="eyebrow">ACTIVE ASSESSMENT</span><h3 id="student-active-session-title">{activeSession.title}</h3>
-            <p>{activeSession.type === 'quiz' ? 'Quiz' : 'CLI practical'} · Ends {formattedExpiration}</p>
+            <p>{activeSession.type === 'competition' ? 'CLI Duel' : activeSession.type === 'quiz' ? 'Quiz' : 'CLI practical'} · Ends {formattedExpiration}</p>
             <small>Finish or submit this assessment before starting another one.</small></div>
-          <button className="primary" type="button" onClick={onResume} disabled={statusRefreshing}>{activeSession.type === 'quiz' ? 'Resume quiz' : 'Resume CLI practical'}</button>
+          <button className="primary" type="button" onClick={onResume} disabled={statusRefreshing}>{activeSession.type === 'competition' ? 'Resume CLI Duel' : activeSession.type === 'quiz' ? 'Resume quiz' : 'Resume CLI practical'}</button>
         </section>
           : <section className="student-overview__ready" aria-label="Assessment status"><strong>You have no assessment attempt in progress.</strong><span>Open an assessment area to see work assigned to you.</span></section>}
     <section aria-labelledby="student-available-assessments">

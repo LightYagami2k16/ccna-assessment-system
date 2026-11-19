@@ -5,6 +5,7 @@ export const workspaceRouteDefinitions = {
     sectionPaths: {
       overview: '/student/overview',
       available: '/student/assessments',
+      competitions: '/student/competitions',
       cli: '/student/practicals',
       history: '/student/history',
       classes: '/student/classes',
@@ -16,6 +17,7 @@ export const workspaceRouteDefinitions = {
     defaultPath: '/instructor/overview',
     sectionPaths: {
       overview: '/instructor/overview',
+      competitions: '/instructor/competitions',
       questions: '/instructor/question-bank',
       quizzes: '/instructor/quizzes',
       'cli-practicals': '/instructor/practicals',
@@ -30,6 +32,7 @@ export const workspaceRouteDefinitions = {
     defaultPath: '/admin/overview',
     sectionPaths: {
       overview: '/admin/overview',
+      competitions: '/admin/competitions',
       accounts: '/admin/users',
       'security-history': '/admin/security',
       'system-health': '/admin/system-health',
@@ -76,7 +79,7 @@ export function getWorkspaceRoute() {
   )?.[0] ?? null
   const assessmentFocus =
     role === 'student' &&
-    /^\/student\/(quiz|practical)\/[^/]+$/.test(path)
+    /^\/student\/(quiz|practical|competition)\/[^/]+$/.test(path)
 
   return { role, path, section, assessmentFocus }
 }

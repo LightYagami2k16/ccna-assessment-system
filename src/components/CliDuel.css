@@ -1,0 +1,263 @@
+.cli-duel { padding: 1.25rem; min-width: 0; }
+.cli-duel h2,.cli-duel h3,.cli-duel h4 { margin: 0 0 .5rem; }
+.duel-heading,.duel-match { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.duel-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0; }
+.duel-player,.duel-match,.duel-create,.duel-controls,.duel-task { background:#f7fbff; border:1px solid #cee0ef; border-radius:14px; padding:1rem; margin:1rem 0; min-width:0; }
+.cli-duel label { display:flex; flex-direction:column; gap:.4rem; font-weight:600; margin:.65rem 0; }
+.cli-duel input,.cli-duel select { width:100%; min-width:0; box-sizing:border-box; }
+.duel-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; margin:1rem 0; }
+.duel-player small { display:block; margin-top:.5rem; }
+.duel-player meter { width:100%; height:1.2rem; }
+.duel-timer { font-size:1.5rem; font-weight:750; text-align:center; font-variant-numeric:tabular-nums; }
+.duel-timer--urgent { color:#b42318; }
+.duel-terminal { background:#071b2d; color:#e3f4ff; padding:1rem; border-radius:12px; max-height:45vh; overflow:auto; min-height:8rem; }
+.duel-terminal pre,.duel-terminal code { white-space:pre-wrap; overflow-wrap:anywhere; font-family:Consolas,monospace; }
+.duel-command { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.75rem; align-items:end; margin-bottom:1rem; }
+.duel-command label { min-width:0; }
+.duel-command button { margin-bottom:.65rem; width:auto; min-width:9rem; }
+.duel-task p { white-space:pre-wrap; }
+@media(max-width:650px) { .duel-grid{grid-template-columns:1fr;} .duel-command{display:block;} .duel-command button{width:100%;} .cli-duel{padding:1rem;} }
+@media(prefers-reduced-motion:reduce) { .cli-duel * { animation:none!important; transition:none!important; } }
+
+.cli-duel .duel-review-setting { flex-direction:row; align-items:center; font-weight:500; gap:.6rem; }
+.cli-duel .duel-review-setting input { width:auto; }
+
+.duel-customization { border:1px solid #cee0ef; background:white; border-radius:12px; padding:1rem; margin:1rem 0; }
+.duel-customization summary { cursor:pointer; font-weight:700; padding:.4rem 0; }
+.duel-customization textarea { width:100%; box-sizing:border-box; min-height:6rem; }
+.duel-objective { background:#f7fbff; border:1px solid #cee0ef; border-radius:10px; padding:.75rem; margin:.75rem 0; }
+.duel-outcome { border:1px solid #8ccbb0; background:#ecfff5; border-radius:12px; padding:1rem; font-weight:700; }
+
+.duel-device-console {min-width:0;}
+.duel-device-console .cli-device-tabs {display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0;}
+.duel-device-console .cli-device-tabs button {width:auto;min-width:7rem;}
+.duel-device-console .pc-setting-choice {flex-direction:row;align-items:center;}
+.duel-device-console .pc-setting-choice input {width:auto;flex:none;}
+
+/* Duel workspace rhythm and actions, scoped to preserve academic screens. */
+.cli-duel { line-height:1.55; }
+.cli-duel p { margin:.35rem 0 .9rem; }
+.cli-duel button { width:auto; min-height:2.65rem; padding:.65rem 1rem; line-height:1.25; white-space:normal; }
+.cli-duel .duel-heading { align-items:flex-start; padding-bottom:1rem; border-bottom:1px solid #d5e2ee; margin-bottom:1.25rem; }
+.cli-duel .duel-heading > div { flex:1 1 18rem; }
+.cli-duel .duel-heading > button { flex:0 0 auto; }
+.cli-duel > h3 { margin:1.8rem 0 .8rem; }
+.duel-list { display:grid; gap:.85rem; }
+.duel-match { margin:0; padding:1.1rem 1.25rem; background:white; }
+.duel-match > div { flex:1 1 16rem; min-width:0; }
+.duel-match h4 { overflow-wrap:anywhere; }
+.duel-match p { margin:0; color:#526982; }
+.duel-match > button { flex:0 0 auto; }
+.duel-create { padding:1.5rem; background:#f8fbff; display:grid; gap:1.2rem; }
+.cli-duel .duel-create label { margin:0; gap:.5rem; }
+.duel-create .form-fieldset { margin:0; }
+.duel-create > .duel-actions { margin:0; padding-top:1rem; border-top:1px solid #d5e2ee; }
+.duel-create .duel-actions { align-items:flex-end; }
+.duel-create .duel-actions > label { flex:0 1 12rem; }
+.duel-create .duel-grid { margin:1rem 0 0; }
+.duel-lobby { display:grid; gap:1.1rem; }
+.duel-lobby > header { padding:1rem 0; border-bottom:1px solid #d5e2ee; }
+.duel-lobby .duel-grid,.duel-lobby .duel-actions,.duel-lobby .duel-controls { margin:0; }
+.duel-player { margin:0; display:flex; flex-direction:column; align-items:stretch; gap:.35rem; }
+.duel-player p { margin:0; }
+.duel-player > button { align-self:flex-start; margin-top:.65rem; }
+.duel-lobby > .primary { justify-self:start; }
+.duel-lobby-notice { padding:1rem; border:1px solid #bedbeb; background:#edf7ff; border-radius:12px; }
+.duel-controls form { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.75rem; }
+.duel-controls form label { margin:0; }
+.duel-controls form small { grid-column:1/-1; color:#637286; }
+.duel-arena { position:relative; }
+.duel-scoreboard { margin:.8rem 0 1.2rem; }
+.duel-scoreboard .duel-player { padding:.85rem 1rem; }
+.duel-scoreboard .duel-player h3 { font-size:1.05rem; margin:0; }
+.duel-scoreboard small { font-size:.78rem; line-height:1.4; }
+.duel-arena .duel-timer { margin:.75rem 0; }
+.duel-arena .cli-practical-layout { height:calc(100dvh - 22rem); min-height:30rem; max-height:48rem; }
+.duel-arena .cli-instructions h2 { font-size:1.2rem; }
+.duel-arena .cli-device-summary strong { overflow-wrap:anywhere; }
+.duel-arena .cisco-terminal__titlebar { gap:1rem; flex-wrap:wrap; }
+.duel-arena .cisco-terminal__titlebar small { font-size:.75rem; color:#c4d6e2; font-weight:400; }
+.duel-device-console .cli-device-tabs { margin:0; }
+.duel-arena .cisco-terminal__screen form label { flex-direction:row; font-weight:400; gap:0; }
+.duel-arena .cisco-terminal__screen form input, .duel-arena .cisco-terminal__screen form input:focus { height:auto; min-height:1.5em; border-radius:0; padding:0; border:0; background:transparent; color:#fff; font:inherit; box-shadow:none; outline:none; }
+.duel-arena .cisco-terminal__screen pre { min-height:0; }
+.duel-arena .pc-ipv4-panel { overflow-y:auto; }
+.duel-arena .pc-ipv4-fields { margin-top:.75rem; }
+.duel-waiting { display:grid; justify-items:center; text-align:center; padding:3rem 1.25rem; border:1px dashed #b7cfe2; border-radius:16px; background:#f4faff; min-height:20rem; align-content:center; }
+.duel-waiting__icon { font-size:2.5rem; margin-bottom:.75rem; }
+.duel-waiting p { max-width:36rem; color:#526982; }
+.duel-presence { display:flex; justify-content:center; flex-wrap:wrap; gap:.75rem; margin-top:.75rem; }
+.duel-presence span { padding:.5rem .85rem; border-radius:999px; background:#e8eff5; color:#526982; font-size:.9rem; }
+.duel-presence .duel-presence--ready { background:#dcfce9; color:#146342; }
+.duel-countdown { position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.25rem; border-radius:16px; color:white; background:rgba(5,22,38,.96); text-align:center; padding:1.5rem; }
+.duel-countdown .eyebrow { color:#9bdcff; }
+.duel-countdown__number { display:grid; place-items:center; width:9rem; height:9rem; border:4px solid #63ccff; border-radius:50%; font-size:5rem; font-variant-numeric:tabular-nums; line-height:1; box-shadow:0 0 0 12px #1b486355,0 0 50px #39baff33; animation:duel-countdown-beat 1s ease-out; }
+@keyframes duel-countdown-beat { from {transform:scale(.75);opacity:.4;} 40% {transform:scale(1.05);opacity:1;} to {transform:scale(1);opacity:1;} }
+@media(max-width:900px) {
+ .duel-arena .cli-practical-layout { grid-template-columns:1fr; height:auto; max-height:none; min-height:0; }
+ .duel-arena .cisco-terminal { min-height:27rem; max-height:70dvh; }
+ .duel-arena .cli-instructions { max-height:19rem; overflow-y:auto; }
+ .duel-arena .cisco-terminal__screen { min-height:18rem; }
+ .duel-arena .cisco-terminal__screen form { gap:.35rem; }
+ .duel-create { padding:1rem; }
+ .duel-controls form { grid-template-columns:1fr; }
+ .duel-create > .duel-actions button { flex:1 1 8rem; }
+ .duel-countdown__number { width:7rem; height:7rem; font-size:4rem; }
+}
+@media(prefers-reduced-motion:reduce) { .duel-countdown__number { animation:none; } }
+
+/* Host arena: two independent read-only player views around one shared task. */
+.duel-host-controls {display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;padding:1rem;border:1px solid #cee0ef;border-radius:12px;background:#f5faff;margin-bottom:1rem;}
+.duel-host-controls [role="timer"] {margin:0 auto 0 0;font-weight:800;font-size:1.15rem;font-variant-numeric:tabular-nums;}
+.duel-host-layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,.6fr) minmax(0,1fr);gap:1rem;align-items:start;}
+.duel-host-player,.duel-host-task {min-width:0;padding:1rem;background:#f7fbff;border:1px solid #cee0ef;border-radius:14px;}
+.duel-host-player>header {display:flex;gap:.75rem;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+.duel-host-player>header h3 {margin:0;}
+.duel-host-task {position:sticky;top:1rem;max-height:75dvh;overflow-y:auto;}
+.duel-host-task p {white-space:pre-wrap;overflow-wrap:anywhere;}
+.duel-host-task h4 {margin-top:1.5rem;}
+.duel-status {font-size:.8rem;padding:.3rem .6rem;border-radius:999px;color:#526982;background:#e4edf5;}
+.duel-status--online {color:#166344;background:#dcfce9;}
+.duel-spectator-console {margin-top:1rem;min-width:0;}
+.duel-spectator-console .cisco-terminal {height:34rem;max-height:65dvh;}
+.duel-spectator-console .cisco-terminal__titlebar {gap:.5rem;flex-wrap:wrap;}
+.duel-spectator-console .cisco-terminal__titlebar small {font-size:.72rem;font-weight:400;}
+.duel-spectator-console .pc-ipv4-panel {overflow-y:auto;}
+.duel-spectator-console .pc-ipv4-fields {grid-template-columns:1fr;}
+.duel-health {position:relative;margin:.5rem 0 .85rem;}
+.duel-health__label {display:flex;gap:1rem;justify-content:space-between;font-size:.9rem;margin-bottom:.4rem;}
+.duel-health__native {position:absolute!important;width:1px!important;height:1px!important;overflow:hidden;clip-path:inset(50%);}
+.duel-health__track {height:12px;overflow:hidden;border-radius:999px;background:#dfe9f0;}
+.duel-health__fill {height:100%;background:#22a469;border-radius:inherit;transition:width .4s ease-out;}
+.duel-health__fill--mid {background:#d79912;}.duel-health__fill--low {background:#dc3d42;}
+.duel-health--damaged .duel-health__track {animation:duel-damage-flash .45s ease-out;}
+.duel-health__damage {position:absolute;right:.2rem;top:-1.2rem;color:#c51b2d;font-size:.85rem;font-weight:800;animation:duel-damage-float .6s ease-out both;}
+@keyframes duel-damage-flash {0%,50% {box-shadow:0 0 0 3px #f8717180;}100% {box-shadow:none;}}
+@keyframes duel-damage-float {from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-.8rem);}}
+.duel-overlay {position:fixed;inset:0;margin:auto;width:min(30rem,calc(100vw - 2rem));max-height:calc(100dvh - 2rem);padding:0;border:1px solid #6bbde5;border-radius:20px;background:#0c2437;color:#fff;box-shadow:0 24px 80px #00101a66;overflow:auto;}
+.duel-overlay::backdrop {background:#061626c9;backdrop-filter:blur(3px);}
+.duel-overlay__content {display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1.2rem;padding:2.5rem 1.5rem;animation:duel-result-enter .25s ease-out;}
+.duel-overlay__content .eyebrow {color:#9bdcff;}
+.duel-overlay__content h2 {color:inherit;margin:0;font-size:2rem;letter-spacing:.04em;}
+.duel-overlay__content p {margin:0;line-height:1.6;}
+.duel-overlay--victory {border-color:#6de4ae;}.duel-overlay--victory h2{color:#80f4ba;}
+.duel-overlay--defeated {border-color:#f08d98;}.duel-overlay--defeated h2{color:#ffadb8;}
+.duel-overlay .duel-countdown__number {font-size:4rem;flex:none;}
+.duel-overlay__content button {min-width:10rem;}
+@keyframes duel-result-enter {from{opacity:0;transform:translateY(12px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+.duel-paused-notice {padding:1rem;border:1px solid #edcb75;border-radius:12px;background:#fff8df;color:#795416;}
+@media(max-width:1100px){.duel-host-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);}.duel-host-task{position:static;grid-column:1/-1;grid-row:1;max-height:18rem;}}
+@media(max-width:650px){.duel-host-layout{grid-template-columns:1fr;}.duel-host-task{grid-column:auto;}.duel-host-controls button{flex:1 1 9rem;}.duel-overlay__content{padding:2rem 1rem;}.duel-spectator-console .cisco-terminal{height:28rem;}}
+@media(prefers-reduced-motion:reduce){.duel-health__fill{transition:none;}.duel-health__damage,.duel-health--damaged .duel-health__track,.duel-overlay__content{animation:none;}}
+
+.duel-countdown__number--waiting {font-size:2rem!important;}
+.duel-match-actions {display:flex;gap:.65rem;flex-wrap:wrap;align-items:center;}
+
+/* Dedicated viewport arena, independent of role workspace/sidebar geometry. */
+.duel-stage {position:fixed;inset:0;width:100%;height:100dvh;overflow:auto;overscroll-behavior:contain;z-index:1000;background:#edf4f9;color:#092b45;}
+.duel-stage>.cli-duel {width:100%;max-width:none;min-height:100%;margin:0;border:0;border-radius:0;box-sizing:border-box;padding:clamp(1rem,2vw,1.75rem);}
+.duel-stage .duel-host-layout {flex:1;}
+.duel-stage .duel-spectator-console .cisco-terminal {height:clamp(22rem,calc(100dvh - 22rem),60rem);max-height:none;}
+.duel-arena-actions {display:flex;align-items:flex-start;gap:.65rem;flex-wrap:wrap;}
+.duel-fullscreen-control {display:flex;flex-direction:column;gap:.5rem;max-width:18rem;}
+.duel-fullscreen-control [role="status"] {font-size:.8rem;}
+.duel-waiting-arena {position:relative;display:grid;justify-items:center;align-content:center;gap:1.75rem;min-height:clamp(24rem,64dvh,48rem);padding:clamp(1.25rem,4vw,3rem);border:1px solid #c1d9e9;border-radius:22px;background:radial-gradient(ellipse at 20% 20%,#d4efff 0,transparent 48%),radial-gradient(ellipse at 85% 85%,#e0f7eb 0,transparent 45%),#f5fbff;text-align:center;}
+.duel-waiting-arena__heading h3 {font-size:clamp(1.6rem,3vw,2.2rem);margin:.4rem 0;}
+.duel-waiting-arena__heading p {max-width:40rem;color:#526982;}
+.duel-waiting-roster {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,5vw,5rem);width:min(50rem,100%);}
+.duel-waiting-slot {position:relative;min-width:0;}
+.duel-waiting-versus {position:absolute;left:calc(clamp(2rem,5vw,5rem)/-2);top:50%;transform:translate(-50%,-50%);font-weight:900;font-size:1.2rem;color:#53768e;}
+.duel-waiting-player {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.9rem;min-height:14rem;padding:1.5rem 1rem;border:1px solid #bdd8e9;border-radius:18px;background:#ffffffdc;box-shadow:0 10px 30px #164b6d0c;}
+.duel-waiting-player h4 {font-size:1.15rem;margin:0;overflow-wrap:anywhere;}
+.duel-waiting-avatar {display:grid;place-items:center;width:4.5rem;height:4.5rem;border-radius:50%;background:#d8f0ff;border:3px solid #80c9ef;color:#086493;font-size:1.6rem;font-weight:800;}
+.duel-waiting-slot:nth-child(2) .duel-waiting-avatar {background:#e3f5e9;border-color:#88cfaa;color:#17613c;}
+.duel-waiting-arena__hint {font-size:.9rem;color:#526982;max-width:36rem;}
+.duel-winner-name {font-size:1.5rem;font-weight:800;overflow-wrap:anywhere;}
+/* Three short, finite CSS bursts; no canvas, particles loop or animation library. */
+.duel-fireworks {position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:inherit;}
+.duel-overlay__content {position:relative;z-index:1;}
+.duel-firework {position:absolute;left:20%;top:30%;width:1px;height:1px;}
+.duel-firework--1 {left:80%;top:27%;}.duel-firework--2 {left:50%;top:16%;}
+.duel-firework i {position:absolute;display:block;width:4px;height:8px;border-radius:2px;background:var(--ray-color);opacity:0;animation:duel-firework-ray 1.1s ease-out var(--burst-delay) 2 both;}
+@keyframes duel-firework-ray {0%{opacity:0;transform:rotate(var(--ray-angle)) translateY(0) scale(.5);}15%{opacity:.95;}100%{opacity:0;transform:rotate(var(--ray-angle)) translateY(3.25rem) scale(.2);}}
+@media(max-width:650px){.duel-stage>.cli-duel{padding:.8rem;}.duel-stage .duel-spectator-console .cisco-terminal{height:28rem;}.duel-waiting-roster{grid-template-columns:1fr;gap:2.25rem;max-width:26rem;}.duel-waiting-versus{left:50%;top:-1.15rem;transform:translate(-50%,-50%);}.duel-waiting-player{min-height:11rem;}.duel-waiting-arena{gap:1.2rem;}.duel-arena-actions button{min-width:8rem;}.duel-waiting-avatar{width:3.5rem;height:3.5rem;font-size:1.3rem;}}
+@media(prefers-reduced-motion:reduce){.duel-fireworks{display:none;}.duel-firework i{animation:none;}}
+
+/* Keep wheel and native scrollbar scrolling inside the dedicated arena. */
+.duel-stage {overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:#7899ae #e5eef5;overscroll-behavior-y:contain;}
+.duel-stage .cisco-terminal__screen,.duel-stage .cli-instructions,.duel-stage .duel-host-task,.duel-stage .pc-ipv4-panel {overscroll-behavior-y:auto;}
+.duel-stage::-webkit-scrollbar,.duel-stage .cisco-terminal__screen::-webkit-scrollbar {width:12px;}
+.duel-stage::-webkit-scrollbar-track {background:#e5eef5;}
+.duel-stage::-webkit-scrollbar-thumb {background:#7899ae;border:3px solid #e5eef5;border-radius:999px;}
+.duel-stage .cisco-terminal__screen::-webkit-scrollbar-track {background:#102535;}
+.duel-stage .cisco-terminal__screen::-webkit-scrollbar-thumb {background:#6e91a8;border:3px solid #102535;border-radius:999px;min-height:2rem;}
+
+/* Cosmetic roster and versus artwork; no gameplay modifiers. */
+.duel-character {display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;flex:none;max-width:100%;vertical-align:middle;}
+.duel-character img {display:block;width:100%;height:100%;min-height:0;object-fit:contain;object-position:center bottom;filter:drop-shadow(0 6px 8px #061e3726);}
+.duel-character__name {font-size:.8rem;font-weight:700;text-align:center;line-height:1.35;overflow-wrap:anywhere;}
+.duel-character__fallback {display:grid;place-items:center;width:4rem;height:4rem;border-radius:50%;background:#d8f0ff;color:#085b88;font-size:2rem;}
+.duel-character--portrait {width:4rem;height:4.5rem;}
+.duel-character--waiting {width:10rem;}.duel-character--waiting img {height:11rem;}
+.duel-character--preview {width:13rem;}.duel-character--preview img {height:15rem;}
+.duel-character--hero {width:100%;}.duel-character--hero img {height:clamp(10rem,36dvh,24rem);}
+.duel-character--result {width:12rem;}.duel-character--result img {height:min(22dvh,12rem);}
+.duel-player-identity {display:flex;align-items:center;gap:.75rem;min-width:0;}.duel-player-identity h3 {overflow-wrap:anywhere;}
+.duel-character-picker {margin-top:1.25rem;padding:clamp(1rem,2vw,1.5rem);background:#fff;border:1px solid #bdd8e9;border-radius:18px;}
+.duel-character-picker>header {display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.2rem;}
+.duel-character-picker h3 {margin:.35rem 0;}.duel-character-picker p {line-height:1.5;}
+.duel-character-count {font-size:.8rem;font-weight:700;white-space:nowrap;background:#e4f2fb;padding:.5rem .7rem;border-radius:999px;}
+.duel-character-picker__layout {display:grid;grid-template-columns:minmax(0,1fr) minmax(13rem,18rem);gap:1.5rem;align-items:start;}
+.duel-character-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));gap:.7rem;max-height:27rem;overflow-y:auto;scrollbar-gutter:stable;padding:.35rem;overscroll-behavior-y:auto;}
+.duel-character-grid button {display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:.6rem;min-width:0;padding:.75rem .4rem;border:2px solid #d3e3ee;border-radius:12px;background:#f5faff;color:#123b59;line-height:1.35;font-size:.85rem;}
+.duel-character-grid button img {width:5rem;height:6rem;object-fit:contain;}
+.duel-character-grid button[aria-pressed=true] {border-color:#0779c4;background:#e0f2ff;box-shadow:0 0 0 2px #0779c42a;}
+.duel-character-grid button:focus-visible {outline:3px solid #105e97;outline-offset:2px;}
+.duel-character-preview {display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1rem;background:#eef7fd;border:1px solid #d3e3ee;border-radius:14px;text-align:center;}
+.duel-character-preview button {width:100%;}.duel-character-preview p {margin:0;color:#17613c;font-weight:700;}.duel-character-preview small {color:#526982;}
+.duel-overlay--versus {width:min(62rem,calc(100vw - 2rem));border-color:#67c8f1;background:radial-gradient(ellipse at 15% 40%,#153c61 0,transparent 55%),radial-gradient(ellipse at 85% 40%,#51233e 0,transparent 55%),#091c30;}
+.duel-overlay--versus .duel-overlay__content {gap:1rem;padding:1.5rem;}
+.duel-overlay--versus h2 {font-size:1.1rem;letter-spacing:.25em;color:#c6e9ff;}
+.duel-versus-lineup {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,7vw,7rem);width:100%;}
+.duel-versus-slot {position:relative;min-width:0;}
+.duel-versus-player {display:flex;flex-direction:column;align-items:center;gap:.65rem;animation:duel-versus-left .45s ease-out both;}
+.duel-versus-player--2 {animation-name:duel-versus-right;}
+.duel-versus-label {color:#86d7ff;font-size:.75rem;font-weight:800;letter-spacing:.15em;}.duel-versus-player--2 .duel-versus-label {color:#ffb6d1;}
+.duel-versus-player h3 {margin:0;color:#fff;font-size:clamp(1rem,2.5vw,1.6rem);overflow-wrap:anywhere;max-width:100%;}
+.duel-versus-emblem {position:absolute;left:calc(clamp(2rem,7vw,7rem)/-2);top:45%;transform:translate(-50%,-50%) rotate(-8deg);font-size:clamp(1.4rem,4vw,3rem);font-weight:900;color:#ffe383;text-shadow:0 0 18px #ffb83a55;}
+@keyframes duel-versus-left {from{opacity:0;transform:translateX(-40px);}to{opacity:1;transform:translateX(0);}}
+@keyframes duel-versus-right {from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}
+@media(max-width:650px){.duel-character-picker>header{align-items:flex-start;flex-direction:column;}.duel-character-picker__layout{grid-template-columns:1fr;}.duel-character-preview{grid-row:1;}.duel-character--preview img{height:9rem;}.duel-character-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:22rem;}.duel-character-grid button img{width:100%;height:5rem;}.duel-character-count{align-self:flex-start;}.duel-overlay--versus .duel-overlay__content{padding:1.25rem .8rem;}.duel-character--hero img{height:clamp(9rem,30dvh,17rem);}.duel-versus-lineup{gap:2rem;}.duel-versus-emblem{left:-1rem;}.duel-character--waiting img{height:8rem;}.duel-character--waiting{width:8rem;}}
+@media(prefers-reduced-motion:reduce){.duel-versus-player,.duel-overlay--versus .duel-overlay__content{animation:none;}}
+
+.duel-player:has(.duel-health--damaged) .duel-character img,.duel-host-player:has(.duel-health--damaged) .duel-character img {animation:duel-character-hit .3s ease-out;}
+@keyframes duel-character-hit {0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}65%{transform:translateX(4px);}}
+@media(prefers-reduced-motion:reduce){.duel-player:has(.duel-health--damaged) .duel-character img,.duel-host-player:has(.duel-health--damaged) .duel-character img{animation:none;}}
+
+/* Mirror artwork only, never player names or controls. Individual scale preserves hit transforms. */
+.duel-versus-player--2 .duel-character img,
+.duel-waiting-slot:nth-child(2) .duel-character img,
+.duel-scoreboard>.duel-player:nth-child(2) .duel-character img,
+.duel-host-layout>.duel-host-player:last-child .duel-character img,
+.duel-lobby>.duel-grid>.duel-player:nth-child(2) .duel-character img {scale:-1 1;}
+
+/* Native centered character selection; only the player's own waiting card can open it. */
+.duel-character-dialog {position:fixed;inset:0;margin:auto;width:min(66rem,calc(100vw - 2rem));max-height:calc(100dvh - 2rem);padding:0;overflow:auto;border:1px solid #afd3ea;border-radius:20px;background:#fff;color:#092b45;box-shadow:0 24px 80px #00101a66;scrollbar-gutter:stable;}
+.duel-character-dialog::backdrop {background:#061626b8;backdrop-filter:blur(3px);}
+.duel-character-dialog>header {display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem 1.5rem;border-bottom:1px solid #d3e3ee;}
+.duel-character-dialog>header h2 {margin:0;font-size:1.4rem;}
+.duel-character-dialog .duel-character-picker {margin:0;border:0;border-radius:0;}
+.duel-character-dialog .duel-character-grid {max-height:min(27rem,48dvh);}
+@media(max-width:650px){.duel-character-dialog{width:calc(100vw - 1rem);max-height:calc(100dvh - 1rem);}.duel-character-dialog>header{padding:1rem;}.duel-character-dialog .duel-character-grid{max-height:20rem;}}
+
+/* Mirrored HUD geometry; terminal text remains standard left-to-right. */
+.duel-player--right,.duel-host-player--right {text-align:right;}
+.duel-player--right .duel-player-identity,.duel-host-player--right .duel-player-identity {flex-direction:row-reverse;justify-content:flex-start;}
+.duel-host-player--right>header {flex-direction:row-reverse;}
+.duel-host-player--right .duel-spectator-console {text-align:left;direction:ltr;}
+.duel-health--right .duel-health__label {flex-direction:row-reverse;}
+.duel-health--right .duel-health__fill {margin-left:auto;}
+.duel-pending-echo {margin:0;color:#b8d7e7;white-space:pre-wrap;overflow-wrap:anywhere;}
+.duel-terminal-sync {padding:.45rem .9rem;background:#102b3b;color:#b8d7e7;text-align:left;font-size:.75rem;}
+.duel-unsent {margin-top:1rem;padding:.75rem;border:1px solid #d3e3ee;border-radius:10px;background:#fff;}
+.duel-unsent pre {white-space:pre-wrap;overflow-wrap:anywhere;}

@@ -11,6 +11,7 @@ import WorkspaceLoading from './WorkspaceLoading'
 import WorkspaceBreadcrumbs from './WorkspaceBreadcrumbs'
 import useWorkspaceRoute from '../hooks/useWorkspaceRoute'
 
+const CliCompetitions = lazy(() => import('./CliCompetitions'))
 const AdminUserManagement = lazy(
   () => import('./AdminUserManagement'),
 )
@@ -26,6 +27,7 @@ const AdminSystemHealth = lazy(
 )
 
 const adminSections = new Set([
+  'competitions',
   'overview',
   'accounts',
   'security-history',
@@ -34,6 +36,7 @@ const adminSections = new Set([
 ])
 
 const adminNavigation = [
+  {id:'competitions',icon:ClipboardList,label:'CLI Duels',description:'Competitions across all students'},
   {
     id: 'overview',
     icon: LayoutDashboard,
@@ -152,6 +155,7 @@ export default function AdminWorkspace({
           />
         }
       >
+        {activeSection === 'competitions' && <CliCompetitions />}
         {activeSection === 'overview' && (
           <AdminOverview onNavigate={setActiveSection} />
         )}

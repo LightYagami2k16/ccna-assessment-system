@@ -30,11 +30,14 @@ import {
   replaceWorkspacePath,
 } from '../routing/workspaceRoutes'
 
+const CliCompetitions = lazy(() => import('./CliCompetitions'))
+const CliDuelArena = lazy(() => import('./CliDuelArena'))
 const QuizPlayer = lazy(() => import('./QuizPlayer'))
 const StudentCliArea = lazy(() => import('./StudentCliArea'))
 const StudentAssessmentHistory = lazy(() => import('./StudentAssessmentHistory'))
 
 const studentSections = new Set([
+  'competitions',
   'overview',
   'available',
   'cli',
@@ -44,6 +47,7 @@ const studentSections = new Set([
 ])
 
 const studentNavigation = [
+  {id:'competitions',icon:SquareTerminal,label:'CLI Duels',description:'Invitations and competition history'},
   {
     id: 'overview',
     icon: LayoutDashboard,
@@ -119,6 +123,12 @@ export default function StudentQuizArea({
   user,
   onExamModeChange = () => {},
 }) {
+  const [duelId, setDuelId] = useState(() => window.location.hash.match(/#\/student\/competition\/([^/]+)$/)?.[1] || null)
+  useEffect(() => {
+    const sync = () => setDuelId(window.location.hash.match(/#\/student\/competition\/([^/]+)$/)?.[1] || null)
+    window.addEventListener('hashchange', sync)
+    return () => window.removeEventListener('hashchange', sync)
+  }, [])
   const userId = user?.id ?? null
   const sectionStorageKey = userId
     ? `ccna-student-active-section:${userId}`
@@ -201,7 +211,7 @@ export default function StudentQuizArea({
   }, [activeAttemptId, attemptStorageKey])
 
   const examModeActive = Boolean(
-    activeAttemptId || activeCliAttemptId,
+    activeAttemptId || activeCliAttemptId || duelId,
   )
 
   useEffect(() => {
@@ -211,12 +221,13 @@ export default function StudentQuizArea({
   }, [examModeActive, onExamModeChange])
 
   useEffect(() => {
+    if (duelId) return
     if (activeAttemptId) {
       replaceWorkspacePath(`/student/quiz/${activeAttemptId}`)
     } else if (activeCliAttemptId) {
       replaceWorkspacePath(`/student/practical/${activeCliAttemptId}`)
     }
-  }, [activeAttemptId, activeCliAttemptId])
+  }, [activeAttemptId, activeCliAttemptId, duelId])
 
   function openQuizAttempt(attemptId) {
     setActiveAttemptId(attemptId)
@@ -235,6 +246,8 @@ export default function StudentQuizArea({
     setNavigationOpen(false)
   }
 
+  function openDuel(id) { setDuelId(id); pushWorkspacePath(`/student/competition/${id}`) }
+
   function resumeActiveSession() {
     if (!activeSession) return
 
@@ -243,12 +256,15 @@ export default function StudentQuizArea({
       return
     }
 
-    updateCliAttempt(activeSession.attemptId)
+    if (activeSession.type === 'competition') { openDuel(activeSession.attemptId); return }
+    if (activeSession.type === 'cli') updateCliAttempt(activeSession.attemptId)
   }
 
   if (sessionLoading && (activeAttemptId || activeCliAttemptId)) {
     return <WorkspaceLoading label="Validating saved assessment..." />
   }
+
+  if (duelId) return <Suspense fallback={<WorkspaceLoading label="Loading duel arena..." />}><CliDuelArena key={duelId} participantId={duelId} onExit={() => {setDuelId(null); setActiveSection('competitions'); void loadActiveSession()}} /></Suspense>
 
   if (activeAttemptId) {
     return (
@@ -382,6 +398,7 @@ export default function StudentQuizArea({
               />
             }
           >
+            {activeSection === 'competitions' && <CliCompetitions onPlay={openDuel} />}
             {activeSection === 'overview' && (
               <StudentOverview
                 activeSession={activeSession}

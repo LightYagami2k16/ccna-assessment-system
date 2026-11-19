@@ -10,6 +10,7 @@ import WorkspaceBreadcrumbs from './WorkspaceBreadcrumbs'
 const InstructorOverview = lazy(() => import('./InstructorOverview'))
 
 const instructorSections = new Set([
+  'competitions',
   'overview',
   'questions',
   'quizzes',

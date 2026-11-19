@@ -1,0 +1,3 @@
+# CLI Duel verifies the real user token inside the function before any trusted RPC.
+[functions.cli-duel]
+verify_jwt = false

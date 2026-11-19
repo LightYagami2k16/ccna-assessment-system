@@ -1,0 +1,30 @@
+// Disposable loopback integration only. Fixture timestamps are explicitly advanced.
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {spawnSync} from 'node:child_process'
+import {createClient} from '@supabase/supabase-js'
+import {createDuelOperationQueue} from '../src/services/cliDuelOperationQueue.js'
+const fixture=JSON.parse(await readFile(join(tmpdir(),'ccna-cli-duel-baseline-20261116-153425/local-stack/test-accounts-private.json'),'utf8'));assert.equal(fixture.url,'http://127.0.0.1:55321')
+const [host,one,two]=fixture.accounts
+for(const actor of [host,one,two]){actor.api=createClient(fixture.url,fixture.publishableKey,{auth:{persistSession:false,autoRefreshToken:false}});const login=await actor.api.auth.signInWithPassword({email:actor.email,password:fixture.password});assert.equal(login.error,null)}
+async function rpc(actor,name,args={}){const {data,error}=await actor.api.rpc(name,args);if(error)throw error;return data}
+function sql(query){const result=spawnSync('docker',['exec','-i','supabase_db_ccna-cli-duel-local-20261116','psql','-U','postgres','-d','postgres','-At','-v','ON_ERROR_STOP=1'],{input:query,encoding:'utf8'});if(result.status!==0)throw new Error(result.stderr);return result.stdout.trim()}
+const title='Responsive queue local acceptance',workspace=await rpc(host,'get_cli_duel_workspace');for(const match of workspace.matches||[])if(match.competition.title===title&&['waiting','countdown','active','paused'].includes(match.competition.status))await rpc(host,'manage_cli_duel',{p_competition_id:match.competition.id,p_action:'cancel',p_reason:'Clean interrupted fictional queue acceptance'})
+const baseline=sql("select (select count(*) from public.quiz_attempts)||','||(select count(*) from public.cli_attempts)")
+const configuration={title,description:'',instructions:'Set hostname Campus and save.',durationMinutes:5,devices:[{id:'d1',label:'Queue switch',hostname:'Switch',type:'switch'}],topology:{links:[]},criteria:[{deviceId:'d1',type:'hostname',target:'',expected:'Campus',points:10},{deviceId:'d1',type:'config_saved',target:'',expected:'',points:10}]}
+const created=await host.api.functions.invoke('cli-duel',{body:{action:'create',rulesVersion:3,title,durationMinutes:5,configuration,combat:{startingHp:100,damage:[50,50]},participantSelections:[{studentId:one.id,classId:fixture.classId},{studentId:two.id,classId:fixture.classId}],allowReview:true}});assert.equal(created.error,null);const id=created.data.competitionId;assert.match(id,/^[a-f0-9-]{36}$/i)
+const view=await rpc(host,'get_cli_duel_host_arena',{p_competition_id:id});for(const actor of [one,two]){actor.pid=view.participants.find(p=>p.displayName===actor.name).id;actor.client=`queue-test:${crypto.randomUUID()}`;await rpc(actor,'enter_cli_duel_arena',{p_participant_id:actor.pid,p_client_id:actor.client});await rpc(actor,'set_cli_duel_arena_presence',{p_participant_id:actor.pid,p_client_id:actor.client,p_entered:true})}
+await rpc(host,'control_cli_duel',{p_competition_id:id,p_action:'start'});console.log('Local fixture mode: advance countdown/versus timestamps; not real-time multiplayer acceptance.')
+sql(`begin;update public.cli_competitions set starts_at=clock_timestamp()-interval '100 milliseconds' where id='${id}';update public.cli_competition_participants set arena_seen_at=clock_timestamp() where competition_id='${id}';select public.cli_duel_settle('${id}');update public.cli_competitions set versus_ends_at=clock_timestamp()-interval '100 milliseconds' where id='${id}';update public.cli_competition_participants set arena_seen_at=clock_timestamp() where competition_id='${id}';select public.cli_duel_settle('${id}');commit;`)
+assert.equal((await rpc(host,'get_cli_duel',{p_competition_id:id})).competition.status,'active')
+let resolveDone,rejectDone,armed=false;const done=new Promise((resolve,reject)=>{resolveDone=resolve;rejectDone=reject}),sent=[],accepted=[],discarded=[]
+const queue=createDuelOperationQueue({
+ createRequest:(entry,revision)=>({action:'operation',participantId:one.pid,clientId:one.client,commandId:crypto.randomUUID(),sequence:revision+1,expectedRevision:revision,...entry}),
+ send:async payload=>{sent.push(payload);const {data,error}=await one.api.functions.invoke('cli-duel',{body:payload});if(error)throw error;return data},
+ onAccepted:result=>{accepted.push(result);if(result.revision===3){assert.equal(result.ownParticipant.scorePoints,0);assert.equal(result.participants.find(p=>p.id===two.pid).hp,100)}if(result.revision===4){assert.equal(result.ownParticipant.scorePoints,10);assert.equal(result.participants.find(p=>p.id===two.pid).hp,50)}},
+ onChange:state=>{if(armed&&!state.entries.length&&!state.sending&&!state.uncertain)resolveDone()},onError:failure=>rejectDone(failure.error),onDiscard:items=>discarded.push(...items),
+})
+let timeout
+try{queue.update({revision:0,allowed:true});for(const command of ['enable','conf t','hostname campus','hostname Campus','end','wr','show running-config'])assert.equal(queue.enqueue({deviceId:'d1',operation:{type:'command',command}}),true);armed=true;await Promise.race([done,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error('Local queue acceptance timed out')),90000)})]);assert.deepEqual(sent.map(p=>p.sequence),[1,2,3,4,5,6]);assert.deepEqual(sent.map(p=>p.expectedRevision),[0,1,2,3,4,5]);assert.equal(new Set(sent.map(p=>p.commandId)).size,6);assert.equal(discarded.length,1);assert.equal(accepted.at(-1).competition.endReason,'knockout');assert.equal(accepted.at(-1).competition.winnerParticipantId,one.pid);assert.equal(sql("select (select count(*) from public.quiz_attempts)||','||(select count(*) from public.cli_attempts)"),baseline);console.log('PASS actual local Edge queue: six serial verified operations, strict-case scoring/damage, unique IDs/revisions, queued tail stopped at KO and ordinary assessment counts unchanged.')}finally{clearTimeout(timeout);queue.dispose()}

@@ -1,6 +1,7 @@
 import { Archive, ChartNoAxesColumn, ClipboardList, LayoutDashboard, Library, MonitorCheck, SquareTerminal, Users } from 'lucide-react'
 
 export const instructorNavigation = [
+  {id:'competitions',icon:SquareTerminal,label:'CLI Duels',description:'Timed configuration challenges'},
   {
     id: 'overview',
     icon: LayoutDashboard,

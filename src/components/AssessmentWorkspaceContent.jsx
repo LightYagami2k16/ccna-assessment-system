@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import WorkspaceLoading from './WorkspaceLoading'
 
+const CliCompetitions = lazy(() => import('./CliCompetitions'))
 const InstructorQuestionBank = lazy(() => import('./InstructorQuestionBank'))
 const InstructorQuizBuilder = lazy(() => import('./InstructorQuizBuilder'))
 const InstructorResultsArea = lazy(() => import('./InstructorResultsArea'))
@@ -17,6 +18,7 @@ const InstructorContentBackup = lazy(
 
 export default function AssessmentWorkspaceContent({ section, label, user, administratorMode = false, onOpenPracticals }) {
   return <Suspense fallback={<WorkspaceLoading label={`Loading ${label.toLowerCase()}...`} />}>
+    {section === 'competitions' && <CliCompetitions />}
     {section === 'questions' && <InstructorQuestionBank user={user} administratorMode={administratorMode} />}
     {section === 'quizzes' && <InstructorQuizBuilder administratorMode={administratorMode} />}
     {section === 'cli-practicals' && <InstructorCliLabBuilder administratorMode={administratorMode} />}

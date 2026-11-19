@@ -1,0 +1,51 @@
+import { expect, test } from '@playwright/test'
+
+test('builder filters devices, preserves draft edits and targets additions at the selected device', async ({ page }, testInfo) => {
+  const writes = []
+  const devices = [{ id: 'r1', label: 'Core router', hostname: 'Router', type: 'router' }, { id: 's1', label: 'Access switch', hostname: 'Switch', type: 'switch' }]
+  const lab = { id: 'lab-one', title: 'Device filtering', courseId: 1, courseCode: 'ITN', status: 'draft', instructions: 'Configure both devices.', durationMinutes: 30, maxAttempts: 1, passingScore: 70, classIds: [], devices, criteria: [{deviceId:'r1',type:'hostname',target:'',expected:'Core',points:10},{deviceId:'s1',type:'hostname',target:'',expected:'Access',points:10}] }
+  await page.route('**/rest/v1/**', route => {
+    const endpoint = new URL(route.request().url()).pathname.split('/').at(-1)
+    if (endpoint === 'save_cli_lab_with_review') { writes.push(route.request().postDataJSON().p_payload); return route.fulfill({json:'saved'}) }
+    const data = { courses:[{id:1,code:'ITN',title:'Introduction to Networks'}],get_instructor_cli_workspace:{labs:[lab],classes:[]},get_cli_lab_topology_data:[{id:'lab-one',devices,topology:{links:[]}}],get_assessment_review_policy:{allowReview:false,availableFrom:null,availableUntil:null} }
+    return route.fulfill({json:data[endpoint]??[]})
+  })
+  await page.goto('/?uat-role=instructor#/instructor/practicals')
+  await page.getByRole('button',{name:'Show practicals',exact:true}).click()
+  await page.getByRole('button',{name:'Show details',exact:true}).click()
+  await page.getByRole('dialog').getByRole('button',{name:'Edit',exact:true}).click()
+  const editor = page.locator('.cli-lab-editor')
+  const criteria = editor.getByRole('group',{name:'Grading criteria',exact:true})
+  const filter = criteria.getByRole('combobox',{name:'Filter by device',exact:true})
+  await expect(filter).toHaveValue('r1')
+  await expect(filter.locator('option')).toHaveText(['1. Core router (Primary)', '2. Access switch', 'All devices'])
+  await expect(criteria.getByRole('button',{name:'Previous device',exact:true})).toBeDisabled()
+  await expect(criteria.locator('.cli-criterion-device-group')).toHaveCount(1)
+  await criteria.getByRole('textbox',{name:'Expected value',exact:true}).fill('CoreEdited')
+  await criteria.getByRole('button',{name:'Next device',exact:true}).click()
+  await expect(criteria.locator('.cli-criterion-device-group')).toHaveCount(1)
+  await expect(criteria.locator('.cli-criterion-device-header')).toContainText('Access switch')
+  await criteria.locator('.cli-criteria-toolbar').getByRole('button',{name:'Add criterion',exact:true}).click()
+  await criteria.getByRole('textbox',{name:'Expected value',exact:true}).fill('SwitchAdded')
+  await criteria.getByRole('combobox',{name:'Quick preset',exact:true}).selectOption('basic_device')
+  await criteria.getByRole('button',{name:'Add preset',exact:true}).click()
+  await criteria.getByRole('button',{name:'Previous device',exact:true}).click()
+  await criteria.locator('.cli-criterion-summary').first().click()
+  await expect(criteria.getByRole('textbox',{name:'Expected value',exact:true})).toHaveValue('CoreEdited')
+  await filter.selectOption('all')
+  await expect(criteria.locator('.cli-criterion-device-group')).toHaveCount(2)
+  await expect(criteria.getByRole('button',{name:'Previous device',exact:true})).toBeDisabled()
+  await expect(criteria.getByRole('button',{name:'Next device',exact:true})).toBeDisabled()
+  await expect(criteria.locator('.cli-criteria-toolbar').getByRole('button',{name:'Add criterion',exact:true})).toBeDisabled()
+  await filter.selectOption('s1')
+  await criteria.screenshot({path:testInfo.outputPath('criteria-desktop.png')})
+  await page.setViewportSize({width:390,height:900})
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(1)
+  await criteria.locator('.cli-criteria-device-filter').screenshot({path:testInfo.outputPath('device-filter-phone.png')})
+  await editor.getByRole('button',{name:'Save practical',exact:true}).click()
+  await expect.poll(()=>writes.length).toBe(1)
+  expect(writes[0].criteria.filter(item=>item.deviceId==='r1')).toHaveLength(1)
+  expect(writes[0].criteria.find(item=>item.deviceId==='r1').expected).toBe('CoreEdited')
+  expect(writes[0].criteria.filter(item=>item.deviceId==='s1').length).toBeGreaterThan(2)
+  expect(writes[0].criteria.find(item=>item.expected==='SwitchAdded').deviceId).toBe('s1')
+})
