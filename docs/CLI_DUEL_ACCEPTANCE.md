@@ -1,5 +1,13 @@
 # CLI Duel pilot — local acceptance
 
+## November 23: prompt preview approved for publication
+
+Full-builder student duels now project the prompt and mode label from confirmed state plus queued commands using the canonical simulator. Pending text retains each pre-command prompt. Configuration, port status, scoring, HP, accepted logs and host views remain confirmed by the server. Acknowledged entries are not replayed, later snapshots rebase the preview, and locked/uncertain sessions show the confirmed prompt. Password/authentication-sensitive operations, SSH sessions, network operations and invalid commands stop further prediction until confirmation. Server command rejection discards unsent tail commands into the existing review list rather than executing them in an incorrect mode.
+
+Verification: 172 unit tests, lint, secret scan and production build pass. All eight focused Chromium cases pass across the full run and the corrected stale-ACK recheck. That older assertion was updated to wait for confirmed queue completion because a projected prompt no longer proves that an ACK has arrived. Controlled browser responses cover immediate navigation, unchanged confirmed HP/ports, rejection rollback, draft preservation, exact retries, revoked access, opponent updates, read-only host views and phone layout. Independent read-only review found no important actionable issues and independently passed all 18 preview/queue unit cases. Live multi-user classroom acceptance remains the owner's next check.
+
+Testing: http://localhost:5174/ uses the existing disposable local Supabase stack at http://127.0.0.1:55321 via process-only environment settings. UI/auth/function preflight health checks return 200/200/204. No credential files were changed. The owner subsequently authorized commit and push on November 23. This is a frontend update; no migrations, hosted Supabase changes or Edge redeployment are required. Plan: `docs/superpowers/plans/2026-11-23-cli-duel-prompt-preview.md`.
+
 ## November 19 update: arena isolation and port indicators
 
 The shared duel arena now hides the workspace behind the game and restores it on exit. Its desktop/phone result-dialog, scrolling and failed-load exit regressions pass.

@@ -1,6 +1,6 @@
 import {memo,useEffect,useRef,useState,useId,useMemo} from 'react'
-import {getDevicePrompt} from '../simulator/ciscoSimulator'
 import {getDuelPorts} from '../services/cliDuelPorts'
+import {getDuelPromptPreview} from '../services/cliDuelPromptPreview'
 
 const EMPTY_OPERATIONS=[]
 function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
@@ -11,6 +11,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
  const [settings,setSettings]=useState({ipAddress:'',subnetMask:'',defaultGateway:'',preferredDns:'',alternateDns:''})
  const device=devices.find(item=>item.id===selection)||devices.find(item=>item.id===data.ownState.activeDeviceId)||devices[0]
  const deviceId=device?.id,state=data.ownState.deviceStates?.[deviceId]
+ const preview=useMemo(()=>getDuelPromptPreview({task:data.task,state:data.ownState,entries:pendingOperations,deviceId,revision:data.revision,enabled:enabled&&!readOnly}),[data.task,data.ownState,data.revision,pendingOperations,deviceId,enabled,readOnly])
  const ports=getDuelPorts(data.task,deviceId,state)
  const adapter=state?.interfaces?.Ethernet0
  const ip=adapter?.ipAddress||'',mask=adapter?.subnetMask||'',gateway=state?.defaultGateway||'',dns1=state?.dnsServers?.[0]||'',dns2=state?.dnsServers?.[1]||''
@@ -21,14 +22,13 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
  const commandLog=useMemo(()=>`${device?.type==='pc'?'CCNA Assessment PC Command Prompt\nUse IP Configuration to change network settings.\nType help to view CMD commands.\n\n':'Cisco IOS Software, CCNA Assessment Simulator\nType commands at the prompt.\n\n'}${(data.ownCommands||[]).filter(item=>item.deviceId===deviceId).map(item=>`${item.promptBefore?`${item.promptBefore} `:''}${item.command}${item.output?`\n${item.output}`:''}\n`).join('')}`,[data.ownCommands,deviceId,device?.type])
  if(!device||!state)return <p role="alert">This device is unavailable. Resynchronize the attempt.</p>
  const remote=state.sshSession?.destinationDeviceId?data.ownState.deviceStates[state.sshSession.destinationDeviceId]:null
- const prompt=getDevicePrompt(remote?{...remote,mode:state.sshSession.remoteMode??'privileged_exec'}:state)
+ const prompt=preview.prompt
  function submit(event){event.preventDefault();if(!enabled||!command.trim())return;if(onOperation(deviceId,{type:'command',command}))setCommand('')}
  const configurationEnabled=enabled&&!pendingOperations.length
- const echo=pendingOperations.find(entry=>entry.payload&&entry.payload.sequence>Number(data.revision)&&entry.deviceId===deviceId&&entry.operation.type==='command')
  async function configure(event){event.preventDefault();if(!configurationEnabled)return;await onOperation(deviceId,mode==='dhcp'?{type:'pc_dhcp'}:{type:'pc_configure',settings:{...settings}})}
  return <div className={compact?"duel-spectator-console":"cli-practical-layout duel-device-console"}>
   {!compact&&<aside className="cli-instructions"><h2>Requirements</h2><p>{data.task.instructions}</p>
-   <div className="cli-device-summary"><span>Device</span><strong>{device.label}</strong><span>Type</span><strong>{device.type}</strong><span>{device.type==='pc'?'IPv4 address':'Current mode'}</span><strong>{device.type==='pc'?(ip||'Not configured'):state.mode?.replaceAll('_',' ')}</strong><span>{device.type==='pc'?'Default gateway':'Saved'}</span><strong>{device.type==='pc'?(gateway||'Not configured'):(state.saved?'Yes':'No')}</strong></div>
+   <div className="cli-device-summary"><span>Device</span><strong>{device.label}</strong><span>Type</span><strong>{device.type}</strong><span>{device.type==='pc'?'IPv4 address':'Current mode'}</span><strong>{device.type==='pc'?(ip||'Not configured'):preview.mode?.replaceAll('_',' ')}</strong><span>{device.type==='pc'?'Default gateway':'Saved'}</span><strong>{device.type==='pc'?(gateway||'Not configured'):(state.saved?'Yes':'No')}</strong></div>
    {!!data.task?.topology?.links?.length&&<div className="cli-topology-summary"><strong>Topology links</strong><ul>{data.task.topology.links.map((link,index)=><li key={link.id||index}>{devices.find(item=>item.id===link.fromDeviceId)?.label} {link.fromInterface} ↔ {devices.find(item=>item.id===link.toDeviceId)?.label} {link.toInterface}</li>)}</ul></div>}
   </aside>}
   <section className="cisco-terminal" aria-label="Cisco CLI terminal">
@@ -44,7 +44,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
    </fieldset><button className="primary" disabled={!configurationEnabled}>Apply IP configuration</button>
   </form>:<div ref={screenRef} className="cisco-terminal__screen" onScroll={event=>{const pane=event.currentTarget;followOutput.current=pane.scrollHeight-pane.clientHeight-pane.scrollTop<24}} onMouseDown={event=>{if(!enabled||readOnly||event.target.closest('button,input,a'))return;const pane=event.currentTarget,box=pane.getBoundingClientRect();if(event.clientX>=box.left+pane.clientLeft+pane.clientWidth||event.clientY>=box.top+pane.clientTop+pane.clientHeight)return;inputRef.current?.focus({preventScroll:true})}}>
    <pre role="log" aria-label="Your CLI command log">{commandLog}</pre>
-   {echo&&<pre className="duel-pending-echo">{prompt} {echo.operation.command}{'\n'}</pre>}
+   {preview.lines.length>0&&<pre className="duel-pending-echo">{preview.lines.map(line=>`${line.prompt??'Queued:'} ${line.command}\n`).join('')}</pre>}
    {!readOnly&&<form onSubmit={submit}><label className="duel-prompt" htmlFor="duel-cli-command">{prompt}</label><input id="duel-cli-command" aria-label="Cisco command" ref={inputRef} autoComplete="off" spellCheck="false" maxLength={500} disabled={!enabled} value={command} onChange={event=>setCommand(event.target.value)}/></form>}
   </div>}
   {!readOnly&&<small className="duel-terminal-sync" role="status">{pendingOperations.length?`Sending ${pendingOperations.length} command${pendingOperations.length===1?'':'s'}…`:enabled?'Ready':'Commands are locked'}</small>}

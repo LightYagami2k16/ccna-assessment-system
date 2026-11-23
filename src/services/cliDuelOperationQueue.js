@@ -13,9 +13,11 @@ export function createDuelOperationQueue({createRequest,send,onAccepted,onChange
    if(!Number.isSafeInteger(result?.revision)||result.revision<entry.payload.sequence)throw new Error('The command acknowledgement is incomplete. Retry the same command.')
    revision=Math.max(revision,result.revision)
    const applied=onAccepted(result),canonical=applied&&typeof applied==='object'?applied:result
+   const rejected=result.ownCommands?.some(command=>command.sequence===entry.payload.sequence&&(!command.deviceId||command.deviceId===entry.deviceId)&&command.accepted===false)
    revision=Math.max(revision,Number(canonical.revision)||0)
    entries.shift();active=null;uncertain=false
    if(applied===false||canonical.competition?.status!=='active'||canonical.ownParticipant?.status!=='in_progress'){allowed=false;discard()}
+   else if(rejected)discard()
    publish();queueMicrotask(pump)
   }).catch(fail)
  }

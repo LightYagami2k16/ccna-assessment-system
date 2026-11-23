@@ -1,0 +1,10 @@
+# Immediate CLI Duel prompt transitions
+
+Approved implementation scope: implement the previously proposed local prompt preview; test at localhost:5174. Initially kept uncommitted for owner testing. The owner subsequently authorized commit and push on November 23. No migrations or backend deployment are required.
+
+Reuse the canonical simulator against a disposable copy of the player's confirmed state and outstanding command queue. Expose only the projected prompt, mode label and pre-command prompts for queued text. All logs, accepted configurations, port status, scoring, damage, HP and host views continue using server snapshots. Ignore commands already covered by the confirmed revision, rebase after each acknowledgement, and use confirmed prompts whenever input is locked or transport is uncertain. Stop projection at SSH/password/authentication boundaries, non-command operations, invalid local commands and unsupported state. Stop unsent commands after a server-declared command rejection; retain them in the existing review list. Never predict a remote SSH session or replay authentication-sensitive commands locally.
+
+1. Add failing unit contracts for mode navigation, per-device projection, revision deduplication/rebase, rejected commands, password/SSH barriers, lock rollback and immutability. Add a queue contract for semantic rejection.
+2. Add an isolated prompt-preview helper and integrate it into the student device console. Preserve the existing serial queue, identifiers, authority and exact retry semantics.
+3. Add browser checks with held acknowledgements: immediate mode transitions and correct pending prompts, unchanged confirmed HP/ports, rebase/rejection, uncertain transport, pause, device switching and read-only host behavior. Update earlier ACK-specific assertions to allow the new preview.
+4. Run units, lint, security scan, build and focused browser checks. Start or verify localhost:5174 without changing hosted credentials or data. Report the local test instructions and any limitations. Keep all changes uncommitted.
