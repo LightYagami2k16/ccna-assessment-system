@@ -35,10 +35,16 @@ try{
  await loadFunction('004_admin_role_compatibility.sql','get_current_user_role_text')
  for(const [filename,names] of [['026_phase2_expanded_switch_configuration.sql',['canonical_cli_line','canonical_cli_vlan_list']],['031_phase2_acl_configuration.sql',['canonical_cli_interface','canonical_cli_acl_id','cli_criterion_is_met']],['036_phase3_multi_device_topology_foundation.sql',['cli_criterion_device_state']],['046_one_active_assessment_session.sql',['describe_active_assessment_session','get_student_active_assessment_session']],['048_repair_active_assessment_trigger.sql',['enforce_one_active_assessment_session']],['052_complete_assessment_client_sessions.sql',['get_instructor_assessment_client_sessions']],['047_assessment_client_session_leases.sql',['validate_assessment_client_id','claim_assessment_client_session','assert_assessment_client_session','heartbeat_assessment_client_session','release_assessment_client_session']]])for(const name of names) await loadFunction(filename,name)
  const originalGrade=(await db.query("select pg_get_functiondef('public.cli_criterion_is_met(jsonb,jsonb)'::regprocedure) def")).rows[0].def
+ if(process.env.DUEL_INCREMENTAL_TEST)for(const name of ['034_phase2_nat_pat_configuration.sql','035_phase2_dhcp_etherchannel_stp_ssh.sql']){
+  const amendments=[...(await file(name)).matchAll(/do \$\$[\s\S]*?\$\$;/gi)].filter(([sql])=>sql.includes("routine.proname = 'cli_criterion_is_met'"));assert.equal(amendments.length,1,name);await db.exec(amendments[0][0])
+ }
  // Actual 036 wraps the actual SQL evaluator for per-device state.
  const source=await file('036_phase3_multi_device_topology_foundation.sql')
  const amendment=[...source.matchAll(/do \$\$[\s\S]*?\$\$;/g)].find(([sql])=>sql.includes("routine.proname = 'cli_criterion_is_met'"))
  assert.ok(amendment);await db.exec(amendment[0]);assert.notEqual((await db.query("select pg_get_functiondef('public.cli_criterion_is_met(jsonb,jsonb)'::regprocedure) def")).rows[0].def,originalGrade)
+ if(process.env.DUEL_INCREMENTAL_TEST)for(const name of ['037_phase3_topology_connectivity_grading.sql','053_phase3_routed_connectivity_and_traceroute.sql','055_phase3_pc_ipv4_ui_and_dns_grading.sql','056_phase3_multidevice_ssh_grading.sql']){
+  const amendments=[...(await file(name)).matchAll(/do \$\$[\s\S]*?\$\$;/gi)].filter(([sql])=>sql.includes("routine.proname = 'cli_criterion_is_met'"));assert.equal(amendments.length,1,name);await db.exec(amendments[0][0])
+ }
  for(const [n,role] of [[1,'student'],[2,'student'],[3,'instructor'],[4,'instructor'],[5,'admin'],[6,'student'],[7,'student']]){await db.query('insert into public.profiles values($1,$2,$3)',[id(n),role,`Person ${n}`]);await db.query('insert into auth.users values($1,null,$2)',[id(n),`person${n}@example.test`])}
  await db.query('insert into public.class_sections values($1,$2,true,$3,$4),($5,$6,true,$7,$8)',[id(30),id(3),'A','Class A',id(40),id(4),'B','Class B'])
  for(const n of [1,2])await db.query('insert into public.class_memberships values($1,$2)',[id(30),id(n)])
@@ -52,6 +58,7 @@ try{
  if(process.env.DUEL_KNOCKOUT_TEST) {await db.exec(await file('076_cli_duel_knockout_customization.sql'));await db.exec(await file('076_cli_duel_knockout_customization.sql'))}
  if(process.env.DUEL_FULL_TEST) {await db.exec(await file('077_cli_duel_full_practical_configuration.sql'));await db.exec(await file('077_cli_duel_full_practical_configuration.sql'))}
  if(process.env.DUEL_PROMPT_TEST){await db.exec(await file('079_cli_duel_command_prompts.sql'));await db.exec(await file('079_cli_duel_command_prompts.sql'))}
+ if(process.env.DUEL_INCREMENTAL_TEST){await db.exec(await file('084_cli_duel_incremental_grading.sql'));await db.exec('update cli_duel_private.grading_settings set audit=true;')}
  console.log('Migrations 074/075 loaded for isolated duel contracts.')
  await user(3);const workspace=await rpc('get_cli_duel_workspace');assert.equal(workspace.candidates.length,2)
  await user(4);assert.equal((await rpc('get_cli_duel_workspace')).candidates.length,1)
@@ -278,6 +285,14 @@ try{
   for(const name of ['cli_duel_player_data(uuid,uuid)','get_cli_duel_host_arena(uuid)'])assert.match((await db.query('select pg_get_functiondef($1::regprocedure) def',[`public.${name}`])).rows[0].def,/public.cli_duel_public_task\(c.definition_snapshot\)/)
   assert.equal((await db.query("select has_function_privilege('authenticated','public.cli_duel_public_task(jsonb)','EXECUTE') allowed")).rows[0].allowed,false)
   console.log('PASS083 twice: deduplicated configured ports, private answer values, protected reader integration and helper ACL.')
+ }
+ if(process.env.DUEL_INCREMENTAL_TEST){
+  await db.exec('reset role');await db.exec(await file('084_cli_duel_incremental_grading.sql'));await db.exec(await file('084_cli_duel_incremental_grading.sql'))
+  await db.exec('begin;update cli_duel_private.grading_settings set audit=true;'+await readFile(new URL('../tests/sql/cli-duel-incremental-grading.sql',import.meta.url),'utf8')+'rollback;')
+  await db.exec('begin;update cli_duel_private.grading_settings set audit=false;'+await readFile(new URL('../tests/sql/cli-duel-incremental-grading.sql',import.meta.url),'utf8')+'rollback;')
+  await db.exec('begin;update cli_duel_private.grading_settings set audit=true;'+await readFile(new URL('../tests/sql/cli-duel-incremental-matrix.sql',import.meta.url),'utf8')+'rollback;')
+  await db.exec('begin;update cli_duel_private.grading_settings set audit=false;'+await readFile(new URL('../tests/sql/cli-duel-incremental-matrix.sql',import.meta.url),'utf8')+'rollback;')
+  console.log('PASS084 twice: incremental/full parity in audit and normal modes, version/definition/state invalidation, private cache and lifecycle cleanup.')
  }
  console.log('PASS atomic start, ordinary quiz/CLI session barriers and retained cancelled history.')
  console.log('PASS extended SQL: actual grading, undo/HP, dedup/stale rejection, browser lease, auto-completion, key/review isolation, release withdrawal, timeout exact ties, rematches, void and role/ban/ownership changes.')
