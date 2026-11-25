@@ -16,8 +16,8 @@ function asConfiguration(lab){return {title:lab.title,description:lab.descriptio
 
 export default function CliCompetitions({onPlay}){
  const loader=useCallback(()=>getDuelWorkspace(),[])
- const {data,error,loading,refresh}=useCliDuel(loader)
  const [selected,setSelected]=useState(null),[creating,setCreating]=useState(false),[rematchId,setRematchId]=useState(null)
+ const {data,error,loading,refresh}=useCliDuel(loader,undefined,10000,{enabled:!selected})
  const [sourceId,setSourceId]=useState(''),[lab,setLabState]=useState(emptyConfiguration),[startingHp,setStartingHp]=useState(100)
  const [players,setPlayers]=useState(['','']),[allowReview,setAllowReview]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  const [sourceLoading,setSourceLoading]=useState(false)

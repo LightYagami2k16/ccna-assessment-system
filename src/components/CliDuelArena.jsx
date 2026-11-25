@@ -17,13 +17,14 @@ import {getDuelWinners} from '../services/cliDuelWinners'
 import CliDuelDeviceConsole from './CliDuelDeviceConsole'
 import {fullOperationCommand} from '../../supabase/functions/_shared/cliDuelFullProtocol.js'
 import { getDevicePrompt } from '../simulator/ciscoSimulator'
+import {getDuelInputPolicy} from '../services/cliDuelInputPolicy'
 
 export default function CliDuelArena({ participantId, onExit }) {
   useAssessmentFocusMode()
   const [locked, setLocked] = useState(false)
   const lease = useAssessmentClientSession({ assessmentType: 'competition', attemptId: participantId, enabled: !locked })
-  const loader = useCallback(() => getDuelPlayer(participantId, lease.clientId), [participantId, lease.clientId])
-  const { data, error, fresh, refresh, adopt, getSnapshot } = useCliDuel(loader,undefined,1000)
+  const loader = useCallback(snapshot => getDuelPlayer(participantId, lease.clientId,snapshot?.ownCommands?.at(-1)?.sequence||0), [participantId, lease.clientId])
+  const { data, error, fresh, refresh, adopt, getSnapshot } = useCliDuel(loader,undefined,5000)
   const [command, setCommand] = useState('')
   const [pending, setPending] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -35,8 +36,10 @@ export default function CliDuelArena({ participantId, onExit }) {
   const [selectingCharacter,setSelectingCharacter]=useState(false)
   const inFlight = useRef(false)
   const settled = useRef(false)
+  const presencePhase=useRef(null)
   const match = data?.competition
   const own = data?.ownParticipant
+  useEffect(()=>{presencePhase.current=match?.status},[match?.status])
   useEffect(()=>{if(match?.status!=='waiting')setSelectingCharacter(false)},[match?.status])
   const introPhase=getDuelIntroPhase(match)
   async function confirmCharacter(character){setBusy(true);setMessage('');try{await selectDuelCharacter(participantId,lease.clientId,character);await refresh();setSelectingCharacter(false)}finally{setBusy(false)}}
@@ -46,8 +49,8 @@ export default function CliDuelArena({ participantId, onExit }) {
   const admitting=Boolean(match?.hostControlled?['waiting','countdown','active','paused'].includes(match?.status):match?.arenaEntryRequired&&['waiting','countdown'].includes(match?.status))
   useEffect(()=>{
     if(!admitting||(!spectator&&lease.status!=='active')||lease.connectionStatus!=='online')return undefined
-    let cancelled=false,inProgress=false
-    async function present(){if(inProgress)return;inProgress=true;try{await setDuelArenaPresence(participantId,lease.clientId,navigator.onLine&&document.visibilityState!=='hidden');if(cancelled)await setDuelArenaPresence(participantId,lease.clientId,false);else void refresh()}catch(failure){if(!cancelled)setMessage(duelError(failure))}finally{inProgress=false}}
+    let cancelled=false,inProgress=false,lastSent=0,lastEntered=null
+    async function present(){const entered=navigator.onLine&&document.visibilityState!=='hidden';if(inProgress||lastEntered===false&&!entered||presencePhase.current==='active'&&lastEntered===true&&entered&&Date.now()-lastSent<5000)return;inProgress=true;lastSent=Date.now();lastEntered=entered;try{await setDuelArenaPresence(participantId,lease.clientId,entered);if(cancelled)await setDuelArenaPresence(participantId,lease.clientId,false);else if(presencePhase.current!=='active')void refresh()}catch(failure){if(!cancelled)setMessage(duelError(failure))}finally{inProgress=false}}
     void present();const timer=window.setInterval(present,match?.hostControlled?750:1500);document.addEventListener('visibilitychange',present)
     return()=>{cancelled=true;window.clearInterval(timer);document.removeEventListener('visibilitychange',present);void setDuelArenaPresence(participantId,lease.clientId,false).catch(()=>{})}
   },[admitting,participantId,lease.clientId,lease.status,lease.connectionStatus,refresh,match?.hostControlled,spectator])
@@ -77,6 +80,7 @@ export default function CliDuelArena({ participantId, onExit }) {
     onDiscard:items=>{setUnsent(previous=>[...previous,...items].slice(-40));setMessage('Some buffered commands need review. Their text is kept below.')},
   })
   const enqueueCommand=queued.enqueue
+  const inputPolicy=getDuelInputPolicy({hasState:Boolean(data?.ownState),ownsAttempt:own?.id===participantId,participantStatus:own?.status,matchStatus:match?.status,leaseStatus:lease.status,online:lease.connectionStatus==='online',fresh,expired,countdown:Boolean(countdown),uncertain:queued.uncertain})
   const enqueueOperation=useCallback((deviceId,operation)=>{const accepted=enqueueCommand(deviceId,operation);setMessage(accepted?'':'Wait for pending commands to synchronize before sending more.');return accepted},[enqueueCommand])
   async function send(payload) {
     if (inFlight.current) return
@@ -114,7 +118,7 @@ export default function CliDuelArena({ participantId, onExit }) {
     {match?.status==='completed'&&own&&!outcomeDismissed&&<CliDuelOverlay kind={draw||!winners.length?'result':won?'victory':'defeated'} title={draw?'DRAW':!winners.length?'DUEL COMPLETE':won?'VICTORY':'DEFEATED'} onClose={()=>setOutcomeDismissed(true)}><CliDuelCharacter characterId={own.characterId} size="result" showName/><p>{match.endReason==='knockout'?'The duel ended by knockout.':'Final ranking uses score, then finish time.'}</p></CliDuelOverlay>}
 
     {showBattle && data?.task && match?.rulesVersion!==3 && <section className="duel-task"><h3>Configuration task</h3><p>{data.task.instructions}</p></section>}
-    {showBattle && data?.ownState && match?.rulesVersion===3 && <CliDuelDeviceConsole data={data} enabled={inputAllowed&&!queued.uncertain} onOperation={enqueueOperation} readOnly={spectator} pendingOperations={queued.entries}/>}
+    {showBattle && data?.ownState && match?.rulesVersion===3 && <CliDuelDeviceConsole data={data} enabled={inputPolicy.canDraft} canSubmit={inputAllowed&&inputPolicy.canSubmit} onOperation={enqueueOperation} readOnly={spectator} pendingOperations={queued.entries}/>}
     {showBattle && data?.ownState && match?.rulesVersion!==3 && <><div className="duel-terminal" aria-label="Your CLI command log" role="log">{data.ownCommands?.map(entry => <div key={entry.sequence}><code>{entry.command}</code>{entry.output && <pre>{entry.output}</pre>}</div>)}</div>
       <p className="duel-prompt"><code>{getDevicePrompt(data.ownState)}</code></p><form onSubmit={submit} className="duel-command"><label>Cisco command<input autoComplete="off" spellCheck="false" maxLength={500} value={command} disabled={!enabled} onChange={e => setCommand(e.target.value)} /></label><button className="primary" disabled={!enabled || !command.trim()}>Send command</button></form></>}
     {queued.uncertain&&!terminal&&own?.status==='in_progress'&&<div className="duel-actions"><button type="button" className="secondary" disabled={!inputAllowed||queued.sending} onClick={queued.retry}>Retry same command</button><button type="button" className="secondary" onClick={refresh}>Resynchronize</button></div>}

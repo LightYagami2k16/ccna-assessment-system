@@ -1,6 +1,24 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createDuelRefreshCoordinator, duelCandidateKey } from './cliDuelSync.js'
+import { createDuelRefreshCoordinator, duelCandidateKey, mergeDuelSnapshot } from './cliDuelSync.js'
+
+test('cursor updates retain history and deduplicate overlapping command acknowledgements',()=>{
+ const previous={competition:{id:'match'},ownParticipant:{id:'player'},revision:2,ownCommands:[{sequence:1,command:'enable'},{sequence:2,command:'conf t'}]}
+ const next={...previous,revision:3,commandsAfter:1,ownCommands:[{sequence:2,command:'conf t'},{sequence:3,command:'hostname Campus'}]}
+ assert.deepEqual(mergeDuelSnapshot(previous,next).ownCommands.map(c=>c.sequence),[1,2,3])
+ assert.deepEqual(mergeDuelSnapshot(previous,{...next,commandsAfter:0,ownCommands:[]}).ownCommands,[])
+ assert.equal(mergeDuelSnapshot(previous,{...next,ownParticipant:{id:'other'}}).ownCommands.length,2)
+})
+test('refresh loader receives the latest merged snapshot for its log cursor',async()=>{
+ let received;const initial={competition:{id:'match'},ownParticipant:{id:'player'},revision:1,ownCommands:[{sequence:1}]}
+ const sync=createDuelRefreshCoordinator(async snapshot=>{received=snapshot;return {...initial,revision:2,commandsAfter:1,ownCommands:[{sequence:2}]}},()=>{},()=>{})
+ sync.adopt(initial);await sync.refresh();assert.equal(received.revision,1);assert.deepEqual(sync.getSnapshot().ownCommands.map(c=>c.sequence),[1,2]);sync.stop()
+})
+test('host cursor updates merge each player separately',()=>{
+ const previous={competition:{id:'match'},players:[{id:'one',commands:[{sequence:1}]},{id:'two',commands:[{sequence:1}]}]}
+ const next={competition:{id:'match'},players:[{id:'one',commandsAfter:1,commands:[{sequence:2}]},{id:'two',commandsAfter:1,commands:[]}]}
+ assert.deepEqual(mergeDuelSnapshot(previous,next).players.map(p=>p.commands.map(c=>c.sequence)),[[1,2],[1]])
+})
 test('refresh coalesces slow invalidations without starving response or authorization denial',async()=>{let resolve,calls=0;const applied=[];const sync=createDuelRefreshCoordinator(()=>{calls++;return new Promise(r=>{resolve=r})},value=>applied.push(value),error=>applied.push(error.message));const first=sync.refresh();const second=sync.refresh();assert.equal(calls,1);resolve('authorized');await first;await new Promise(r=>setTimeout(r,0));assert.deepEqual(applied,['authorized']);assert.equal(calls,2);resolve('new revision');await second;await new Promise(r=>setTimeout(r,0));assert.deepEqual(applied,['authorized','new revision']);sync.stop()})
 test('failed reconciliation returns false and never reports success',async()=>{const sync=createDuelRefreshCoordinator(async()=>{throw new Error('offline')},()=>assert.fail(),()=>{});assert.equal(await sync.refresh(),false);sync.stop()})
 test('participant selections stay stable when class candidate order changes',()=>{const a={studentId:'a',classId:'one'},b={studentId:'b',classId:'one'};const key=duelCandidateKey(a);assert.equal([b,a].find(p=>duelCandidateKey(p)===key),a);assert.notEqual(key,duelCandidateKey({...a,classId:'two'}))})

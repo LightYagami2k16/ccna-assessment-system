@@ -3,7 +3,7 @@ import {getDuelPorts} from '../services/cliDuelPorts'
 import {getDuelPromptPreview} from '../services/cliDuelPromptPreview'
 
 const EMPTY_OPERATIONS=[]
-function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
+function CliDuelDeviceConsole({data,enabled,canSubmit=enabled,onOperation,readOnly=false,compact=false,pendingOperations=EMPTY_OPERATIONS}){
  const radioGroup=useId()
  const inputRef=useRef(null),screenRef=useRef(null),followOutput=useRef(true)
  const devices=data.task?.devices||[]
@@ -11,7 +11,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
  const [settings,setSettings]=useState({ipAddress:'',subnetMask:'',defaultGateway:'',preferredDns:'',alternateDns:''})
  const device=devices.find(item=>item.id===selection)||devices.find(item=>item.id===data.ownState.activeDeviceId)||devices[0]
  const deviceId=device?.id,state=data.ownState.deviceStates?.[deviceId]
- const preview=useMemo(()=>getDuelPromptPreview({task:data.task,state:data.ownState,entries:pendingOperations,deviceId,revision:data.revision,enabled:enabled&&!readOnly}),[data.task,data.ownState,data.revision,pendingOperations,deviceId,enabled,readOnly])
+ const preview=useMemo(()=>getDuelPromptPreview({task:data.task,state:data.ownState,entries:pendingOperations,deviceId,revision:data.revision,enabled:canSubmit&&!readOnly}),[data.task,data.ownState,data.revision,pendingOperations,deviceId,canSubmit,readOnly])
  const ports=getDuelPorts(data.task,deviceId,state)
  const adapter=state?.interfaces?.Ethernet0
  const ip=adapter?.ipAddress||'',mask=adapter?.subnetMask||'',gateway=state?.defaultGateway||'',dns1=state?.dnsServers?.[0]||'',dns2=state?.dnsServers?.[1]||''
@@ -23,8 +23,8 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
  if(!device||!state)return <p role="alert">This device is unavailable. Resynchronize the attempt.</p>
  const remote=state.sshSession?.destinationDeviceId?data.ownState.deviceStates[state.sshSession.destinationDeviceId]:null
  const prompt=preview.prompt
- function submit(event){event.preventDefault();if(!enabled||!command.trim())return;if(onOperation(deviceId,{type:'command',command}))setCommand('')}
- const configurationEnabled=enabled&&!pendingOperations.length
+ function submit(event){event.preventDefault();if(!enabled||!canSubmit||!command.trim())return;if(onOperation(deviceId,{type:'command',command}))setCommand('')}
+ const configurationEnabled=enabled&&canSubmit&&!pendingOperations.length
  async function configure(event){event.preventDefault();if(!configurationEnabled)return;await onOperation(deviceId,mode==='dhcp'?{type:'pc_dhcp'}:{type:'pc_configure',settings:{...settings}})}
  return <div className={compact?"duel-spectator-console":"cli-practical-layout duel-device-console"}>
   {!compact&&<aside className="cli-instructions"><h2>Requirements</h2><p>{data.task.instructions}</p>
@@ -47,7 +47,7 @@ function CliDuelDeviceConsole({data,enabled,onOperation,readOnly=false,compact=f
    {preview.lines.length>0&&<pre className="duel-pending-echo">{preview.lines.map(line=>`${line.prompt??'Queued:'} ${line.command}\n`).join('')}</pre>}
    {!readOnly&&<form onSubmit={submit}><label className="duel-prompt" htmlFor="duel-cli-command">{prompt}</label><input id="duel-cli-command" aria-label="Cisco command" ref={inputRef} autoComplete="off" spellCheck="false" maxLength={500} disabled={!enabled} value={command} onChange={event=>setCommand(event.target.value)}/></form>}
   </div>}
-  {!readOnly&&<small className="duel-terminal-sync" role="status">{pendingOperations.length?`Sending ${pendingOperations.length} command${pendingOperations.length===1?'':'s'}…`:enabled?'Ready':'Commands are locked'}</small>}
+  {!readOnly&&<small className="duel-terminal-sync" role="status">{enabled&&!canSubmit?'Draft only · Waiting to synchronize; commands are not being sent.':pendingOperations.length?`Sending ${pendingOperations.length} command${pendingOperations.length===1?'':'s'}…`:enabled?'Ready':'Commands are locked'}</small>}
   </section>
  </div>
 }

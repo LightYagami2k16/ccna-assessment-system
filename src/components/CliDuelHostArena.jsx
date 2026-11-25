@@ -14,8 +14,8 @@ import {getDuelWinners} from '../services/cliDuelWinners'
 
 export default function CliDuelHostArena({id,onBack,onHistory}){
  useAssessmentFocusMode()
- const loader=useCallback(()=>getDuelHostArena(id),[id])
- const {data,error,fresh,refresh}=useCliDuel(loader,id,1000)
+ const loader=useCallback(snapshot=>getDuelHostArena(id,Object.fromEntries((snapshot?.players||[]).map(p=>[p.id,p.commands?.at(-1)?.sequence||0]))),[id])
+ const {data,error,fresh,refresh}=useCliDuel(loader,id,3000)
  const [clock,setClock]=useState(Date.now()),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  useEffect(()=>{const timer=window.setInterval(()=>setClock(Date.now()),200);return()=>window.clearInterval(timer)},[])
  const match=data?.competition,terminal=['completed','cancelled','voided'].includes(match?.status)

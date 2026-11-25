@@ -1,5 +1,5 @@
 import CliDuelCharacter from './CliDuelCharacter'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import useCliDuel from '../hooks/useCliDuel'
 import { getDuel, readyDuel, startDuel, manageDuel, releaseDuelReview, enterDuelArena, duelError } from '../services/cliDuelService'
 import { getAssessmentClientId } from '../services/assessmentClientSessionService'
@@ -8,13 +8,15 @@ import CliDuelHostArena from './CliDuelHostArena'
 
 export default function CliDuelLobby({ id, onPlay, onRematch, onBack }) {
   const loader = useCallback(() => getDuel(id), [id])
-  const { data, error, loading, refresh } = useCliDuel(loader, id)
+  const [arenaVisible,setArenaVisible]=useState(false)
+  const { data, error, loading, refresh } = useCliDuel(loader, id,5000,{enabled:!arenaVisible})
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [reason, setReason] = useState('')
   const [review, setReview] = useState(null)
   const [showDetails,setShowDetails]=useState(false)
   const match = data?.competition
+  useEffect(()=>setArenaVisible(Boolean(match?.canHost&&match?.hostControlled&&!showDetails)),[match?.canHost,match?.hostControlled,showDetails])
   const own = data?.participants?.find(p => p.isOwn)
   async function act(action) {
     setBusy(true); setMessage('')

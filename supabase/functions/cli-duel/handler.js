@@ -9,7 +9,7 @@ export async function handleDuelRequest(request, { authenticate, rpc }) {
   const token = request.headers.get('Authorization')?.match(/^Bearer ([^\s]+)$/i)?.[1]
   if (!token) return json({ error: 'Sign in to continue.', code: 'UNAUTHENTICATED' }, 401)
   let actor
-  try { actor = await authenticate(token) } catch { return json({ error: 'Your session could not be verified.', code: 'UNAUTHENTICATED' }, 401) }
+  try { actor = await authenticate(token) } catch { return json({ error: 'The sign-in service is temporarily unavailable. Please retry.', code: 'AUTH_UNAVAILABLE' }, 503) }
   if (!actor) return json({ error: 'Your session is not valid.', code: 'UNAUTHENTICATED' }, 401)
   let body
   try {
@@ -24,7 +24,7 @@ export async function handleDuelRequest(request, { authenticate, rpc }) {
       const context=await rpc('cli_duel_operation_context',args)
       if(context.duplicateResult)return json(context.duplicateResult)
       const outcome=executeFullDuelOperation(context.definition,context.state,body)
-      return json(await rpc('cli_duel_commit_operation',{...args,p_outcome:outcome}))
+      return json(await rpc('cli_duel_commit_operation_updates',{...args,p_outcome:outcome}))
     }
     if (body.action === 'create' && body.rulesVersion===3) {
       const context=await rpc('cli_duel_configuration_context',{p_actor_id:actor,p_lab_id:body.labId??null,p_rematch_id:body.rematchId??null})

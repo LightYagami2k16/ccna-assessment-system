@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { duelError, subscribeDuel } from '../services/cliDuelService'
 import { createDuelRefreshCoordinator, duelAccessDenied } from '../services/cliDuelSync'
-export default function useCliDuel(loader, matchId, pollMs=5000) {
+export default function useCliDuel(loader, matchId, pollMs=5000,{enabled=true}={}) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -11,6 +11,7 @@ export default function useCliDuel(loader, matchId, pollMs=5000) {
   const adopt=useCallback(value=>coordinator.current?.adopt(value)??false,[])
   const refresh = useCallback(() => coordinator.current?.refresh() ?? Promise.resolve(false), [])
   useEffect(() => {
+    if(!enabled)return undefined
     setData(null); setLoading(true); setFresh(false)
     const sync = createDuelRefreshCoordinator(loader, next => {
       setData(next); setError(''); setLoading(false); setFresh(true)
@@ -19,15 +20,20 @@ export default function useCliDuel(loader, matchId, pollMs=5000) {
       setFresh(false); setError(duelError(failure)); setLoading(false)
     })
     coordinator.current = sync
-    void sync.refresh()
-    const timer = window.setInterval(sync.refresh, pollMs)
+    let stopped=false,timer
+    async function poll(){
+      if(stopped)return
+      if(document.visibilityState!=='hidden'&&navigator.onLine)await sync.refresh()
+      if(!stopped)timer=window.setTimeout(poll,pollMs+Math.random()*Math.min(500,pollMs/5))
+    }
+    void poll()
     window.addEventListener('focus', sync.refresh); window.addEventListener('online', sync.refresh)
     return () => {
-      sync.stop(); window.clearInterval(timer)
+      stopped=true;sync.stop();if(coordinator.current===sync)coordinator.current=null;window.clearTimeout(timer)
       window.removeEventListener('focus', sync.refresh); window.removeEventListener('online', sync.refresh)
     }
-  }, [loader,pollMs])
+  }, [loader,pollMs,enabled])
   const topicId = matchId || data?.competition?.id
-  useEffect(() => topicId ? subscribeDuel(topicId, refresh) : undefined, [topicId, refresh])
+  useEffect(() => enabled&&topicId ? subscribeDuel(topicId, refresh) : undefined, [topicId, refresh,enabled])
   return { data, error, loading, fresh, refresh, adopt, getSnapshot }
 }

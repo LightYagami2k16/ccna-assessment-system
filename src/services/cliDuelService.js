@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import {createDuelNotifier} from './cliDuelDelivery'
 
 async function rpc(name, args = {}) {
   const { data, error } = await supabase.rpc(name, args)
@@ -8,12 +9,12 @@ async function rpc(name, args = {}) {
 export const enterDuelArena = (id,client) => rpc('enter_cli_duel_arena',{p_participant_id:id,p_client_id:client})
 export const selectDuelCharacter = (id,client,character) => rpc('select_cli_duel_character',{p_participant_id:id,p_client_id:client,p_character_id:character})
 export const controlDuel = (id,action) => rpc('control_cli_duel',{p_competition_id:id,p_action:action})
-export const getDuelHostArena = id => rpc('get_cli_duel_host_arena',{p_competition_id:id})
+export const getDuelHostArena = (id,cursors={}) => rpc('get_cli_duel_host_arena_updates',{p_competition_id:id,p_cursors:cursors})
 export const getDuelConfiguration = (labId,rematchId) => rpc('get_cli_duel_configuration',{p_lab_id:labId||null,p_rematch_id:rematchId||null})
 export const getDuelAuthoring = (labId, rematchId) => rpc('get_cli_duel_authoring', {p_lab_id: rematchId ? null : labId, p_rematch_id: rematchId || null})
 export const getDuelWorkspace = () => rpc('get_cli_duel_workspace')
 export const getDuel = id => rpc('get_cli_duel', { p_competition_id: id })
-export const getDuelPlayer = (id, client) => rpc('get_cli_duel_player', { p_participant_id: id, p_client_id: client })
+export const getDuelPlayer = (id, client,after=0) => rpc('get_cli_duel_player_updates', { p_participant_id: id, p_client_id: client,p_after_sequence:after })
 export const readyDuel = (id, client, ready) => rpc('ready_cli_duel', { p_competition_id: id, p_client_id: client, p_ready: ready })
 export const setDuelArenaPresence = (id,client,entered) => rpc('set_cli_duel_arena_presence',{p_participant_id:id,p_client_id:client,p_entered:entered})
 export const startDuel = id => rpc('start_cli_duel', { p_competition_id: id })
@@ -40,16 +41,17 @@ export function subscribeDuel(id, refresh) {
     return () => removeListener(id, refresh)
   }
   const listeners = new Set([refresh])
+  const notifier=createDuelNotifier(()=>listeners.forEach(listener=>listener()))
   const channel = supabase.channel(`cli-duel:${id}`, { config: { private: true } })
-    .on('broadcast', { event: 'changed' }, () => listeners.forEach(listener => listener())).subscribe()
-  subscriptions.set(id, { channel, listeners })
+    .on('broadcast', { event: 'changed' }, notifier.changed).subscribe()
+  subscriptions.set(id, { channel, listeners,notifier })
   return () => removeListener(id, refresh)
 }
 function removeListener(id, listener) {
   const subscription = subscriptions.get(id)
   if (!subscription) return
   subscription.listeners.delete(listener)
-  if (!subscription.listeners.size) { subscriptions.delete(id); void supabase.removeChannel(subscription.channel) }
+  if (!subscription.listeners.size) { subscription.notifier.stop();subscriptions.delete(id); void supabase.removeChannel(subscription.channel) }
 }
 export function duelError(error) {
   if (['PGRST202', '42883', '42P01'].includes(error?.code)) return 'CLI Duels are not set up on this database. Apply the local duel migrations and start the local cli-duel function first.'
